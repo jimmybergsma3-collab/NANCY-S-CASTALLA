@@ -312,11 +312,11 @@ export const dictionaries = {
     home: {
       headline: "Productos internacionales, café y prepedidos para expatriados cerca de Castalla.",
       intro:
-        "Un concepto cálido de mercado con stock pequeño, favoritos holandeses, británicos, irlandeses y europeos, pan por encargo y entrega local cuando sea posible.",
+        "Un concepto cálido de mercado con stock pequeño, favoritos holandeses, británicos, irlandeses, europeos y sudamericanos, pan por encargo y entrega local cuando sea posible.",
       shop: "Ver productos iniciales",
       bread: "Prepedir pan",
       cardTitle: "Productos internacionales, café, pan y bebidas",
-      cardText: "Premium, cálido y práctico para expatriados británicos, holandeses, irlandeses y europeos cerca de Castalla.",
+      cardText: "Premium, cálido y práctico para expatriados británicos, holandeses, irlandeses, europeos y sudamericanos cerca de Castalla.",
       featured: "Productos destacados",
       starterRange: "Selección inicial",
       viewAll: "Ver todos",
@@ -330,7 +330,7 @@ export const dictionaries = {
       eyebrow: "Selección inicial",
       title: "Productos",
       intro:
-        "Una primera gama enfocada para una pequeña tienda expat: snacks holandeses, favoritos británicos e irlandeses, pan por encargo, desayuno, café, bebidas y salsas.",
+        "Una primera gama enfocada para una pequeña tienda expat: snacks holandeses, favoritos británicos e irlandeses, productos sudamericanos de despensa, pan por encargo, desayuno, café, bebidas y salsas.",
     },
     bread: {
       eyebrow: "Pan por encargo",
@@ -357,7 +357,7 @@ export const dictionaries = {
       p1:
         "Nancy's Castalla empieza como un concepto internacional profesional pero sencillo para expatriados cerca de Castalla: productos prácticos, snacks familiares, café, pan por encargo y recogida o entrega flexible.",
       p2:
-        "El enfoque de verano está en favoritos británicos, holandeses, irlandeses y europeos. Los productos sudamericanos quedan para una fase posterior.",
+        "El primer enfoque combina favoritos británicos, holandeses, irlandeses y europeos con una selección sudamericana en crecimiento. La gama sudamericana empieza limitada y crecerá según la demanda.",
       p3:
         "La web está hecha para empezar con stock pequeño: sin checkout, sin base de datos y sin cuentas complicadas. Los clientes eligen productos, envían WhatsApp y reciben confirmación antes de pagar.",
     },
