@@ -54,6 +54,7 @@ export default async function HomePage({ params }: { params: Promise<unknown> })
                 alt="Nancy's Castalla international foods logo"
                 className="object-cover"
                 fill
+                loading="eager"
                 priority
                 sizes="(min-width: 1024px) 430px, 90vw"
                 src="/nancys-castalla-logo.jpg"
