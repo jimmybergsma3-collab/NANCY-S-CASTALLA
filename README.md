@@ -27,6 +27,18 @@ Version 2 is prepared for Supabase and Resend:
 
 - Run `supabase-schema.sql` in Supabase SQL editor.
 - Add the values from `.env.example` to Vercel environment variables.
+- Supabase URL is `https://kylianmqyewlfoypcjve.supabase.co`.
+- Find `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` in Supabase project settings under API keys.
+- If you install Supabase CLI, link this project with:
+
+```bash
+supabase login
+supabase init
+supabase link --project-ref kylianmqyewlfoypcjve
+supabase db push
+```
+
+- Do not commit the PostgreSQL connection string or service role key.
 - Admin products page: `/en/admin/products`.
 - Customer registration page: `/en/register`.
 - Orders are sent through `/api/orders` and email is sent through Resend when `RESEND_API_KEY` is configured.
