@@ -14,7 +14,7 @@ export function BrandMark() {
         />
       </div>
       <div className="leading-tight">
-        <div className="font-serif text-xl font-bold tracking-wide text-forest">NANCY'S</div>
+        <div className="font-serif text-xl font-bold tracking-wide text-forest">NANCY&apos;S</div>
         <div className="text-xs font-bold uppercase tracking-[0.28em] text-coffee">Castalla</div>
       </div>
     </div>

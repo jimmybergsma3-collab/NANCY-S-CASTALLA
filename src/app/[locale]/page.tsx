@@ -26,7 +26,7 @@ export default async function HomePage({ params }: { params: Promise<unknown> })
             {dictionary.common.phase}
           </div>
           <h1 className="mt-6 max-w-3xl font-serif text-5xl font-bold leading-tight text-forest md:text-6xl">
-            Nancy's Castalla
+            Nancy&apos;s Castalla
           </h1>
           <p className="mt-5 max-w-2xl text-xl leading-8 text-forest/78">{dictionary.home.headline}</p>
           <p className="mt-4 max-w-2xl leading-7 text-forest/70">{dictionary.home.intro}</p>
