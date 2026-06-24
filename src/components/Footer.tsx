@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { businessConfig } from "@/config/business";
 import { defaultLocale, getDictionary, type Locale } from "@/i18n/config";
 import { paymentProviders } from "@/payments/providers";
@@ -29,6 +30,17 @@ export function Footer({ locale = defaultLocale }: { locale?: Locale }) {
               ))}
             <li>Card payment later</li>
           </ul>
+        </div>
+      </div>
+      <div className="border-t border-cream/10 px-4 py-5">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 text-sm text-cream/75 sm:flex-row">
+          <div className="flex items-center gap-3">
+            <div className="relative h-9 w-9 overflow-hidden rounded-full border border-brass bg-cream">
+              <Image alt="Nancy's Castalla logo" className="object-cover" fill sizes="36px" src="/nancys-castalla-logo.jpg" />
+            </div>
+            <span>&copy; NANCY&apos;S CASTALLA 2026</span>
+          </div>
+          <span>International foods, coffee, empanadas and drinks</span>
         </div>
       </div>
     </footer>

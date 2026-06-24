@@ -4,10 +4,10 @@ import { ArrowRight, Coffee, PackageCheck, Truck } from "lucide-react";
 import { InfoBand } from "@/components/InfoBand";
 import { ProductOrder } from "@/components/ProductOrder";
 import { businessConfig } from "@/config/business";
-import { products } from "@/data/products";
 import { defaultLocale, getDictionary, isLocale, locales, type Locale } from "@/i18n/config";
+import { getProducts } from "@/lib/product-store";
 
-const featuredProducts = products.filter((product) => product.featured);
+export const dynamic = "force-dynamic";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -17,6 +17,7 @@ export default async function HomePage({ params }: { params: Promise<unknown> })
   const { locale: rawLocale } = (await params) as { locale?: string };
   const locale: Locale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const dictionary = getDictionary(locale);
+  const featuredProducts = (await getProducts()).filter((product) => product.featured);
 
   return (
     <>

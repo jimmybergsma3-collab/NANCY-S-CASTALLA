@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { MessageCircle, Minus, Plus, ShoppingBasket } from "lucide-react";
+import { MailCheck, MessageCircle, Minus, Plus, Send, ShoppingBasket } from "lucide-react";
 import type { Product, ProductCategory } from "@/types/product";
 import { buildWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { formatEuro } from "@/lib/pricing";
@@ -19,6 +19,12 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
   const [category, setCategory] = useState<ProductCategory | "All">(initialCategory);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [fulfillment, setFulfillment] = useState<"Collection" | "Local delivery">("Collection");
+  const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [notes, setNotes] = useState("");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [message, setMessage] = useState("");
 
   const categories = useMemo(() => ["All", ...Array.from(new Set(products.map((product) => product.category)))] as const, [products]);
   const visibleProducts = category === "All" ? products : products.filter((product) => product.category === category);
@@ -30,6 +36,49 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
 
   function updateQuantity(id: string, nextQuantity: number) {
     setQuantities((current) => ({ ...current, [id]: Math.max(0, nextQuantity) }));
+  }
+
+  async function submitOrder(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setStatus("sending");
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName,
+          customerEmail,
+          customerPhone,
+          fulfillment,
+          notes,
+          total,
+          lines: cartLines.map((line) => ({
+            productId: line.product.id,
+            name: line.product.name,
+            quantity: line.quantity,
+            unit: line.product.unit,
+            salePriceInclVat: line.product.salePriceInclVat,
+          })),
+        }),
+      });
+      const result = (await response.json()) as { ok: boolean; message?: string; orderId?: string; emailed?: boolean };
+
+      if (!response.ok || !result.ok) {
+        throw new Error(result.message || "Order could not be sent.");
+      }
+
+      setStatus("sent");
+      setMessage(
+        result.emailed
+          ? `Order ${result.orderId} sent. Please check your email.`
+          : `Order ${result.orderId} received. Email provider is not configured yet.`,
+      );
+    } catch (error) {
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : "Order could not be sent.");
+    }
   }
 
   return (
@@ -145,13 +194,53 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
             {formatEuro(businessConfig.deliveryFee)} within around {businessConfig.deliveryRadiusKm} km when possible.
           </p>
         </div>
+        <form className="mt-5 space-y-3" onSubmit={submitOrder}>
+          <input
+            className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm text-forest outline-none focus:border-forest"
+            onChange={(event) => setCustomerName(event.target.value)}
+            placeholder="Name"
+            required
+            value={customerName}
+          />
+          <input
+            className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm text-forest outline-none focus:border-forest"
+            onChange={(event) => setCustomerEmail(event.target.value)}
+            placeholder="Email for confirmation"
+            required
+            type="email"
+            value={customerEmail}
+          />
+          <input
+            className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm text-forest outline-none focus:border-forest"
+            onChange={(event) => setCustomerPhone(event.target.value)}
+            placeholder="Phone / WhatsApp"
+            value={customerPhone}
+          />
+          <textarea
+            className="min-h-20 w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm text-forest outline-none focus:border-forest"
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="Notes, preferred time or delivery address"
+            value={notes}
+          />
+          <button
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-forest px-5 py-3 text-sm font-bold text-cream shadow-soft transition hover:bg-leaf disabled:opacity-50"
+            disabled={status === "sending" || cartLines.length === 0}
+            type="submit"
+          >
+            {status === "sent" ? <MailCheck size={18} /> : <Send size={18} />}
+            {status === "sending" ? "Sending..." : "Send order request"}
+          </button>
+        </form>
+        {message ? (
+          <p className={`mt-3 text-xs leading-5 ${status === "error" ? "text-red-700" : "text-forest/75"}`}>{message}</p>
+        ) : null}
         <a
-          className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-forest px-5 py-3 text-sm font-bold text-cream shadow-soft transition hover:bg-leaf"
+          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-forest/20 bg-white px-5 py-3 text-sm font-bold text-forest transition hover:border-forest"
           href={whatsAppUrl}
           target="_blank"
         >
           <MessageCircle size={18} />
-          {dictionary.common.orderViaWhatsApp}
+          {businessConfig.whatsappCtaLabel}
         </a>
         <p className="mt-4 text-xs leading-5 text-forest/65">
           {dictionary.order.after}

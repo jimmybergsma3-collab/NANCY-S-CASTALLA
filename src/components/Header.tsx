@@ -14,6 +14,8 @@ export function Header({ locale = defaultLocale }: { locale?: Locale }) {
     { href: `/${locale}/collection-delivery`, label: dictionary.nav.delivery },
     { href: `/${locale}/about`, label: dictionary.nav.about },
     { href: `/${locale}/contact`, label: dictionary.nav.contact },
+    { href: `/${locale}/register`, label: dictionary.nav.register },
+    { href: `/${locale}/admin/products`, label: dictionary.nav.admin },
   ];
 
   return (
@@ -39,7 +41,7 @@ export function Header({ locale = defaultLocale }: { locale?: Locale }) {
             href={`https://wa.me/${businessConfig.whatsappNumber.replace(/\D/g, "")}`}
           >
             <MessageCircle size={17} />
-            {dictionary.common.whatsapp}
+            {businessConfig.whatsappCtaLabel}
           </a>
         </div>
       </div>

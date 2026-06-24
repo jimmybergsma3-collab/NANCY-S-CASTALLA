@@ -1,13 +1,14 @@
 import { ProductOrder } from "@/components/ProductOrder";
-import { products } from "@/data/products";
 import { defaultLocale, getDictionary, isLocale, type Locale } from "@/i18n/config";
+import { getProducts } from "@/lib/product-store";
 
-const breadProducts = products.filter((product) => product.category === "Bread & bakery");
+export const dynamic = "force-dynamic";
 
 export default async function BreadPage({ params }: { params: Promise<unknown> }) {
   const { locale: rawLocale } = (await params) as { locale?: string };
   const locale: Locale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const dictionary = getDictionary(locale);
+  const breadProducts = (await getProducts()).filter((product) => product.category === "Bread & bakery");
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-12">

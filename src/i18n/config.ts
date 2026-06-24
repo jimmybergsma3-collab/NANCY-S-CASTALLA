@@ -33,6 +33,8 @@ export const dictionaries = {
       delivery: "Collection & delivery",
       about: "About",
       contact: "Contact",
+      register: "Register",
+      admin: "Admin",
     },
     common: {
       phase: "Starting soon / pre-order phase",
@@ -119,6 +121,8 @@ export const dictionaries = {
       delivery: "Afhalen & bezorgen",
       about: "Over ons",
       contact: "Contact",
+      register: "Registreren",
+      admin: "Admin",
     },
     common: {
       phase: "Binnenkort open / pre-order fase",
@@ -205,6 +209,8 @@ export const dictionaries = {
       delivery: "Abholung & Lieferung",
       about: "Über uns",
       contact: "Kontakt",
+      register: "Registrieren",
+      admin: "Admin",
     },
     common: {
       phase: "Startet bald / Vorbestellphase",
@@ -291,6 +297,8 @@ export const dictionaries = {
       delivery: "Recogida y entrega",
       about: "Sobre Nancy's",
       contact: "Contacto",
+      register: "Registro",
+      admin: "Admin",
     },
     common: {
       phase: "Próximamente / fase de prepedido",
@@ -377,6 +385,8 @@ export const dictionaries = {
       delivery: "Collection & delivery",
       about: "About",
       contact: "Contact",
+      register: "Register",
+      admin: "Admin",
     },
     common: {
       phase: "Starting soon / pre-order phase",

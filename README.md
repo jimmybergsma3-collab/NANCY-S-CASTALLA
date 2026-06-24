@@ -20,3 +20,13 @@ npm run dev
 ## Deploy
 
 Import this folder into Vercel. No database or Stripe setup is required for version 1.
+
+## Admin, orders and email
+
+Version 2 is prepared for Supabase and Resend:
+
+- Run `supabase-schema.sql` in Supabase SQL editor.
+- Add the values from `.env.example` to Vercel environment variables.
+- Admin products page: `/en/admin/products`.
+- Customer registration page: `/en/register`.
+- Orders are sent through `/api/orders` and email is sent through Resend when `RESEND_API_KEY` is configured.

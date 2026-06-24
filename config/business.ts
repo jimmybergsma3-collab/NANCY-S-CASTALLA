@@ -4,11 +4,14 @@ export const businessConfig = {
   address: "Calle Murcia 111, 03420 Castalla",
   whatsappNumber: "+34694269389",
   displayWhatsappNumber: "+34 694 26 93 89",
+  orderEmail: "orders@nancyscastalla.com",
+  fromEmail: "Nancy's Castalla <orders@nancyscastalla.com>",
   bankAccount: "Add bank account details here",
   bizumNumber: "+34 694 26 93 89",
   deliveryMinimum: 25,
   deliveryRadiusKm: 15,
   deliveryFee: 3.5,
+  whatsappCtaLabel: "Order support",
   openingTexts: {
     headline: "International food, coffee and pre-orders for expats around Castalla.",
     shortIntro:
