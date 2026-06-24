@@ -28,7 +28,7 @@ Version 2 is prepared for Supabase and Resend:
 - Run `supabase-schema.sql` in Supabase SQL editor.
 - Add the values from `.env.example` to Vercel environment variables.
 - Supabase URL is `https://kylianmqyewlfoypcjve.supabase.co`.
-- Find `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` in Supabase project settings under API keys.
+- Add `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SERVICE_ROLE_KEY` from Supabase project settings under API keys.
 - If you install Supabase CLI, link this project with:
 
 ```bash

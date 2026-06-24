@@ -1,6 +1,7 @@
 export const env = {
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
-  supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+  supabasePublishableKey:
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
   resendApiKey: process.env.RESEND_API_KEY ?? "",
   adminEmail: process.env.ADMIN_EMAIL ?? "",
@@ -14,7 +15,7 @@ export function hasSupabaseAdmin() {
 }
 
 export function hasSupabasePublic() {
-  return Boolean(env.supabaseUrl && env.supabaseAnonKey);
+  return Boolean(env.supabaseUrl && env.supabasePublishableKey);
 }
 
 export function hasEmailProvider() {

@@ -36,14 +36,14 @@ export async function supabaseAdminFetch<T>(path: string, options: RequestOption
 }
 
 export async function supabaseAuthSignup(input: { email: string; password: string; name: string }) {
-  if (!env.supabaseUrl || !env.supabaseAnonKey) {
+  if (!env.supabaseUrl || !env.supabasePublishableKey) {
     throw new Error("Supabase public environment variables are not configured.");
   }
 
   const response = await fetch(`${env.supabaseUrl}/auth/v1/signup`, {
     method: "POST",
     headers: {
-      apikey: env.supabaseAnonKey,
+      apikey: env.supabasePublishableKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
