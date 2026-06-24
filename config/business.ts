@@ -15,7 +15,7 @@ export const businessConfig = {
   openingTexts: {
     headline: "International food, coffee and pre-orders for expats around Castalla.",
     shortIntro:
-      "A warm small-stock market concept with Dutch, British, Irish and European favourites, plus bread by pre-order and local delivery when possible.",
+      "A warm small-stock market concept with Dutch, British, Irish, European and South American favourites, plus bread by pre-order and local delivery when possible.",
     preorderNote:
       "Bread is available by pre-order when minimum demand is reached.",
     stockNote:

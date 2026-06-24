@@ -48,11 +48,11 @@ export const dictionaries = {
     home: {
       headline: "International food, coffee and pre-orders for expats around Castalla.",
       intro:
-        "A warm small-stock market concept with Dutch, British, Irish and European favourites, plus bread by pre-order and local delivery when possible.",
+        "A warm small-stock market concept with Dutch, British, Irish, European and South American favourites, plus bread by pre-order and local delivery when possible.",
       shop: "Shop starter products",
       bread: "Bread pre-orders",
       cardTitle: "International foods, coffee, bread and drinks",
-      cardText: "Premium, warm and practical for British, Dutch, Irish and European expats around Castalla.",
+      cardText: "Premium, warm and practical for British, Dutch, Irish, European and South American expats around Castalla.",
       featured: "Featured products",
       starterRange: "Starter range",
       viewAll: "View all products",
@@ -66,7 +66,7 @@ export const dictionaries = {
       eyebrow: "Starter product selection",
       title: "Products",
       intro:
-        "A focused first range for a small expat shop: Dutch snacks, British and Irish favourites, bakery pre-orders, breakfast products, coffee, drinks and condiments.",
+        "A focused first range for a small expat shop: Dutch snacks, British and Irish favourites, South American pantry items, bakery pre-orders, breakfast products, coffee, drinks and condiments.",
     },
     bread: {
       eyebrow: "Bread on pre-order",
@@ -93,7 +93,7 @@ export const dictionaries = {
       p1:
         "Nancy's Castalla is starting as a professional but simple international food concept for expats around Castalla: practical groceries, familiar snacks, coffee, bread by pre-order and flexible collection or delivery.",
       p2:
-        "The summer focus is British, Dutch, Irish and wider European favourites. South American products are planned as a later expansion, once the first ordering rhythm and demand are clear.",
+        "The first focus combines British, Dutch, Irish and wider European favourites with a growing South American selection. The South American range starts limited and expands once demand is clear.",
       p3:
         "The site is built for a small-stock launch: no checkout, no database and no complicated account system. Customers choose products, send a WhatsApp message and receive confirmation before payment.",
     },
@@ -136,11 +136,11 @@ export const dictionaries = {
     home: {
       headline: "Internationale producten, koffie en pre-orders voor expats rond Castalla.",
       intro:
-        "Een warm marktconcept met kleine voorraad, Nederlandse, Britse, Ierse en Europese favorieten, brood op bestelling en lokale bezorging wanneer mogelijk.",
+        "Een warm marktconcept met kleine voorraad, Nederlandse, Britse, Ierse, Europese en Zuid-Amerikaanse favorieten, brood op bestelling en lokale bezorging wanneer mogelijk.",
       shop: "Bekijk starterproducten",
       bread: "Brood bestellen",
       cardTitle: "Internationale producten, koffie, brood en dranken",
-      cardText: "Premium, warm en praktisch voor Britse, Nederlandse, Ierse en Europese expats rond Castalla.",
+      cardText: "Premium, warm en praktisch voor Britse, Nederlandse, Ierse, Europese en Zuid-Amerikaanse expats rond Castalla.",
       featured: "Uitgelichte producten",
       starterRange: "Starterselectie",
       viewAll: "Alle producten",
@@ -154,7 +154,7 @@ export const dictionaries = {
       eyebrow: "Starterselectie",
       title: "Producten",
       intro:
-        "Een gerichte eerste selectie voor een kleine expatwinkel: Nederlandse snacks, Britse en Ierse favorieten, brood op bestelling, ontbijtproducten, koffie, dranken en sauzen.",
+        "Een gerichte eerste selectie voor een kleine expatwinkel: Nederlandse snacks, Britse en Ierse favorieten, Zuid-Amerikaanse voorraadproducten, brood op bestelling, ontbijtproducten, koffie, dranken en sauzen.",
     },
     bread: {
       eyebrow: "Brood op bestelling",
@@ -181,7 +181,7 @@ export const dictionaries = {
       p1:
         "Nancy's Castalla start als professioneel maar eenvoudig internationaal foodconcept voor expats rond Castalla: praktische boodschappen, bekende snacks, koffie, brood op bestelling en flexibel afhalen of bezorgen.",
       p2:
-        "De zomerfocus ligt op Britse, Nederlandse, Ierse en bredere Europese favorieten. Zuid-Amerikaanse producten zijn gepland als latere uitbreiding.",
+        "De eerste focus combineert Britse, Nederlandse, Ierse en bredere Europese favorieten met een groeiende Zuid-Amerikaanse selectie. Het Zuid-Amerikaanse assortiment start beperkt en groeit mee met de vraag.",
       p3:
         "De site is gebouwd voor een start met kleine voorraad: geen checkout, geen database en geen ingewikkelde accounts. Klanten kiezen producten, sturen WhatsApp en krijgen bevestiging voor betaling.",
     },
@@ -400,11 +400,11 @@ export const dictionaries = {
     home: {
       headline: "International food, coffee and pre-orders for Nordic expats around Castalla.",
       intro:
-        "A warm small-stock market concept with European favourites, bread by pre-order and local delivery when possible.",
+        "A warm small-stock market concept with European and South American favourites, bread by pre-order and local delivery when possible.",
       shop: "Shop starter products",
       bread: "Bread pre-orders",
       cardTitle: "International foods, coffee, bread and drinks",
-      cardText: "Premium, warm and practical for Nordic and European expats around Castalla.",
+      cardText: "Premium, warm and practical for Nordic, European and South American expats around Castalla.",
       featured: "Featured products",
       starterRange: "Starter range",
       viewAll: "View all products",
@@ -418,7 +418,7 @@ export const dictionaries = {
       eyebrow: "Starter product selection",
       title: "Products",
       intro:
-        "A focused first range for a small expat shop: Dutch snacks, British and Irish favourites, bakery pre-orders, breakfast products, coffee, drinks and condiments.",
+        "A focused first range for a small expat shop: Dutch snacks, British and Irish favourites, South American pantry items, bakery pre-orders, breakfast products, coffee, drinks and condiments.",
     },
     bread: {
       eyebrow: "Bread on pre-order",
@@ -445,7 +445,7 @@ export const dictionaries = {
       p1:
         "Nancy's Castalla is starting as a professional but simple international food concept for expats around Castalla: practical groceries, familiar snacks, coffee, bread by pre-order and flexible collection or delivery.",
       p2:
-        "The summer focus is British, Dutch, Irish and wider European favourites. South American products are planned as a later expansion, once the first ordering rhythm and demand are clear.",
+        "The first focus combines British, Dutch, Irish and wider European favourites with a growing South American selection. The South American range starts limited and expands once demand is clear.",
       p3:
         "The site is built for a small-stock launch: no checkout, no database and no complicated account system. Customers choose products, send a WhatsApp message and receive confirmation before payment.",
     },
