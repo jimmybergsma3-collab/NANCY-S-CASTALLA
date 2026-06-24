@@ -1,0 +1,12 @@
+.next
+node_modules
+out
+dist
+work
+outputs
+.agents
+.codex
+tsconfig.tsbuildinfo
+.env*
+!.env.example
+*.log
