@@ -84,19 +84,24 @@ export function AdminProductManager() {
 
   async function saveProduct(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const response = await fetch("/api/admin/products", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(product),
-    });
-    const result = (await response.json()) as { ok: boolean; message?: string; product?: Product };
-    if (!response.ok || !result.ok) {
+    const result = await saveProductPayload(product);
+    if (!result.ok) {
       setMessage(result.message || "Product could not be saved.");
       return;
     }
     setMessage(isEditing ? "Product updated." : "Product saved.");
     setProduct(defaultProduct);
     await loadProducts();
+  }
+
+  async function saveProductPayload(nextProduct: Product) {
+    const response = await fetch("/api/admin/products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(nextProduct),
+    });
+    const result = (await response.json()) as { ok: boolean; message?: string; product?: Product };
+    return response.ok ? result : { ...result, ok: false };
   }
 
   async function uploadImage() {
@@ -123,9 +128,20 @@ export function AdminProductManager() {
         throw new Error(result.message || "Photo could not be uploaded.");
       }
 
-      update("imageUrl", result.imageUrl);
+      const nextProduct = { ...product, imageUrl: result.imageUrl };
+      setProduct(nextProduct);
       setSelectedImage(null);
-      setMessage("Photo uploaded. Click Save/Update product to store it.");
+
+      if (isEditing) {
+        const saveResult = await saveProductPayload(nextProduct);
+        if (!saveResult.ok) {
+          throw new Error(saveResult.message || "Photo uploaded, but product could not be updated.");
+        }
+        setMessage("Photo uploaded and product updated.");
+        await loadProducts();
+      } else {
+        setMessage("Photo uploaded. Complete the product fields and click Save product.");
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Photo could not be uploaded.");
     } finally {
@@ -232,7 +248,7 @@ export function AdminProductManager() {
         <div className="mt-4 rounded-lg border border-forest/10 bg-linen p-4">
           <span className="text-sm font-bold text-forest">Upload product photo</span>
           <p className="mt-1 text-xs leading-5 text-forest/60">
-            Choose a JPG, PNG or WebP from your computer. Maximum 5MB. After upload, click Save/Update product.
+            Choose a JPG, PNG or WebP from your computer. Maximum 5MB. Existing products are updated automatically.
           </p>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row">
             <input

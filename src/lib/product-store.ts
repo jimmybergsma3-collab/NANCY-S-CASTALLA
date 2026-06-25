@@ -89,6 +89,11 @@ export async function getProducts() {
   }
 }
 
+export async function getProductById(id: string) {
+  const products = await getProducts();
+  return products.find((product) => product.id.toLowerCase() === id.toLowerCase());
+}
+
 export async function createProduct(product: Product) {
   const rows = await supabaseAdminFetch<ProductRow[]>("products?on_conflict=id", {
     method: "POST",

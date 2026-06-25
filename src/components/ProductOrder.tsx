@@ -2,7 +2,8 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useMemo, useState } from "react";
-import { MailCheck, MessageCircle, Minus, Plus, Send, ShoppingBasket } from "lucide-react";
+import Link from "next/link";
+import { MailCheck, MessageCircle, Minus, Plus, Search, Send, ShoppingBasket } from "lucide-react";
 import type { Product, ProductCategory } from "@/types/product";
 import { buildWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { formatEuro } from "@/lib/pricing";
@@ -24,11 +25,22 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [message, setMessage] = useState("");
 
   const categories = useMemo(() => ["All", ...Array.from(new Set(products.map((product) => product.category)))] as const, [products]);
-  const visibleProducts = category === "All" ? products : products.filter((product) => product.category === category);
+  const visibleProducts = (category === "All" ? products : products.filter((product) => product.category === category)).filter((product) => {
+    const query = search.trim().toLowerCase();
+    if (!query) {
+      return true;
+    }
+
+    return [product.id, product.name, product.description, product.category, product.origin, product.supplierCode]
+      .join(" ")
+      .toLowerCase()
+      .includes(query);
+  });
   const cartLines = products
     .map((product) => ({ product, quantity: quantities[product.id] ?? 0 }))
     .filter((line) => line.quantity > 0);
@@ -85,6 +97,16 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
       <div>
+        <label className="mb-4 flex items-center gap-3 rounded-full border border-forest/15 bg-white px-4 py-3 text-forest shadow-soft">
+          <Search size={18} />
+          <input
+            className="w-full bg-transparent text-sm outline-none placeholder:text-forest/45"
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by product name or product code"
+            type="search"
+            value={search}
+          />
+        </label>
         <div className="mb-5 flex gap-2 overflow-x-auto pb-2">
           {categories.map((item) => (
             <button
@@ -102,27 +124,46 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
           ))}
         </div>
         <div className="grid gap-4 md:grid-cols-2">
+          {visibleProducts.length === 0 ? (
+            <div className="rounded-lg border border-forest/10 bg-white p-6 text-sm text-forest/70 shadow-soft md:col-span-2">
+              No products found. Try another product name, category or product code.
+            </div>
+          ) : null}
           {visibleProducts.map((product) => {
             const quantity = quantities[product.id] ?? 0;
             const disabled = product.stockStatus === "coming-soon";
+            const productHref = `/${locale}/products/${encodeURIComponent(product.id)}`;
 
             return (
-              <article key={product.id} className="rounded-lg border border-forest/10 bg-white p-5 shadow-soft">
+              <article
+                key={product.id}
+                className="group rounded-lg border border-forest/10 bg-white p-5 shadow-soft transition hover:-translate-y-0.5 hover:border-brass/50"
+              >
                 {product.imageUrl ? (
-                  <div className="mb-4 aspect-[4/3] overflow-hidden rounded-md bg-cream">
+                  <Link className="mb-4 block aspect-[4/3] overflow-hidden rounded-md bg-cream" href={productHref}>
                     <img alt={product.name} className="h-full w-full object-cover" src={product.imageUrl} />
-                  </div>
+                  </Link>
                 ) : null}
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.16em] text-coffee">{product.category}</p>
-                    <h3 className="mt-2 font-serif text-2xl font-bold text-forest">{product.name}</h3>
+                    <Link href={productHref}>
+                      <h3 className="mt-2 font-serif text-2xl font-bold text-forest transition group-hover:text-coffee">
+                        {product.name}
+                      </h3>
+                    </Link>
                   </div>
                   <span className="rounded-full bg-cream px-3 py-1 text-xs font-bold capitalize text-forest">
                     {product.stockStatus.replace("-", " ")}
                   </span>
                 </div>
                 <p className="mt-3 min-h-12 text-sm leading-6 text-forest/75">{product.description}</p>
+                <Link
+                  className="mt-3 inline-flex text-sm font-bold text-coffee underline-offset-4 hover:underline"
+                  href={productHref}
+                >
+                  View product details
+                </Link>
                 <div className="mt-5 flex items-center justify-between gap-4">
                   <div>
                     <div className="text-xl font-bold text-forest">
