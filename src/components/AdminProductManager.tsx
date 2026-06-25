@@ -52,6 +52,8 @@ export function AdminProductManager() {
   const [products, setProducts] = useState<Product[]>([]);
   const [product, setProduct] = useState<Product>(defaultProduct);
   const [message, setMessage] = useState("");
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const pricing = calculatePricing(product);
   const isEditing = products.some((item) => item.id === product.id);
 
@@ -97,6 +99,40 @@ export function AdminProductManager() {
     await loadProducts();
   }
 
+  async function uploadImage() {
+    if (!selectedImage) {
+      setMessage("Choose a photo first.");
+      return;
+    }
+
+    setUploading(true);
+    setMessage("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedImage);
+      formData.append("productId", product.id || product.name || "product");
+
+      const response = await fetch("/api/admin/upload-product-image", {
+        method: "POST",
+        body: formData,
+      });
+      const result = (await response.json()) as { ok: boolean; imageUrl?: string; message?: string };
+
+      if (!response.ok || !result.ok || !result.imageUrl) {
+        throw new Error(result.message || "Photo could not be uploaded.");
+      }
+
+      update("imageUrl", result.imageUrl);
+      setSelectedImage(null);
+      setMessage("Photo uploaded. Click Save/Update product to store it.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Photo could not be uploaded.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   function update<K extends keyof Product>(key: K, value: Product[K]) {
     setProduct((current) => ({ ...current, [key]: value }));
   }
@@ -137,7 +173,7 @@ export function AdminProductManager() {
           <Field help="The name customers see on the website." label="Product name">
             <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("name", event.target.value)} placeholder="Frikandel" required value={product.name} />
           </Field>
-          <Field help="Paste a public image URL. For Supabase Storage: upload image, copy public URL, paste here." label="Product photo URL">
+          <Field help="You can paste a public URL, or upload a file from your computer below." label="Product photo URL">
             <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("imageUrl", event.target.value)} placeholder="https://..." type="url" value={product.imageUrl ?? ""} />
           </Field>
           <Field help="How it is sold. Example: 6 pieces, 1kg bag, 415g tin." label="Unit / packaging">
@@ -192,6 +228,28 @@ export function AdminProductManager() {
         <div className="mt-4 rounded-lg bg-cream p-4 text-sm text-forest">
           <strong>Margin preview:</strong> estimated profit {formatEuro(pricing.profitPerUnit)} per unit, margin{" "}
           {pricing.marginPercent}%.
+        </div>
+        <div className="mt-4 rounded-lg border border-forest/10 bg-linen p-4">
+          <span className="text-sm font-bold text-forest">Upload product photo</span>
+          <p className="mt-1 text-xs leading-5 text-forest/60">
+            Choose a JPG, PNG or WebP from your computer. Maximum 5MB. After upload, click Save/Update product.
+          </p>
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+            <input
+              accept="image/*"
+              className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm"
+              onChange={(event) => setSelectedImage(event.target.files?.[0] ?? null)}
+              type="file"
+            />
+            <button
+              className="rounded-full bg-coffee px-5 py-2 text-sm font-bold text-white disabled:opacity-50"
+              disabled={uploading || !selectedImage}
+              onClick={uploadImage}
+              type="button"
+            >
+              {uploading ? "Uploading..." : "Upload photo"}
+            </button>
+          </div>
         </div>
         <Field help="Short product text customers see on the product card." label="Description">
           <textarea className="min-h-24 w-full rounded-lg border px-3 py-2" onChange={(event) => update("description", event.target.value)} placeholder="Classic Dutch frozen snack, available by pre-order." required value={product.description} />

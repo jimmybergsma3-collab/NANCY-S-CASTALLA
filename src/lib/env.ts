@@ -8,6 +8,7 @@ export const env = {
   adminPassword: process.env.ADMIN_PASSWORD ?? "",
   orderEmail: process.env.ORDER_EMAIL ?? "orders@nancyscastalla.com",
   fromEmail: process.env.FROM_EMAIL ?? "Nancy's Castalla <orders@nancyscastalla.com>",
+  productImagesBucket: process.env.PRODUCT_IMAGES_BUCKET ?? "product-images",
 };
 
 export function hasSupabaseAdmin() {
