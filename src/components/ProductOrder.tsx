@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import { useMemo, useState } from "react";
 import { MailCheck, MessageCircle, Minus, Plus, Send, ShoppingBasket } from "lucide-react";
@@ -107,6 +108,11 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
 
             return (
               <article key={product.id} className="rounded-lg border border-forest/10 bg-white p-5 shadow-soft">
+                {product.imageUrl ? (
+                  <div className="mb-4 aspect-[4/3] overflow-hidden rounded-md bg-cream">
+                    <img alt={product.name} className="h-full w-full object-cover" src={product.imageUrl} />
+                  </div>
+                ) : null}
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.16em] text-coffee">{product.category}</p>

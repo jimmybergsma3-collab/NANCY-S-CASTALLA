@@ -7,6 +7,7 @@ import { calculatePricing, formatEuro } from "@/lib/pricing";
 const defaultProduct: Product = {
   id: "",
   name: "",
+  imageUrl: "",
   category: "British & Irish products",
   description: "",
   price: 0,
@@ -52,6 +53,7 @@ export function AdminProductManager() {
   const [product, setProduct] = useState<Product>(defaultProduct);
   const [message, setMessage] = useState("");
   const pricing = calculatePricing(product);
+  const isEditing = products.some((item) => item.id === product.id);
 
   async function loadProducts() {
     const response = await fetch("/api/admin/products");
@@ -90,7 +92,7 @@ export function AdminProductManager() {
       setMessage(result.message || "Product could not be saved.");
       return;
     }
-    setMessage("Product saved.");
+    setMessage(isEditing ? "Product updated." : "Product saved.");
     setProduct(defaultProduct);
     await loadProducts();
   }
@@ -114,7 +116,14 @@ export function AdminProductManager() {
   return (
     <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_420px]">
       <form className="rounded-lg border border-forest/10 bg-white p-6 shadow-soft" onSubmit={saveProduct}>
-        <h2 className="font-serif text-3xl font-bold text-forest">Add product manually</h2>
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <h2 className="font-serif text-3xl font-bold text-forest">{isEditing ? "Edit product" : "Add product manually"}</h2>
+          {isEditing ? (
+            <button className="rounded-full border border-forest/20 px-4 py-2 text-sm font-bold text-forest" onClick={() => setProduct(defaultProduct)} type="button">
+              New product
+            </button>
+          ) : null}
+        </div>
         <p className="mt-2 text-sm leading-6 text-forest/70">
           Use product codes for your own shop codes and supplier codes for codes from the wholesaler invoice or catalogue.
         </p>
@@ -127,6 +136,9 @@ export function AdminProductManager() {
           </Field>
           <Field help="The name customers see on the website." label="Product name">
             <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("name", event.target.value)} placeholder="Frikandel" required value={product.name} />
+          </Field>
+          <Field help="Paste a public image URL. For Supabase Storage: upload image, copy public URL, paste here." label="Product photo URL">
+            <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("imageUrl", event.target.value)} placeholder="https://..." type="url" value={product.imageUrl ?? ""} />
           </Field>
           <Field help="How it is sold. Example: 6 pieces, 1kg bag, 415g tin." label="Unit / packaging">
             <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("unit", event.target.value)} placeholder="6 pieces / 1kg / 1 tin" required value={product.unit} />
@@ -184,18 +196,47 @@ export function AdminProductManager() {
         <Field help="Short product text customers see on the product card." label="Description">
           <textarea className="min-h-24 w-full rounded-lg border px-3 py-2" onChange={(event) => update("description", event.target.value)} placeholder="Classic Dutch frozen snack, available by pre-order." required value={product.description} />
         </Field>
-        <button className="mt-4 rounded-full bg-forest px-5 py-3 font-bold text-cream" type="submit">Save product</button>
+        {product.imageUrl ? (
+          <div className="mt-4 overflow-hidden rounded-lg border border-forest/10 bg-linen">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img alt={`${product.name || "Product"} preview`} className="h-48 w-full object-cover" src={product.imageUrl} />
+          </div>
+        ) : null}
+        <button className="mt-4 rounded-full bg-forest px-5 py-3 font-bold text-cream" type="submit">
+          {isEditing ? "Update product" : "Save product"}
+        </button>
         {message ? <p className="mt-3 text-sm text-forest/75">{message}</p> : null}
       </form>
       <aside className="rounded-lg border border-forest/10 bg-cream p-6 shadow-soft">
         <h2 className="font-serif text-3xl font-bold text-forest">Current products</h2>
+        <p className="mt-2 text-sm text-forest/65">Click a product to edit it.</p>
         <div className="mt-4 max-h-[640px] space-y-3 overflow-auto">
           {products.map((item) => (
-            <div className="rounded-lg bg-white p-3 text-sm" key={item.id}>
-              <div className="font-bold text-forest">{item.name}</div>
-              <div className="text-forest/65">{item.id} / {item.supplierCode}</div>
-              <div className="font-bold text-coffee">{formatEuro(item.salePriceInclVat)}</div>
-            </div>
+            <button
+              className={`w-full rounded-lg bg-white p-3 text-left text-sm transition hover:ring-2 hover:ring-brass ${
+                item.id === product.id ? "ring-2 ring-forest" : ""
+              }`}
+              key={item.id}
+              onClick={() => {
+                setProduct({ ...defaultProduct, ...item });
+                setMessage("");
+              }}
+              type="button"
+            >
+              <div className="flex gap-3">
+                {item.imageUrl ? (
+                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md bg-cream">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img alt="" className="h-full w-full object-cover" src={item.imageUrl} />
+                  </div>
+                ) : null}
+                <div>
+                  <div className="font-bold text-forest">{item.name}</div>
+                  <div className="text-forest/65">{item.id} / {item.supplierCode}</div>
+                  <div className="font-bold text-coffee">{formatEuro(item.salePriceInclVat)}</div>
+                </div>
+              </div>
+            </button>
           ))}
         </div>
       </aside>

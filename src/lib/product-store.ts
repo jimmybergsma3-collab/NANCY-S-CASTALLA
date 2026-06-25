@@ -6,6 +6,7 @@ import { supabaseAdminFetch } from "./supabase-rest";
 type ProductRow = {
   id: string;
   name: string;
+  image_url?: string;
   category: Product["category"];
   description: string;
   price: number;
@@ -29,6 +30,7 @@ export function rowToProduct(row: ProductRow): Product {
   return {
     id: row.id,
     name: row.name,
+    imageUrl: row.image_url ?? "",
     category: row.category,
     description: row.description,
     price: row.price,
@@ -53,6 +55,7 @@ export function productToRow(product: Product): ProductRow {
   return {
     id: product.id,
     name: product.name,
+    image_url: product.imageUrl ?? "",
     category: product.category,
     description: product.description,
     price: product.price,
@@ -87,9 +90,10 @@ export async function getProducts() {
 }
 
 export async function createProduct(product: Product) {
-  const rows = await supabaseAdminFetch<ProductRow[]>("products", {
+  const rows = await supabaseAdminFetch<ProductRow[]>("products?on_conflict=id", {
     method: "POST",
     body: productToRow(product),
+    prefer: "resolution=merge-duplicates,return=representation",
   });
   return rowToProduct(rows[0]);
 }

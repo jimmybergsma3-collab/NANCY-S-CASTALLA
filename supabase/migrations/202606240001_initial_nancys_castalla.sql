@@ -1,6 +1,7 @@
 create table if not exists products (
   id text primary key,
   name text not null,
+  image_url text not null default '',
   category text not null,
   description text not null,
   price numeric not null default 0,
@@ -46,3 +47,5 @@ create table if not exists order_items (
 alter table products enable row level security;
 alter table orders enable row level security;
 alter table order_items enable row level security;
+
+alter table products add column if not exists image_url text not null default '';
