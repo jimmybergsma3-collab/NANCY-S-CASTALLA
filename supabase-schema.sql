@@ -19,6 +19,7 @@ create table if not exists products (
   supplier_code text not null default '',
   pack_size text not null default '',
   unit_cost numeric not null default 0,
+  package_options jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now()
 );
 
@@ -41,6 +42,8 @@ create table if not exists order_items (
   product_name text not null,
   quantity integer not null,
   unit text not null,
+  package_label text not null default '',
+  package_quantity numeric not null default 1,
   sale_price_incl_vat numeric not null default 0
 );
 
@@ -49,6 +52,9 @@ alter table orders enable row level security;
 alter table order_items enable row level security;
 
 alter table products add column if not exists image_url text not null default '';
+alter table products add column if not exists package_options jsonb not null default '[]'::jsonb;
+alter table order_items add column if not exists package_label text not null default '';
+alter table order_items add column if not exists package_quantity numeric not null default 1;
 
 insert into storage.buckets (id, name, public)
 values ('product-images', 'product-images', true)

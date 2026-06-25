@@ -24,6 +24,7 @@ type ProductRow = {
   supplier_code: string;
   pack_size: string;
   unit_cost: number;
+  package_options?: Product["packageOptions"];
 };
 
 export function rowToProduct(row: ProductRow): Product {
@@ -48,6 +49,7 @@ export function rowToProduct(row: ProductRow): Product {
     supplierCode: row.supplier_code,
     packSize: row.pack_size,
     unitCost: row.unit_cost,
+    packageOptions: row.package_options ?? [],
   };
 }
 
@@ -73,6 +75,7 @@ export function productToRow(product: Product): ProductRow {
     supplier_code: product.supplierCode,
     pack_size: product.packSize,
     unit_cost: product.unitCost,
+    package_options: product.packageOptions ?? [],
   };
 }
 

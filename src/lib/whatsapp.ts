@@ -4,13 +4,15 @@ import type { Product } from "@/types/product";
 export type CartLine = {
   product: Product;
   quantity: number;
+  unit?: string;
+  salePriceInclVat?: number;
 };
 
 export function buildWhatsAppMessage(lines: CartLine[], fulfillment: "Collection" | "Local delivery") {
   const selected = lines.filter((line) => line.quantity > 0);
-  const total = selected.reduce((sum, line) => sum + line.product.salePriceInclVat * line.quantity, 0);
+  const total = selected.reduce((sum, line) => sum + (line.salePriceInclVat ?? line.product.salePriceInclVat) * line.quantity, 0);
   const productLines = selected
-    .map((line) => `- ${line.quantity} x ${line.product.name} (${line.product.unit})`)
+    .map((line) => `- ${line.quantity} x ${line.product.name} (${line.unit ?? line.product.unit})`)
     .join("\n");
 
   return [

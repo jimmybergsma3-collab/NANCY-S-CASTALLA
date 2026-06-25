@@ -25,7 +25,30 @@ const defaultProduct: Product = {
   supplierCode: "",
   packSize: "",
   unitCost: 0,
+  packageOptions: [],
 };
+
+function packageOptionsToText(product: Product) {
+  return (product.packageOptions ?? [])
+    .map((option) => `${option.label} | ${option.quantity} | ${option.salePriceInclVat}`)
+    .join("\n");
+}
+
+function textToPackageOptions(value: string) {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [label = "", quantity = "1", salePriceInclVat = "0"] = line.split("|").map((part) => part.trim());
+      return {
+        label,
+        quantity: Number(quantity),
+        salePriceInclVat: Number(salePriceInclVat),
+      };
+    })
+    .filter((option) => option.label && option.quantity > 0);
+}
 
 function Field({
   children,
@@ -194,6 +217,17 @@ export function AdminProductManager() {
           </Field>
           <Field help="How it is sold. Example: 6 pieces, 1kg bag, 415g tin." label="Unit / packaging">
             <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("unit", event.target.value)} placeholder="6 pieces / 1kg / 1 tin" required value={product.unit} />
+          </Field>
+          <Field
+            help="Optional. One option per line: 4 stuks | 4 | 3.00. Leave empty when the product has only one package."
+            label="Customer package options"
+          >
+            <textarea
+              className="min-h-24 w-full rounded-lg border px-3 py-2"
+              onChange={(event) => update("packageOptions", textToPackageOptions(event.target.value))}
+              placeholder={"4 stuks | 4 | 3.00\n8 stuks | 8 | 5.75\n12 stuks | 12 | 8.25"}
+              value={packageOptionsToText(product)}
+            />
           </Field>
           <Field help="Where this product appears in the webshop filters." label="Category">
             <select className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("category", event.target.value as Product["category"])} value={product.category}>

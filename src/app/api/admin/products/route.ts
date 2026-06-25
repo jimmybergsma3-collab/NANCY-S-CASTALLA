@@ -38,6 +38,11 @@ export async function POST(request: Request) {
     marginPercent: pricing.marginPercent,
     profitPerUnit: pricing.profitPerUnit,
     unitCost: Number(body.unitCost || body.costPriceExVat),
+    packageOptions: (body.packageOptions ?? []).map((option) => ({
+      label: String(option.label).trim(),
+      quantity: Number(option.quantity),
+      salePriceInclVat: Number(option.salePriceInclVat),
+    })).filter((option) => option.label && option.quantity > 0),
     featured: Boolean(body.featured),
   };
 

@@ -15,6 +15,8 @@ type OrderBody = {
     name: string;
     quantity: number;
     unit: string;
+    packageLabel?: string;
+    packageQuantity?: number;
     salePriceInclVat: number;
   }>;
 };
@@ -52,6 +54,8 @@ export async function POST(request: Request) {
         product_name: line.name,
         quantity: line.quantity,
         unit: line.unit,
+        package_label: line.packageLabel ?? "",
+        package_quantity: line.packageQuantity ?? 1,
         sale_price_incl_vat: line.salePriceInclVat,
       })),
     });

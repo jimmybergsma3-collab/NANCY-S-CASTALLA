@@ -14,6 +14,8 @@ export type OrderEmailInput = {
     name: string;
     quantity: number;
     unit: string;
+    packageLabel?: string;
+    packageQuantity?: number;
     salePriceInclVat: number;
   }>;
 };

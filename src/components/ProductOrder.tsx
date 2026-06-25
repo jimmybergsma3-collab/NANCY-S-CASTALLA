@@ -21,6 +21,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
   const [category, setCategory] = useState<ProductCategory | "All">(initialCategory);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [fulfillment, setFulfillment] = useState<"Collection" | "Local delivery">("Collection");
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, number>>({});
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -42,9 +43,19 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
       .includes(query);
   });
   const cartLines = products
-    .map((product) => ({ product, quantity: quantities[product.id] ?? 0 }))
+    .map((product) => {
+      const optionIndex = selectedOptions[product.id] ?? 0;
+      const packageOption = product.packageOptions?.[optionIndex];
+      return {
+        product,
+        packageOption,
+        quantity: quantities[product.id] ?? 0,
+        unit: packageOption?.label ?? product.unit,
+        salePriceInclVat: packageOption?.salePriceInclVat ?? product.salePriceInclVat,
+      };
+    })
     .filter((line) => line.quantity > 0);
-  const total = cartLines.reduce((sum, line) => sum + line.product.salePriceInclVat * line.quantity, 0);
+  const total = cartLines.reduce((sum, line) => sum + line.salePriceInclVat * line.quantity, 0);
   const whatsAppUrl = buildWhatsAppUrl(buildWhatsAppMessage(cartLines, fulfillment));
 
   function updateQuantity(id: string, nextQuantity: number) {
@@ -71,8 +82,10 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
             productId: line.product.id,
             name: line.product.name,
             quantity: line.quantity,
-            unit: line.product.unit,
-            salePriceInclVat: line.product.salePriceInclVat,
+            unit: line.unit,
+            packageLabel: line.packageOption?.label ?? "",
+            packageQuantity: line.packageOption?.quantity ?? 1,
+            salePriceInclVat: line.salePriceInclVat,
           })),
         }),
       });
@@ -133,6 +146,11 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
             const quantity = quantities[product.id] ?? 0;
             const disabled = product.stockStatus === "coming-soon";
             const productHref = `/${locale}/products/${encodeURIComponent(product.id)}`;
+            const packageOptions = product.packageOptions ?? [];
+            const optionIndex = selectedOptions[product.id] ?? 0;
+            const packageOption = packageOptions[optionIndex];
+            const displayUnit = packageOption?.label ?? product.unit;
+            const displayPrice = packageOption?.salePriceInclVat ?? product.salePriceInclVat;
 
             return (
               <article
@@ -164,12 +182,28 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
                 >
                   View product details
                 </Link>
+                {packageOptions.length > 0 ? (
+                  <label className="mt-4 block text-sm font-bold text-forest">
+                    Package
+                    <select
+                      className="mt-1 w-full rounded-lg border border-forest/15 bg-linen px-3 py-2 text-sm font-normal text-forest"
+                      onChange={(event) => setSelectedOptions((current) => ({ ...current, [product.id]: Number(event.target.value) }))}
+                      value={optionIndex}
+                    >
+                      {packageOptions.map((option, index) => (
+                        <option key={`${option.label}-${index}`} value={index}>
+                          {option.label} - {formatEuro(option.salePriceInclVat)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
                 <div className="mt-5 flex items-center justify-between gap-4">
                   <div>
                     <div className="text-xl font-bold text-forest">
-                      {product.salePriceInclVat > 0 ? formatEuro(product.salePriceInclVat) : dictionary.common.soon}
+                      {displayPrice > 0 ? formatEuro(displayPrice) : dictionary.common.soon}
                     </div>
-                    <div className="text-xs text-forest/60">{product.unit}</div>
+                    <div className="text-xs text-forest/60">{displayUnit}</div>
                   </div>
                   <div className="flex h-10 items-center overflow-hidden rounded-full border border-forest/15 bg-linen">
                     <button
@@ -224,9 +258,9 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
             cartLines.map((line) => (
               <div key={line.product.id} className="flex justify-between gap-3 text-sm text-forest">
                 <span>
-                  {line.quantity} x {line.product.name}
+                  {line.quantity} x {line.product.name} ({line.unit})
                 </span>
-                <strong>{formatEuro(line.quantity * line.product.salePriceInclVat)}</strong>
+                <strong>{formatEuro(line.quantity * line.salePriceInclVat)}</strong>
               </div>
             ))
           )}

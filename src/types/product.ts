@@ -12,6 +12,12 @@ export type ProductCategory =
   | "Sauces & condiments"
   | "South American products";
 
+export type ProductPackageOption = {
+  label: string;
+  quantity: number;
+  salePriceInclVat: number;
+};
+
 export type Product = {
   id: string;
   name: string;
@@ -33,4 +39,5 @@ export type Product = {
   supplierCode: string;
   packSize: string;
   unitCost: number;
+  packageOptions?: ProductPackageOption[];
 };

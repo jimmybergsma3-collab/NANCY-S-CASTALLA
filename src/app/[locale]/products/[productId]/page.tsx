@@ -89,6 +89,22 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
             {product.salePriceInclVat > 0 ? formatEuro(product.salePriceInclVat) : dictionary.common.soon}
           </div>
           <p className="mt-5 leading-7 text-forest/72">{product.description}</p>
+          {product.packageOptions?.length ? (
+            <div className="mt-6 rounded-lg border border-brass/30 bg-linen p-4">
+              <h2 className="font-serif text-2xl font-bold text-forest">Available package sizes</h2>
+              <div className="mt-3 grid gap-2">
+                {product.packageOptions.map((option) => (
+                  <div className="flex justify-between gap-4 text-sm text-forest" key={option.label}>
+                    <span>
+                      {option.label}
+                      {option.quantity > 1 ? <span className="text-forest/55"> ({option.quantity} pieces)</span> : null}
+                    </span>
+                    <strong>{formatEuro(option.salePriceInclVat)}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <div className="mt-6 grid gap-3 rounded-lg border border-forest/10 bg-cream p-4 text-sm text-forest">
             <div className="flex justify-between gap-4">
               <span>Product code</span>
