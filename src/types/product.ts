@@ -22,6 +22,7 @@ export type Product = {
   id: string;
   name: string;
   imageUrl?: string;
+  isVisible?: boolean;
   category: ProductCategory;
   description: string;
   price: number;
@@ -40,4 +41,8 @@ export type Product = {
   packSize: string;
   unitCost: number;
   packageOptions?: ProductPackageOption[];
+  ingredients?: string;
+  directions?: string;
+  conservation?: string;
+  additionalInfo?: string;
 };

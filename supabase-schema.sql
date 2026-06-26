@@ -2,6 +2,7 @@ create table if not exists products (
   id text primary key,
   name text not null,
   image_url text not null default '',
+  is_visible boolean not null default false,
   category text not null,
   description text not null,
   price numeric not null default 0,
@@ -20,6 +21,10 @@ create table if not exists products (
   pack_size text not null default '',
   unit_cost numeric not null default 0,
   package_options jsonb not null default '[]'::jsonb,
+  ingredients text not null default '',
+  directions text not null default '',
+  conservation text not null default '',
+  additional_info text not null default '',
   created_at timestamptz not null default now()
 );
 
@@ -52,7 +57,12 @@ alter table orders enable row level security;
 alter table order_items enable row level security;
 
 alter table products add column if not exists image_url text not null default '';
+alter table products add column if not exists is_visible boolean not null default false;
 alter table products add column if not exists package_options jsonb not null default '[]'::jsonb;
+alter table products add column if not exists ingredients text not null default '';
+alter table products add column if not exists directions text not null default '';
+alter table products add column if not exists conservation text not null default '';
+alter table products add column if not exists additional_info text not null default '';
 alter table order_items add column if not exists package_label text not null default '';
 alter table order_items add column if not exists package_quantity numeric not null default 1;
 

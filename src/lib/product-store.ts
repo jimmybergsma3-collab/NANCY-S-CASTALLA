@@ -7,6 +7,7 @@ type ProductRow = {
   id: string;
   name: string;
   image_url?: string;
+  is_visible?: boolean;
   category: Product["category"];
   description: string;
   price: number;
@@ -25,6 +26,10 @@ type ProductRow = {
   pack_size: string;
   unit_cost: number;
   package_options?: Product["packageOptions"];
+  ingredients?: string;
+  directions?: string;
+  conservation?: string;
+  additional_info?: string;
 };
 
 export function rowToProduct(row: ProductRow): Product {
@@ -32,6 +37,7 @@ export function rowToProduct(row: ProductRow): Product {
     id: row.id,
     name: row.name,
     imageUrl: row.image_url ?? "",
+    isVisible: row.is_visible ?? true,
     category: row.category,
     description: row.description,
     price: row.price,
@@ -50,6 +56,10 @@ export function rowToProduct(row: ProductRow): Product {
     packSize: row.pack_size,
     unitCost: row.unit_cost,
     packageOptions: row.package_options ?? [],
+    ingredients: row.ingredients ?? "",
+    directions: row.directions ?? "",
+    conservation: row.conservation ?? "",
+    additionalInfo: row.additional_info ?? "",
   };
 }
 
@@ -58,6 +68,7 @@ export function productToRow(product: Product): ProductRow {
     id: product.id,
     name: product.name,
     image_url: product.imageUrl ?? "",
+    is_visible: product.isVisible ?? false,
     category: product.category,
     description: product.description,
     price: product.price,
@@ -76,19 +87,24 @@ export function productToRow(product: Product): ProductRow {
     pack_size: product.packSize,
     unit_cost: product.unitCost,
     package_options: product.packageOptions ?? [],
+    ingredients: product.ingredients ?? "",
+    directions: product.directions ?? "",
+    conservation: product.conservation ?? "",
+    additional_info: product.additionalInfo ?? "",
   };
 }
 
-export async function getProducts() {
+export async function getProducts({ includeHidden = false }: { includeHidden?: boolean } = {}) {
   if (!hasSupabaseAdmin()) {
-    return localProducts;
+    return includeHidden ? localProducts : localProducts.filter((product) => product.isVisible !== false);
   }
 
   try {
     const rows = await supabaseAdminFetch<ProductRow[]>("products?select=*&order=category.asc,name.asc");
-    return rows.map(rowToProduct);
+    const products = rows.map(rowToProduct);
+    return includeHidden ? products : products.filter((product) => product.isVisible);
   } catch {
-    return localProducts;
+    return includeHidden ? localProducts : localProducts.filter((product) => product.isVisible !== false);
   }
 }
 

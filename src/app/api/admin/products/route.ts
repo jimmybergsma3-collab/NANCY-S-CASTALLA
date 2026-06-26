@@ -10,7 +10,7 @@ export async function GET() {
     return NextResponse.json({ ok: false, message: "Admin login required." }, { status: 401 });
   }
 
-  const products = await getProducts();
+  const products = await getProducts({ includeHidden: true });
   return NextResponse.json({ ok: true, products, databaseEnabled: hasSupabaseAdmin() });
 }
 
@@ -43,6 +43,11 @@ export async function POST(request: Request) {
       quantity: Number(option.quantity),
       salePriceInclVat: Number(option.salePriceInclVat),
     })).filter((option) => option.label && option.quantity > 0),
+    isVisible: Boolean(body.isVisible),
+    ingredients: body.ingredients?.trim() ?? "",
+    directions: body.directions?.trim() ?? "",
+    conservation: body.conservation?.trim() ?? "",
+    additionalInfo: body.additionalInfo?.trim() ?? "",
     featured: Boolean(body.featured),
   };
 

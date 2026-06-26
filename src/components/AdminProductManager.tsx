@@ -8,6 +8,7 @@ const defaultProduct: Product = {
   id: "",
   name: "",
   imageUrl: "",
+  isVisible: false,
   category: "British & Irish products",
   description: "",
   price: 0,
@@ -26,6 +27,10 @@ const defaultProduct: Product = {
   packSize: "",
   unitCost: 0,
   packageOptions: [],
+  ingredients: "",
+  directions: "",
+  conservation: "",
+  additionalInfo: "",
 };
 
 function packageOptionsToText(product: Product) {
@@ -274,6 +279,12 @@ export function AdminProductManager() {
             Featured
             </label>
           </Field>
+          <Field help="Turn this on only when the product may appear on the public website." label="Show on website">
+            <label className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
+              <input checked={product.isVisible ?? false} onChange={(event) => update("isVisible", event.target.checked)} type="checkbox" />
+              Visible online
+            </label>
+          </Field>
         </div>
         <div className="mt-4 rounded-lg bg-cream p-4 text-sm text-forest">
           <strong>Margin preview:</strong> estimated profit {formatEuro(pricing.profitPerUnit)} per unit, margin{" "}
@@ -304,6 +315,20 @@ export function AdminProductManager() {
         <Field help="Short product text customers see on the product card." label="Description">
           <textarea className="min-h-24 w-full rounded-lg border px-3 py-2" onChange={(event) => update("description", event.target.value)} placeholder="Classic Dutch frozen snack, available by pre-order." required value={product.description} />
         </Field>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <Field help="Optional. Only shown when filled in." label="Ingredients / allergens">
+            <textarea className="min-h-24 w-full rounded-lg border px-3 py-2" onChange={(event) => update("ingredients", event.target.value)} placeholder="Ingredients from supplier label..." value={product.ingredients ?? ""} />
+          </Field>
+          <Field help="Optional. Preparation instructions from supplier." label="Directions for use">
+            <textarea className="min-h-24 w-full rounded-lg border px-3 py-2" onChange={(event) => update("directions", event.target.value)} placeholder="Oven, fryer, air fryer..." value={product.directions ?? ""} />
+          </Field>
+          <Field help="Optional. Freezer, chilled or ambient storage details." label="Conservation">
+            <textarea className="min-h-24 w-full rounded-lg border px-3 py-2" onChange={(event) => update("conservation", event.target.value)} placeholder="Store at -18C / chilled / cool and dry..." value={product.conservation ?? ""} />
+          </Field>
+          <Field help="Optional. Extra supplier notes, pack details or warnings." label="Additional information">
+            <textarea className="min-h-24 w-full rounded-lg border px-3 py-2" onChange={(event) => update("additionalInfo", event.target.value)} placeholder="May contain allergens, supplier remarks..." value={product.additionalInfo ?? ""} />
+          </Field>
+        </div>
         {product.imageUrl ? (
           <div className="mt-4 overflow-hidden rounded-lg border border-forest/10 bg-linen">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -342,6 +367,9 @@ export function AdminProductManager() {
                   <div className="font-bold text-forest">{item.name}</div>
                   <div className="text-forest/65">{item.id} / {item.supplierCode}</div>
                   <div className="font-bold text-coffee">{formatEuro(item.salePriceInclVat)}</div>
+                  <div className={`mt-1 text-xs font-bold ${item.isVisible !== false ? "text-leaf" : "text-coffee"}`}>
+                    {item.isVisible !== false ? "Visible online" : "Hidden from website"}
+                  </div>
                 </div>
               </div>
             </button>

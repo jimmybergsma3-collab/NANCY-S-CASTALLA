@@ -6,33 +6,8 @@ import { ProductOrder } from "@/components/ProductOrder";
 import { defaultLocale, getDictionary, isLocale, type Locale } from "@/i18n/config";
 import { formatEuro } from "@/lib/pricing";
 import { getProductById, getProducts } from "@/lib/product-store";
-import type { Product } from "@/types/product";
 
 export const dynamic = "force-dynamic";
-
-function getDirections(product: Product) {
-  if (product.type === "frozen") {
-    return "Prepare from frozen or thawed according to the supplier label. Oven, air fryer or deep-fryer instructions can differ per product, so Nancy's Castalla confirms the packaging details with the order.";
-  }
-
-  if (product.type === "fresh") {
-    return "Fresh items are supplied by pre-order. Keep chilled where required and follow the confirmed collection or delivery timing.";
-  }
-
-  return "Ambient products can be kept in a cool, dry place. Follow the supplier label after opening.";
-}
-
-function getConservation(product: Product) {
-  if (product.type === "frozen") {
-    return "Frozen product: store at -18C. Keep frozen until preparation.";
-  }
-
-  if (product.type === "fresh") {
-    return "Fresh product: keep chilled and consume within the advised date on the packaging.";
-  }
-
-  return "Ambient product: store cool and dry, away from direct sunlight.";
-}
 
 function DetailPanel({ children, open, title }: { children: React.ReactNode; open?: boolean; title: string }) {
   return (
@@ -128,15 +103,18 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
             payment instructions.
           </p>
           <div className="mt-6 border-b border-forest/15">
-            <DetailPanel open title="Ingredients">
-              Ingredients and allergen information are checked from the supplier packaging. For frozen snacks and imported
-              products, Nancy&apos;s Castalla can confirm label details before collection or delivery.
-            </DetailPanel>
-            <DetailPanel title="Directions for use">{getDirections(product)}</DetailPanel>
-            <DetailPanel title="Conservation">{getConservation(product)}</DetailPanel>
+            {product.ingredients ? <DetailPanel open title="Ingredients">{product.ingredients}</DetailPanel> : null}
+            {product.directions ? <DetailPanel title="Directions for use">{product.directions}</DetailPanel> : null}
+            {product.conservation ? <DetailPanel title="Conservation">{product.conservation}</DetailPanel> : null}
             <DetailPanel title="Additional information">
-              Supplier code: <strong>{product.supplierCode || "TBC"}</strong>. Pack size:{" "}
-              <strong>{product.packSize || product.unit}</strong>. Origin: <strong>{product.origin}</strong>.
+              {product.additionalInfo ? (
+                <span>{product.additionalInfo}</span>
+              ) : (
+                <>
+                  Supplier code: <strong>{product.supplierCode || "TBC"}</strong>. Pack size:{" "}
+                  <strong>{product.packSize || product.unit}</strong>. Origin: <strong>{product.origin}</strong>.
+                </>
+              )}
             </DetailPanel>
           </div>
         </div>
