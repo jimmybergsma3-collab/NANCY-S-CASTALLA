@@ -9,6 +9,7 @@ export const productCategories: ProductCategory[] = [
   "Coffee & drinks",
   "Sauces & condiments",
   "South American products",
+  "Non-food & packaging",
 ];
 
 export function categoryToSlug(category: ProductCategory) {

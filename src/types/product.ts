@@ -10,7 +10,8 @@ export type ProductCategory =
   | "Breakfast products"
   | "Coffee & drinks"
   | "Sauces & condiments"
-  | "South American products";
+  | "South American products"
+  | "Non-food & packaging";
 
 export type ProductPackageOption = {
   label: string;

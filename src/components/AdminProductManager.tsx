@@ -288,7 +288,7 @@ export function AdminProductManager() {
           </Field>
           <Field help="Where this product appears in the webshop filters." label="Category">
             <select className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("category", event.target.value as Product["category"])} value={product.category}>
-              {["Dutch products", "British & Irish products", "Frozen snacks", "Bread & bakery", "Breakfast products", "Coffee & drinks", "Sauces & condiments", "South American products"].map((item) => <option key={item}>{item}</option>)}
+              {["Dutch products", "British & Irish products", "Frozen snacks", "Bread & bakery", "Breakfast products", "Coffee & drinks", "Sauces & condiments", "South American products", "Non-food & packaging"].map((item) => <option key={item}>{item}</option>)}
             </select>
           </Field>
           <Field help="Available = stock now. Preorder = order first. Coming soon = visible but not orderable." label="Stock status">
