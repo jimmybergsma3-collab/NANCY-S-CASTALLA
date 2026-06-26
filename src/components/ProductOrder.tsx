@@ -9,6 +9,7 @@ import { buildWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { formatEuro } from "@/lib/pricing";
 import { businessConfig } from "@/config/business";
 import { defaultLocale, getDictionary, type Locale } from "@/i18n/config";
+import { getPublicProductDescription } from "@/lib/product-display";
 
 type Props = {
   products: Product[];
@@ -175,7 +176,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
                     {product.stockStatus.replace("-", " ")}
                   </span>
                 </div>
-                <p className="mt-3 min-h-12 text-sm leading-6 text-forest/75">{product.description}</p>
+                <p className="mt-3 min-h-12 text-sm leading-6 text-forest/75">{getPublicProductDescription(product)}</p>
                 <Link
                   className="mt-3 inline-flex text-sm font-bold text-coffee underline-offset-4 hover:underline"
                   href={productHref}

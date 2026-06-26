@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import type { Product } from "@/types/product";
 import { calculatePricing, formatEuro, suggestedSalePriceInclVat } from "@/lib/pricing";
 
@@ -94,10 +95,32 @@ export function AdminProductManager() {
   const [product, setProduct] = useState<Product>(defaultProduct);
   const [message, setMessage] = useState("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [productSearch, setProductSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [visibilityFilter, setVisibilityFilter] = useState("All");
   const [uploading, setUploading] = useState(false);
   const pricing = calculatePricing(product);
   const suggestedPrice = suggestedSalePriceInclVat(product.costPriceExVat, product.vatRate, 50);
   const isEditing = products.some((item) => item.id === product.id);
+  const productCategories = useMemo(() => ["All", ...Array.from(new Set(products.map((item) => item.category)))], [products]);
+  const filteredProducts = useMemo(() => {
+    const query = productSearch.trim().toLowerCase();
+
+    return products.filter((item) => {
+      const matchesQuery = query
+        ? [item.id, item.name, item.category, item.supplier, item.supplierCode, item.unit]
+            .join(" ")
+            .toLowerCase()
+            .includes(query)
+        : true;
+      const matchesCategory = categoryFilter === "All" || item.category === categoryFilter;
+      const matchesVisibility =
+        visibilityFilter === "All" ||
+        (visibilityFilter === "Visible" ? item.isVisible !== false : item.isVisible === false);
+
+      return matchesQuery && matchesCategory && matchesVisibility;
+    });
+  }, [categoryFilter, productSearch, products, visibilityFilter]);
 
   async function loadProducts() {
     const response = await fetch("/api/admin/products");
@@ -134,7 +157,11 @@ export function AdminProductManager() {
     }
     setMessage(isEditing ? "Product updated." : "Product saved.");
     const refreshedProducts = await loadProductsAndReturn();
-    setProduct(createBlankProduct(refreshedProducts));
+    if (isEditing && result.product) {
+      setProduct({ ...defaultProduct, ...result.product });
+    } else {
+      setProduct(createBlankProduct(refreshedProducts));
+    }
   }
 
   async function loadProductsAndReturn() {
@@ -246,7 +273,7 @@ export function AdminProductManager() {
   }
 
   return (
-    <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_420px]">
+    <div className="mt-8 grid gap-8 xl:grid-cols-[minmax(0,1fr)_620px]">
       <form className="rounded-lg border border-forest/10 bg-white p-6 shadow-soft" onSubmit={saveProduct}>
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <h2 className="font-serif text-3xl font-bold text-forest">{isEditing ? "Edit product" : "Add product manually"}</h2>
@@ -410,39 +437,110 @@ export function AdminProductManager() {
         {message ? <p className="mt-3 text-sm text-forest/75">{message}</p> : null}
       </form>
       <aside className="rounded-lg border border-forest/10 bg-cream p-6 shadow-soft">
-        <h2 className="font-serif text-3xl font-bold text-forest">Current products</h2>
-        <p className="mt-2 text-sm text-forest/65">Click a product to edit it.</p>
-        <div className="mt-4 max-h-[640px] space-y-3 overflow-auto">
-          {products.map((item) => (
-            <button
-              className={`w-full rounded-lg bg-white p-3 text-left text-sm transition hover:ring-2 hover:ring-brass ${
-                item.id === product.id ? "ring-2 ring-forest" : ""
-              }`}
-              key={item.id}
-              onClick={() => {
-                setProduct({ ...defaultProduct, ...item });
-                setMessage("");
-              }}
-              type="button"
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="font-serif text-3xl font-bold text-forest">Product overview</h2>
+            <p className="mt-2 text-sm text-forest/65">
+              {filteredProducts.length} of {products.length} products shown. Click a row to edit.
+            </p>
+          </div>
+          <button
+            className="rounded-full bg-forest px-4 py-2 text-sm font-bold text-cream"
+            onClick={() => setProduct(createBlankProduct(products))}
+            type="button"
+          >
+            New product
+          </button>
+        </div>
+        <div className="mt-5 grid gap-3">
+          <input
+            className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm"
+            onChange={(event) => setProductSearch(event.target.value)}
+            placeholder="Search name, NC number, supplier code or category"
+            type="search"
+            value={productSearch}
+          />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <select
+              className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm"
+              onChange={(event) => setCategoryFilter(event.target.value)}
+              value={categoryFilter}
             >
-              <div className="flex gap-3">
-                {item.imageUrl ? (
-                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md bg-cream">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img alt="" className="h-full w-full object-cover" src={item.imageUrl} />
-                  </div>
-                ) : null}
-                <div>
-                  <div className="font-bold text-forest">{item.name}</div>
-                  <div className="text-forest/65">{item.id} / {item.supplierCode}</div>
-                  <div className="font-bold text-coffee">{formatEuro(item.salePriceInclVat)}</div>
-                  <div className={`mt-1 text-xs font-bold ${item.isVisible !== false ? "text-leaf" : "text-coffee"}`}>
-                    {item.isVisible !== false ? "Visible online" : "Hidden from website"}
-                  </div>
-                </div>
-              </div>
-            </button>
-          ))}
+              {productCategories.map((item) => (
+                <option key={item}>{item}</option>
+              ))}
+            </select>
+            <select
+              className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm"
+              onChange={(event) => setVisibilityFilter(event.target.value)}
+              value={visibilityFilter}
+            >
+              <option>All</option>
+              <option>Visible</option>
+              <option>Hidden</option>
+            </select>
+          </div>
+        </div>
+        <div className="mt-4 max-h-[720px] overflow-auto rounded-lg border border-forest/10 bg-white">
+          <table className="w-full min-w-[560px] text-left text-sm">
+            <thead className="sticky top-0 bg-forest text-cream">
+              <tr>
+                <th className="px-3 py-2">Product</th>
+                <th className="px-3 py-2">Code</th>
+                <th className="px-3 py-2">Price</th>
+                <th className="px-3 py-2">Status</th>
+                <th className="px-3 py-2">Open</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredProducts.map((item) => (
+                <tr
+                  className={`cursor-pointer border-t border-forest/10 transition hover:bg-linen ${
+                    item.id === product.id ? "bg-cream" : ""
+                  }`}
+                  key={item.id}
+                  onClick={() => {
+                    setProduct({ ...defaultProduct, ...item });
+                    setMessage("");
+                  }}
+                >
+                  <td className="px-3 py-3">
+                    <div className="font-bold text-forest">{item.name}</div>
+                    <div className="text-xs text-forest/60">{item.category}</div>
+                  </td>
+                  <td className="px-3 py-3 text-xs text-forest/70">
+                    <div className="font-bold text-forest">{item.id}</div>
+                    <div>{item.supplierCode}</div>
+                  </td>
+                  <td className="px-3 py-3 font-bold text-coffee">{formatEuro(item.salePriceInclVat)}</td>
+                  <td className="px-3 py-3">
+                    <span className={`rounded-full px-2 py-1 text-xs font-bold ${
+                      item.isVisible !== false ? "bg-leaf/10 text-leaf" : "bg-coffee/10 text-coffee"
+                    }`}>
+                      {item.isVisible !== false ? "Visible" : "Hidden"}
+                    </span>
+                  </td>
+                  <td className="px-3 py-3">
+                    <Link
+                      className="text-xs font-bold text-forest underline-offset-4 hover:underline"
+                      href={`/en/products/${encodeURIComponent(item.id)}`}
+                      onClick={(event) => event.stopPropagation()}
+                      target="_blank"
+                    >
+                      Page
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+              {filteredProducts.length === 0 ? (
+                <tr>
+                  <td className="px-3 py-5 text-sm text-forest/65" colSpan={5}>
+                    No products match this search.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
         </div>
       </aside>
     </div>

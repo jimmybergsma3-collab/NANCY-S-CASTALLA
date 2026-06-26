@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { ProductOrder } from "@/components/ProductOrder";
 import { defaultLocale, getDictionary, isLocale, type Locale } from "@/i18n/config";
 import { formatEuro } from "@/lib/pricing";
+import { getPublicProductDescription } from "@/lib/product-display";
 import { getProductById, getProducts } from "@/lib/product-store";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,22 @@ function DetailPanel({ children, open, title }: { children: React.ReactNode; ope
   );
 }
 
+function getPublicAdditionalInfo(product: {
+  additionalInfo?: string;
+  packSize?: string;
+  unit: string;
+  origin: string;
+}) {
+  const info = product.additionalInfo?.trim() ?? "";
+  const supplierNote = /^(supplier section|supplier category|dutch name):/i.test(info);
+
+  if (info && !supplierNote) {
+    return info;
+  }
+
+  return `Pack size: ${product.packSize || product.unit}. Origin: ${product.origin}.`;
+}
+
 export default async function ProductDetailPage({ params }: { params: Promise<unknown> }) {
   const { locale: rawLocale, productId: rawProductId } = (await params) as {
     locale?: string;
@@ -29,7 +46,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
   const locale: Locale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const dictionary = getDictionary(locale);
   const productId = rawProductId ? decodeURIComponent(rawProductId) : "";
-  const product = await getProductById(productId);
+  const product = await getProductById(productId, { includeHidden: true });
 
   if (!product) {
     notFound();
@@ -63,7 +80,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
           <div className="mt-3 text-2xl font-bold text-forest">
             {product.salePriceInclVat > 0 ? formatEuro(product.salePriceInclVat) : dictionary.common.soon}
           </div>
-          <p className="mt-5 leading-7 text-forest/72">{product.description}</p>
+          <p className="mt-5 leading-7 text-forest/72">{getPublicProductDescription(product)}</p>
           {product.packageOptions?.length ? (
             <div className="mt-6 rounded-lg border border-brass/30 bg-linen p-4">
               <h2 className="font-serif text-2xl font-bold text-forest">Available package sizes</h2>
@@ -107,14 +124,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
             {product.directions ? <DetailPanel title="Directions for use">{product.directions}</DetailPanel> : null}
             {product.conservation ? <DetailPanel title="Conservation">{product.conservation}</DetailPanel> : null}
             <DetailPanel title="Additional information">
-              {product.additionalInfo ? (
-                <span>{product.additionalInfo}</span>
-              ) : (
-                <>
-                  Supplier code: <strong>{product.supplierCode || "TBC"}</strong>. Pack size:{" "}
-                  <strong>{product.packSize || product.unit}</strong>. Origin: <strong>{product.origin}</strong>.
-                </>
-              )}
+              {getPublicAdditionalInfo(product)}
             </DetailPanel>
           </div>
         </div>

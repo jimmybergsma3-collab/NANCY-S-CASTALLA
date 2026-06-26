@@ -108,8 +108,8 @@ export async function getProducts({ includeHidden = false }: { includeHidden?: b
   }
 }
 
-export async function getProductById(id: string) {
-  const products = await getProducts();
+export async function getProductById(id: string, { includeHidden = false }: { includeHidden?: boolean } = {}) {
+  const products = await getProducts({ includeHidden });
   return products.find((product) => product.id.toLowerCase() === id.toLowerCase());
 }
 
