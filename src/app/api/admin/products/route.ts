@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAdminSession } from "@/lib/admin-auth";
 import { calculatePricing } from "@/lib/pricing";
-import { createProduct, getProducts } from "@/lib/product-store";
+import { createProduct, deleteProduct, getProducts } from "@/lib/product-store";
 import { hasSupabaseAdmin } from "@/lib/env";
 import type { Product } from "@/types/product";
 
@@ -57,4 +57,27 @@ export async function POST(request: Request) {
 
   const saved = await createProduct(product);
   return NextResponse.json({ ok: true, product: saved });
+}
+
+export async function DELETE(request: Request) {
+  if (!(await isAdminSession())) {
+    return NextResponse.json({ ok: false, message: "Admin login required." }, { status: 401 });
+  }
+
+  if (!hasSupabaseAdmin()) {
+    return NextResponse.json(
+      { ok: false, message: "Supabase is required before products can be deleted from admin." },
+      { status: 503 },
+    );
+  }
+
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id")?.trim();
+
+  if (!id) {
+    return NextResponse.json({ ok: false, message: "Product code is required." }, { status: 400 });
+  }
+
+  await deleteProduct(id);
+  return NextResponse.json({ ok: true });
 }

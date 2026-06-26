@@ -33,6 +33,19 @@ const defaultProduct: Product = {
   additionalInfo: "",
 };
 
+function getNextProductId(products: Product[]) {
+  const highest = products.reduce((max, product) => {
+    const match = /^NC-(\d{5})$/i.exec(product.id);
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 0);
+  const next = Math.min(highest + 1, 99999);
+  return `NC-${String(next).padStart(5, "0")}`;
+}
+
+function createBlankProduct(products: Product[]) {
+  return { ...defaultProduct, id: getNextProductId(products) };
+}
+
 function packageOptionsToText(product: Product) {
   return (product.packageOptions ?? [])
     .map((option) => `${option.label} | ${option.quantity} | ${option.salePriceInclVat}`)
@@ -91,6 +104,7 @@ export function AdminProductManager() {
     if (response.ok) {
       const result = (await response.json()) as { products: Product[] };
       setProducts(result.products);
+      setProduct((current) => current.id ? current : createBlankProduct(result.products));
       setLoggedIn(true);
     }
   }
@@ -119,8 +133,45 @@ export function AdminProductManager() {
       return;
     }
     setMessage(isEditing ? "Product updated." : "Product saved.");
-    setProduct(defaultProduct);
-    await loadProducts();
+    const refreshedProducts = await loadProductsAndReturn();
+    setProduct(createBlankProduct(refreshedProducts));
+  }
+
+  async function loadProductsAndReturn() {
+    const response = await fetch("/api/admin/products");
+    if (!response.ok) {
+      return products;
+    }
+
+    const result = (await response.json()) as { products: Product[] };
+    setProducts(result.products);
+    setLoggedIn(true);
+    return result.products;
+  }
+
+  async function deleteCurrentProduct() {
+    if (!isEditing) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete ${product.name || product.id}? This cannot be undone.`);
+    if (!confirmed) {
+      return;
+    }
+
+    const response = await fetch(`/api/admin/products?id=${encodeURIComponent(product.id)}`, {
+      method: "DELETE",
+    });
+    const result = (await response.json()) as { ok: boolean; message?: string };
+
+    if (!response.ok || !result.ok) {
+      setMessage(result.message || "Product could not be deleted.");
+      return;
+    }
+
+    setMessage("Product deleted.");
+    const refreshedProducts = await loadProductsAndReturn();
+    setProduct(createBlankProduct(refreshedProducts));
   }
 
   async function saveProductPayload(nextProduct: Product) {
@@ -200,17 +251,17 @@ export function AdminProductManager() {
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <h2 className="font-serif text-3xl font-bold text-forest">{isEditing ? "Edit product" : "Add product manually"}</h2>
           {isEditing ? (
-            <button className="rounded-full border border-forest/20 px-4 py-2 text-sm font-bold text-forest" onClick={() => setProduct(defaultProduct)} type="button">
+            <button className="rounded-full border border-forest/20 px-4 py-2 text-sm font-bold text-forest" onClick={() => setProduct(createBlankProduct(products))} type="button">
               New product
             </button>
           ) : null}
         </div>
         <p className="mt-2 text-sm leading-6 text-forest/70">
-          Use product codes for your own shop codes and supplier codes for codes from the wholesaler invoice or catalogue.
+          Product numbers are generated automatically as NC-00001, NC-00002 and so on. Supplier codes are for the wholesaler invoice or catalogue.
         </p>
         <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <Field help="Your own unique code. Example: NL-FRIKANDEL-01." label="Product code / shop id">
-            <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("id", event.target.value)} placeholder="NL-FRIKANDEL-01" required value={product.id} />
+          <Field help="Generated automatically. You can use this product number on labels, lists and customer orders." label="Product number">
+            <input className="w-full rounded-lg border bg-linen px-3 py-2 font-bold text-forest" readOnly required value={product.id} />
           </Field>
           <Field help="Code from the supplier or PDF catalogue. Example: EF-12345." label="Supplier code">
             <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("supplierCode", event.target.value)} placeholder="Supplier item code" required value={product.supplierCode} />
@@ -347,6 +398,15 @@ export function AdminProductManager() {
         <button className="mt-4 rounded-full bg-forest px-5 py-3 font-bold text-cream" type="submit">
           {isEditing ? "Update product" : "Save product"}
         </button>
+        {isEditing ? (
+          <button
+            className="ml-3 mt-4 rounded-full border border-red-200 bg-white px-5 py-3 font-bold text-red-700"
+            onClick={deleteCurrentProduct}
+            type="button"
+          >
+            Delete product
+          </button>
+        ) : null}
         {message ? <p className="mt-3 text-sm text-forest/75">{message}</p> : null}
       </form>
       <aside className="rounded-lg border border-forest/10 bg-cream p-6 shadow-soft">

@@ -121,3 +121,10 @@ export async function createProduct(product: Product) {
   });
   return rowToProduct(rows[0]);
 }
+
+export async function deleteProduct(id: string) {
+  await supabaseAdminFetch<void>(`products?id=eq.${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    prefer: "return=minimal",
+  });
+}
