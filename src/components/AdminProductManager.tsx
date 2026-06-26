@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Product } from "@/types/product";
-import { calculatePricing, formatEuro } from "@/lib/pricing";
+import { calculatePricing, formatEuro, suggestedSalePriceInclVat } from "@/lib/pricing";
 
 const defaultProduct: Product = {
   id: "",
@@ -83,6 +83,7 @@ export function AdminProductManager() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const pricing = calculatePricing(product);
+  const suggestedPrice = suggestedSalePriceInclVat(product.costPriceExVat, product.vatRate, 50);
   const isEditing = products.some((item) => item.id === product.id);
 
   async function loadProducts() {
@@ -287,8 +288,16 @@ export function AdminProductManager() {
           </Field>
         </div>
         <div className="mt-4 rounded-lg bg-cream p-4 text-sm text-forest">
-          <strong>Margin preview:</strong> estimated profit {formatEuro(pricing.profitPerUnit)} per unit, margin{" "}
-          {pricing.marginPercent}%.
+          <strong>Pricing preview:</strong> 50% target price {formatEuro(suggestedPrice)} incl. IVA. Current sale ex IVA{" "}
+          {formatEuro(pricing.salePriceExVat)}, IVA {formatEuro(pricing.ivaAmount)}, estimated profit{" "}
+          {formatEuro(pricing.profitPerUnit)} per unit, margin {pricing.marginPercent}%.
+          <button
+            className="ml-0 mt-3 rounded-full border border-forest/20 bg-white px-4 py-2 text-xs font-bold text-forest sm:ml-3 sm:mt-0"
+            onClick={() => update("salePriceInclVat", suggestedPrice)}
+            type="button"
+          >
+            Use 50% price
+          </button>
         </div>
         <div className="mt-4 rounded-lg border border-forest/10 bg-linen p-4">
           <span className="text-sm font-bold text-forest">Upload product photo</span>
