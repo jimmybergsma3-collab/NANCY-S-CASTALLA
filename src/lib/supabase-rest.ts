@@ -4,6 +4,10 @@ type RequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
   prefer?: string;
+  range?: {
+    from: number;
+    to: number;
+  };
 };
 
 export async function supabaseAdminFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -18,6 +22,7 @@ export async function supabaseAdminFetch<T>(path: string, options: RequestOption
       Authorization: `Bearer ${env.supabaseServiceRoleKey}`,
       "Content-Type": "application/json",
       Prefer: options.prefer ?? "return=representation",
+      ...(options.range ? { Range: `${options.range.from}-${options.range.to}` } : {}),
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
     cache: "no-store",

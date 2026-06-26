@@ -94,13 +94,34 @@ export function productToRow(product: Product): ProductRow {
   };
 }
 
+async function getAllProductRows() {
+  const pageSize = 1000;
+  const rows: ProductRow[] = [];
+
+  for (let page = 0; page < 20; page += 1) {
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
+    const pageRows = await supabaseAdminFetch<ProductRow[]>("products?select=*&order=id.asc", {
+      range: { from, to },
+    });
+
+    rows.push(...pageRows);
+
+    if (pageRows.length < pageSize) {
+      break;
+    }
+  }
+
+  return rows;
+}
+
 export async function getProducts({ includeHidden = false }: { includeHidden?: boolean } = {}) {
   if (!hasSupabaseAdmin()) {
     return includeHidden ? localProducts : localProducts.filter((product) => product.isVisible !== false);
   }
 
   try {
-    const rows = await supabaseAdminFetch<ProductRow[]>("products?select=*&order=category.asc,name.asc");
+    const rows = await getAllProductRows();
     const products = rows.map(rowToProduct);
     return includeHidden ? products : products.filter((product) => product.isVisible);
   } catch {
