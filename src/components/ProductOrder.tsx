@@ -11,7 +11,7 @@ import { businessConfig } from "@/config/business";
 import { defaultLocale, getDictionary, type Locale } from "@/i18n/config";
 import { getPublicProductDescription } from "@/lib/product-display";
 import { productMatchesCategory } from "@/lib/product-categories";
-import { getEffectivePackageOptions } from "@/lib/product-packaging";
+import { getCustomerDisplayUnit, getEffectivePackageOptions } from "@/lib/product-packaging";
 
 type Props = {
   products: Product[];
@@ -53,7 +53,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
         product,
         packageOption,
         quantity: quantities[product.id] ?? 0,
-        unit: packageOption?.label ?? product.unit,
+        unit: packageOption?.label ?? getCustomerDisplayUnit(product),
         salePriceInclVat: packageOption?.salePriceInclVat ?? product.salePriceInclVat,
       };
     })
@@ -152,7 +152,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
             const packageOptions = getEffectivePackageOptions(product);
             const optionIndex = selectedOptions[product.id] ?? 0;
             const packageOption = packageOptions[optionIndex];
-            const displayUnit = packageOption?.label ?? product.unit;
+            const displayUnit = packageOption?.label ?? getCustomerDisplayUnit(product);
             const displayPrice = packageOption?.salePriceInclVat ?? product.salePriceInclVat;
 
             return (
@@ -185,7 +185,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
                 >
                   View product details
                 </Link>
-                {packageOptions.length > 0 ? (
+                {packageOptions.length > 1 ? (
                   <label className="mt-4 block text-sm font-bold text-forest">
                     Package
                     <select

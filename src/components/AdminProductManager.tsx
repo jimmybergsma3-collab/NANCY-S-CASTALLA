@@ -100,6 +100,7 @@ export function AdminProductManager() {
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [visibilityFilter, setVisibilityFilter] = useState("All");
   const [uploading, setUploading] = useState(false);
+  const [packageOptionsText, setPackageOptionsText] = useState("");
   const pricing = calculatePricing(product);
   const suggestedPrice = suggestedSalePriceInclVat(product.costPriceExVat, product.vatRate, 50);
   const isEditing = products.some((item) => item.id === product.id);
@@ -123,12 +124,19 @@ export function AdminProductManager() {
     });
   }, [categoryFilter, productSearch, products, visibilityFilter]);
 
+  function setActiveProduct(nextProduct: Product) {
+    setProduct(nextProduct);
+    setPackageOptionsText(packageOptionsToText(nextProduct));
+  }
+
   async function loadProducts() {
     const response = await fetch("/api/admin/products");
     if (response.ok) {
       const result = (await response.json()) as { products: Product[] };
       setProducts(result.products);
-      setProduct((current) => current.id ? current : createBlankProduct(result.products));
+      if (!product.id) {
+        setActiveProduct(createBlankProduct(result.products));
+      }
       setLoggedIn(true);
     }
   }
@@ -159,9 +167,9 @@ export function AdminProductManager() {
     setMessage(isEditing ? "Product updated." : "Product saved.");
     const refreshedProducts = await loadProductsAndReturn();
     if (isEditing && result.product) {
-      setProduct({ ...defaultProduct, ...result.product });
+      setActiveProduct({ ...defaultProduct, ...result.product });
     } else {
-      setProduct(createBlankProduct(refreshedProducts));
+      setActiveProduct(createBlankProduct(refreshedProducts));
     }
   }
 
@@ -199,7 +207,7 @@ export function AdminProductManager() {
 
     setMessage("Product deleted.");
     const refreshedProducts = await loadProductsAndReturn();
-    setProduct(createBlankProduct(refreshedProducts));
+    setActiveProduct(createBlankProduct(refreshedProducts));
   }
 
   async function saveProductPayload(nextProduct: Product) {
@@ -279,7 +287,7 @@ export function AdminProductManager() {
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <h2 className="font-serif text-3xl font-bold text-forest">{isEditing ? "Edit product" : "Add product manually"}</h2>
           {isEditing ? (
-            <button className="rounded-full border border-forest/20 px-4 py-2 text-sm font-bold text-forest" onClick={() => setProduct(createBlankProduct(products))} type="button">
+            <button className="rounded-full border border-forest/20 px-4 py-2 text-sm font-bold text-forest" onClick={() => setActiveProduct(createBlankProduct(products))} type="button">
               New product
             </button>
           ) : null}
@@ -300,7 +308,7 @@ export function AdminProductManager() {
           <Field help="You can paste a public URL, or upload a file from your computer below." label="Product photo URL">
             <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("imageUrl", event.target.value)} placeholder="https://..." type="url" value={product.imageUrl ?? ""} />
           </Field>
-          <Field help="How it is sold. Example: 6 pieces, 1kg bag, 415g tin." label="Unit / packaging">
+          <Field help="What one customer receives. Example: 1 bottle 255g, 1kg bag or pack of 6. Supplier case sizes belong in Supplier pack size." label="Customer unit / item size">
             <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("unit", event.target.value)} placeholder="6 pieces / 1kg / 1 tin" required value={product.unit} />
           </Field>
           <Field
@@ -309,9 +317,12 @@ export function AdminProductManager() {
           >
             <textarea
               className="min-h-24 w-full rounded-lg border px-3 py-2"
-              onChange={(event) => update("packageOptions", textToPackageOptions(event.target.value))}
+              onChange={(event) => {
+                setPackageOptionsText(event.target.value);
+                update("packageOptions", textToPackageOptions(event.target.value));
+              }}
               placeholder={"4 stuks | 4 | 3.00\n8 stuks | 8 | 5.75\n12 stuks | 12 | 8.25"}
-              value={packageOptionsToText(product)}
+              value={packageOptionsText}
             />
           </Field>
           <Field help="Where this product appears in the webshop filters." label="Category">
@@ -447,7 +458,7 @@ export function AdminProductManager() {
           </div>
           <button
             className="rounded-full bg-forest px-4 py-2 text-sm font-bold text-cream"
-            onClick={() => setProduct(createBlankProduct(products))}
+            onClick={() => setActiveProduct(createBlankProduct(products))}
             type="button"
           >
             New product
@@ -501,7 +512,7 @@ export function AdminProductManager() {
                   }`}
                   key={item.id}
                   onClick={() => {
-                    setProduct({ ...defaultProduct, ...item });
+                    setActiveProduct({ ...defaultProduct, ...item });
                     setMessage("");
                   }}
                 >

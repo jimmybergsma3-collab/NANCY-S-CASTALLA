@@ -7,7 +7,7 @@ import { defaultLocale, getDictionary, isLocale, type Locale } from "@/i18n/conf
 import { formatEuro } from "@/lib/pricing";
 import { getPublicProductDescription } from "@/lib/product-display";
 import { getProductById, getProducts } from "@/lib/product-store";
-import { getDisplayedProductPrice, getEffectivePackageOptions } from "@/lib/product-packaging";
+import { getCustomerDisplayUnit, getDisplayedProductPrice, getEffectivePackageOptions } from "@/lib/product-packaging";
 
 export const dynamic = "force-dynamic";
 
@@ -25,10 +25,9 @@ function DetailPanel({ children, open, title }: { children: React.ReactNode; ope
 
 function getPublicAdditionalInfo(product: {
   additionalInfo?: string;
-  packSize?: string;
   unit: string;
   origin: string;
-}) {
+} & Parameters<typeof getCustomerDisplayUnit>[0]) {
   const info = product.additionalInfo?.trim() ?? "";
   const supplierNote = /^(supplier section|supplier category|dutch name):/i.test(info);
 
@@ -36,7 +35,7 @@ function getPublicAdditionalInfo(product: {
     return info;
   }
 
-  return `Pack size: ${product.packSize || product.unit}. Origin: ${product.origin}.`;
+  return `Sold as: ${getCustomerDisplayUnit(product)}. Origin: ${product.origin}.`;
 }
 
 export default async function ProductDetailPage({ params }: { params: Promise<unknown> }) {
@@ -107,7 +106,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
             </div>
             <div className="flex justify-between gap-4">
               <span>Unit</span>
-              <strong>{product.unit}</strong>
+              <strong>{getCustomerDisplayUnit(product)}</strong>
             </div>
             <div className="flex justify-between gap-4">
               <span>Status</span>
