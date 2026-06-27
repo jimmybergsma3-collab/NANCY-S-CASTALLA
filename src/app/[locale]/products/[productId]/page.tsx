@@ -7,6 +7,7 @@ import { defaultLocale, getDictionary, isLocale, type Locale } from "@/i18n/conf
 import { formatEuro } from "@/lib/pricing";
 import { getPublicProductDescription } from "@/lib/product-display";
 import { getProductById, getProducts } from "@/lib/product-store";
+import { getDisplayedProductPrice, getEffectivePackageOptions } from "@/lib/product-packaging";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
   const relatedProducts = allProducts
     .filter((item) => item.category === product.category && item.id !== product.id)
     .slice(0, 4);
+  const packageOptions = getEffectivePackageOptions(product);
+  const displayedPrice = getDisplayedProductPrice(product);
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-12">
@@ -78,14 +81,14 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-coffee">{product.category}</p>
           <h1 className="mt-2 font-serif text-5xl font-bold text-forest">{product.name}</h1>
           <div className="mt-3 text-2xl font-bold text-forest">
-            {product.salePriceInclVat > 0 ? formatEuro(product.salePriceInclVat) : dictionary.common.soon}
+            {displayedPrice > 0 ? formatEuro(displayedPrice) : dictionary.common.soon}
           </div>
           <p className="mt-5 leading-7 text-forest/72">{getPublicProductDescription(product)}</p>
-          {product.packageOptions?.length ? (
+          {packageOptions.length ? (
             <div className="mt-6 rounded-lg border border-brass/30 bg-linen p-4">
               <h2 className="font-serif text-2xl font-bold text-forest">Available package sizes</h2>
               <div className="mt-3 grid gap-2">
-                {product.packageOptions.map((option) => (
+                {packageOptions.map((option) => (
                   <div className="flex justify-between gap-4 text-sm text-forest" key={option.label}>
                     <span>
                       {option.label}
@@ -153,7 +156,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
                 )}
                 <h3 className="mt-4 min-h-12 text-sm font-bold text-forest">{item.name}</h3>
                 <p className="mt-2 text-sm font-bold text-coffee">
-                  {item.salePriceInclVat > 0 ? formatEuro(item.salePriceInclVat) : dictionary.common.soon}
+                  {getDisplayedProductPrice(item) > 0 ? formatEuro(getDisplayedProductPrice(item)) : dictionary.common.soon}
                 </p>
               </Link>
             ))}

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { defaultLocale, getDictionary, isLocale, type Locale } from "@/i18n/config";
-import { categoryToSlug, productCategories } from "@/lib/product-categories";
+import { categoryToSlug, productCategories, productMatchesCategory } from "@/lib/product-categories";
 import { getProducts } from "@/lib/product-store";
 
 export const dynamic = "force-dynamic";
@@ -10,11 +10,12 @@ export default async function ProductsPage({ params }: { params: Promise<unknown
   const locale: Locale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const dictionary = getDictionary(locale);
   const products = await getProducts();
-  const categoryCounts = new Map(products.map((product) => [product.category, 0]));
-
-  for (const product of products) {
-    categoryCounts.set(product.category, (categoryCounts.get(product.category) ?? 0) + 1);
-  }
+  const categoryCounts = new Map(
+    productCategories.map((category) => [
+      category,
+      products.filter((product) => productMatchesCategory(product, category)).length,
+    ]),
+  );
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-12">

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { ProductOrder } from "@/components/ProductOrder";
 import { defaultLocale, getDictionary, isLocale, type Locale } from "@/i18n/config";
-import { categoryToSlug, slugToCategory } from "@/lib/product-categories";
+import { productMatchesCategory, slugToCategory } from "@/lib/product-categories";
 import { getProducts } from "@/lib/product-store";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export default async function ProductCategoryPage({ params }: { params: Promise<
     notFound();
   }
 
-  const products = (await getProducts()).filter((product) => categoryToSlug(product.category) === categoryToSlug(category));
+  const products = (await getProducts()).filter((product) => productMatchesCategory(product, category));
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-12">

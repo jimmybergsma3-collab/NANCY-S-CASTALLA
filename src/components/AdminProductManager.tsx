@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { Product } from "@/types/product";
 import { calculatePricing, formatEuro, suggestedSalePriceInclVat } from "@/lib/pricing";
+import { productCategories as availableProductCategories } from "@/lib/product-categories";
 
 const defaultProduct: Product = {
   id: "",
@@ -315,7 +316,7 @@ export function AdminProductManager() {
           </Field>
           <Field help="Where this product appears in the webshop filters." label="Category">
             <select className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("category", event.target.value as Product["category"])} value={product.category}>
-              {["Dutch products", "British & Irish products", "Frozen snacks", "Bread & bakery", "Breakfast products", "Coffee & drinks", "Sauces & condiments", "South American products", "Non-food & packaging"].map((item) => <option key={item}>{item}</option>)}
+              {availableProductCategories.map((item) => <option key={item}>{item}</option>)}
             </select>
           </Field>
           <Field help="Available = stock now. Preorder = order first. Coming soon = visible but not orderable." label="Stock status">
@@ -334,7 +335,7 @@ export function AdminProductManager() {
           </Field>
           <Field help="Main origin or target range." label="Origin">
             <select className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("origin", event.target.value as Product["origin"])} value={product.origin}>
-              {["Dutch", "British", "Irish", "South American", "Other"].map((item) => <option key={item}>{item}</option>)}
+              {["Dutch", "British", "Irish", "German", "Asian", "South American", "Other"].map((item) => <option key={item}>{item}</option>)}
             </select>
           </Field>
           <Field help="Supplier name. Example: Eurofood." label="Supplier">

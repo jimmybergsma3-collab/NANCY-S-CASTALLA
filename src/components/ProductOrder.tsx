@@ -10,6 +10,8 @@ import { formatEuro } from "@/lib/pricing";
 import { businessConfig } from "@/config/business";
 import { defaultLocale, getDictionary, type Locale } from "@/i18n/config";
 import { getPublicProductDescription } from "@/lib/product-display";
+import { productMatchesCategory } from "@/lib/product-categories";
+import { getEffectivePackageOptions } from "@/lib/product-packaging";
 
 type Props = {
   products: Product[];
@@ -32,7 +34,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
   const [message, setMessage] = useState("");
 
   const categories = useMemo(() => ["All", ...Array.from(new Set(products.map((product) => product.category)))] as const, [products]);
-  const visibleProducts = (category === "All" ? products : products.filter((product) => product.category === category)).filter((product) => {
+  const visibleProducts = (category === "All" ? products : products.filter((product) => productMatchesCategory(product, category))).filter((product) => {
     const query = search.trim().toLowerCase();
     if (!query) {
       return true;
@@ -46,7 +48,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
   const cartLines = products
     .map((product) => {
       const optionIndex = selectedOptions[product.id] ?? 0;
-      const packageOption = product.packageOptions?.[optionIndex];
+      const packageOption = getEffectivePackageOptions(product)[optionIndex];
       return {
         product,
         packageOption,
@@ -147,7 +149,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
             const quantity = quantities[product.id] ?? 0;
             const disabled = product.stockStatus === "coming-soon";
             const productHref = `/${locale}/products/${encodeURIComponent(product.id)}`;
-            const packageOptions = product.packageOptions ?? [];
+            const packageOptions = getEffectivePackageOptions(product);
             const optionIndex = selectedOptions[product.id] ?? 0;
             const packageOption = packageOptions[optionIndex];
             const displayUnit = packageOption?.label ?? product.unit;

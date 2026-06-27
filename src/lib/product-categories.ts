@@ -1,4 +1,4 @@
-import type { ProductCategory } from "@/types/product";
+import type { Product, ProductCategory } from "@/types/product";
 
 export const productCategories: ProductCategory[] = [
   "Dutch products",
@@ -9,8 +9,22 @@ export const productCategories: ProductCategory[] = [
   "Coffee & drinks",
   "Sauces & condiments",
   "South American products",
+  "German products",
+  "Asian products",
   "Non-food & packaging",
 ];
+
+const originCategories: Partial<Record<ProductCategory, Product["origin"][]>> = {
+  "Dutch products": ["Dutch"],
+  "British & Irish products": ["British", "Irish"],
+  "South American products": ["South American"],
+  "German products": ["German"],
+  "Asian products": ["Asian"],
+};
+
+export function productMatchesCategory(product: Product, category: ProductCategory) {
+  return product.category === category || (originCategories[category]?.includes(product.origin) ?? false);
+}
 
 export function categoryToSlug(category: ProductCategory) {
   return category

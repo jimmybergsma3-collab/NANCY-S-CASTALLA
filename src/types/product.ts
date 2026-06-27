@@ -1,6 +1,6 @@
 export type ProductStatus = "available" | "preorder" | "coming-soon";
 export type ProductType = "frozen" | "fresh" | "ambient";
-export type ProductOrigin = "Dutch" | "British" | "Irish" | "South American" | "Other";
+export type ProductOrigin = "Dutch" | "British" | "Irish" | "German" | "Asian" | "South American" | "Other";
 
 export type ProductCategory =
   | "Dutch products"
@@ -11,6 +11,8 @@ export type ProductCategory =
   | "Coffee & drinks"
   | "Sauces & condiments"
   | "South American products"
+  | "German products"
+  | "Asian products"
   | "Non-food & packaging";
 
 export type ProductPackageOption = {

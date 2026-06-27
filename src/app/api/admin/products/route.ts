@@ -4,6 +4,7 @@ import { calculatePricing } from "@/lib/pricing";
 import { createProduct, deleteProduct, getProducts } from "@/lib/product-store";
 import { hasSupabaseAdmin } from "@/lib/env";
 import type { Product } from "@/types/product";
+import { getEffectivePackageOptions } from "@/lib/product-packaging";
 
 export async function GET() {
   if (!(await isAdminSession())) {
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
     marginPercent: pricing.marginPercent,
     profitPerUnit: pricing.profitPerUnit,
     unitCost: Number(body.unitCost || body.costPriceExVat),
-    packageOptions: (body.packageOptions ?? []).map((option) => ({
+    packageOptions: getEffectivePackageOptions(body).map((option) => ({
       label: String(option.label).trim(),
       quantity: Number(option.quantity),
       salePriceInclVat: Number(option.salePriceInclVat),
