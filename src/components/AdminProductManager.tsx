@@ -328,7 +328,7 @@ export function AdminProductManager() {
           <Field help="You can paste a public URL, or upload a file from your computer below." label="Product photo URL">
             <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("imageUrl", event.target.value)} placeholder="https://..." type="url" value={product.imageUrl ?? ""} />
           </Field>
-          <Field help="What one customer receives. Example: 1 bottle 255g, 1kg bag or pack of 6. Supplier case sizes belong in Supplier pack size." label="Customer unit / item size">
+          <Field help="This text is shown directly below the customer price and must match that price. Use 40 x 85g for a full box, 1 x 85g for one item, or use Customer package options for several choices." label="Customer unit / item size">
             <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("unit", event.target.value)} placeholder="6 pieces / 1kg / 1 tin" required value={product.unit} />
           </Field>
           <Field

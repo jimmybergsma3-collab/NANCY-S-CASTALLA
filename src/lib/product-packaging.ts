@@ -29,14 +29,5 @@ export function getCustomerDisplayUnit(product: Product) {
     return packageOption.label;
   }
 
-  const caseWithItemSize = /^\d+\s*x\s*(.+)$/i.exec(product.unit.trim());
-  if (caseWithItemSize?.[1]) {
-    return caseWithItemSize[1].trim();
-  }
-
-  if (/\(x\s*\d+\)$/i.test(product.unit.trim())) {
-    return "1 piece";
-  }
-
   return product.unit;
 }
