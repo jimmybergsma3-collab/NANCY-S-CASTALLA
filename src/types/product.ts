@@ -27,6 +27,7 @@ export type Product = {
   imageUrl?: string;
   isVisible?: boolean;
   category: ProductCategory;
+  categories?: ProductCategory[];
   description: string;
   price: number;
   unit: string;

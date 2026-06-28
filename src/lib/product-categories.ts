@@ -14,16 +14,12 @@ export const productCategories: ProductCategory[] = [
   "Non-food & packaging",
 ];
 
-const originCategories: Partial<Record<ProductCategory, Product["origin"][]>> = {
-  "Dutch products": ["Dutch"],
-  "British & Irish products": ["British", "Irish"],
-  "South American products": ["South American"],
-  "German products": ["German"],
-  "Asian products": ["Asian"],
-};
+export function getProductCategories(product: Product) {
+  return product.categories?.length ? product.categories : [product.category];
+}
 
 export function productMatchesCategory(product: Product, category: ProductCategory) {
-  return product.category === category || (originCategories[category]?.includes(product.origin) ?? false);
+  return getProductCategories(product).includes(category);
 }
 
 export function categoryToSlug(category: ProductCategory) {

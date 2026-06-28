@@ -10,6 +10,7 @@ import { formatEuro } from "@/lib/pricing";
 import { getPublicProductDescription } from "@/lib/product-display";
 import { getProductById, getProducts } from "@/lib/product-store";
 import { getCustomerDisplayUnit, getDisplayedProductPrice, getEffectivePackageOptions } from "@/lib/product-packaging";
+import { getProductCategories } from "@/lib/product-categories";
 
 export const dynamic = "force-dynamic";
 
@@ -80,7 +81,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
 
   const allProducts = await getProducts();
   const relatedProducts = allProducts
-    .filter((item) => item.category === product.category && item.id !== product.id)
+    .filter((item) => getProductCategories(item).some((category) => getProductCategories(product).includes(category)) && item.id !== product.id)
     .slice(0, 4);
   const packageOptions = getEffectivePackageOptions(product);
   const displayedPrice = getDisplayedProductPrice(product);
@@ -103,7 +104,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
           )}
         </div>
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-coffee">{product.category}</p>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-coffee">{getProductCategories(product).join(" · ")}</p>
           <h1 className="mt-2 font-serif text-5xl font-bold text-forest">{product.name}</h1>
           <div className="mt-3 text-2xl font-bold text-forest">
             {displayedPrice > 0 ? formatEuro(displayedPrice) : dictionary.common.soon}

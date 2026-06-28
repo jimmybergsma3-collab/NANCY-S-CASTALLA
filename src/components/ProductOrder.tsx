@@ -10,7 +10,7 @@ import { formatEuro } from "@/lib/pricing";
 import { businessConfig } from "@/config/business";
 import { defaultLocale, getDictionary, type Locale } from "@/i18n/config";
 import { getPublicProductDescription } from "@/lib/product-display";
-import { productMatchesCategory } from "@/lib/product-categories";
+import { getProductCategories, productMatchesCategory } from "@/lib/product-categories";
 import { getCustomerDisplayUnit, getEffectivePackageOptions } from "@/lib/product-packaging";
 
 type Props = {
@@ -33,14 +33,14 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [message, setMessage] = useState("");
 
-  const categories = useMemo(() => ["All", ...Array.from(new Set(products.map((product) => product.category)))] as const, [products]);
+  const categories = useMemo(() => ["All", ...Array.from(new Set(products.flatMap(getProductCategories)))] as const, [products]);
   const visibleProducts = (category === "All" ? products : products.filter((product) => productMatchesCategory(product, category))).filter((product) => {
     const query = search.trim().toLowerCase();
     if (!query) {
       return true;
     }
 
-    return [product.id, product.name, product.description, product.category, product.origin, product.supplierCode]
+    return [product.id, product.name, product.description, getProductCategories(product).join(" "), product.origin, product.supplierCode]
       .join(" ")
       .toLowerCase()
       .includes(query);
@@ -167,7 +167,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
                 ) : null}
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-coffee">{product.category}</p>
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-coffee">{getProductCategories(product).join(" · ")}</p>
                     <Link href={productHref}>
                       <h3 className="mt-2 font-serif text-2xl font-bold text-forest transition group-hover:text-coffee">
                         {product.name}

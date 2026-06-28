@@ -29,9 +29,12 @@ export async function POST(request: Request) {
 
   const body = (await request.json()) as Product;
   const pricing = calculatePricing(body);
+  const categories = Array.from(new Set(body.categories?.length ? body.categories : [body.category]));
   const product: Product = {
     ...body,
     id: body.id.trim(),
+    category: categories.includes(body.category) ? body.category : categories[0],
+    categories,
     price: Number(body.salePriceInclVat),
     costPriceExVat: Number(body.costPriceExVat),
     vatRate: Number(body.vatRate),

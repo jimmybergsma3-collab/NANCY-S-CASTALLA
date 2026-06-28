@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { Product } from "@/types/product";
 import { calculatePricing, calculateUnitCost, formatEuro, getSupplierPackQuantity } from "@/lib/pricing";
-import { productCategories as availableProductCategories } from "@/lib/product-categories";
+import { getProductCategories, productCategories as availableProductCategories, productMatchesCategory } from "@/lib/product-categories";
 
 const defaultProduct: Product = {
   id: "",
@@ -12,6 +12,7 @@ const defaultProduct: Product = {
   imageUrl: "",
   isVisible: false,
   category: "British & Irish products",
+  categories: ["British & Irish products"],
   description: "",
   price: 0,
   unit: "",
@@ -105,18 +106,18 @@ export function AdminProductManager() {
   const supplierPackQuantity = getSupplierPackQuantity(product.packSize);
   const calculatedUnitCost = calculateUnitCost(product.costPriceExVat, product.packSize);
   const isEditing = products.some((item) => item.id === product.id);
-  const productCategories = useMemo(() => ["All", ...Array.from(new Set(products.map((item) => item.category)))], [products]);
+  const productCategories = useMemo(() => ["All", ...availableProductCategories], []);
   const filteredProducts = useMemo(() => {
     const query = productSearch.trim().toLowerCase();
 
     return products.filter((item) => {
       const matchesQuery = query
-        ? [item.id, item.name, item.category, item.supplier, item.supplierCode, item.unit]
+        ? [item.id, item.name, getProductCategories(item).join(" "), item.supplier, item.supplierCode, item.unit]
             .join(" ")
             .toLowerCase()
             .includes(query)
         : true;
-      const matchesCategory = categoryFilter === "All" || item.category === categoryFilter;
+      const matchesCategory = categoryFilter === "All" || productMatchesCategory(item, categoryFilter as Product["category"]);
       const matchesVisibility =
         visibilityFilter === "All" ||
         (visibilityFilter === "Visible" ? item.isVisible !== false : item.isVisible === false);
@@ -270,6 +271,24 @@ export function AdminProductManager() {
     setProduct((current) => ({ ...current, [key]: value }));
   }
 
+  function toggleCategory(category: Product["category"]) {
+    setProduct((current) => {
+      const selected = getProductCategories(current);
+      const isSelected = selected.includes(category);
+
+      if (isSelected && selected.length === 1) {
+        return current;
+      }
+
+      const categories = isSelected ? selected.filter((item) => item !== category) : [...selected, category];
+      return {
+        ...current,
+        category: categories.includes(current.category) ? current.category : categories[0],
+        categories,
+      };
+    });
+  }
+
   if (!loggedIn) {
     return (
       <form className="mt-8 max-w-md rounded-lg border border-forest/10 bg-white p-6 shadow-soft" onSubmit={login}>
@@ -326,10 +345,20 @@ export function AdminProductManager() {
               value={packageOptionsText}
             />
           </Field>
-          <Field help="Where this product appears in the webshop filters." label="Category">
-            <select className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("category", event.target.value as Product["category"])} value={product.category}>
-              {availableProductCategories.map((item) => <option key={item}>{item}</option>)}
-            </select>
+          <Field help="Select every webshop section where this product should appear. At least one category is required." label="Product categories">
+            <div className="grid gap-2 rounded-lg border border-forest/15 bg-linen p-3 sm:grid-cols-2">
+              {availableProductCategories.map((item) => (
+                <label className="flex items-start gap-2 text-sm text-forest" key={item}>
+                  <input
+                    checked={getProductCategories(product).includes(item)}
+                    className="mt-0.5"
+                    onChange={() => toggleCategory(item)}
+                    type="checkbox"
+                  />
+                  <span>{item}</span>
+                </label>
+              ))}
+            </div>
           </Field>
           <Field help="Available = stock now. Preorder = order first. Coming soon = visible but not orderable." label="Stock status">
             <select className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("stockStatus", event.target.value as Product["stockStatus"])} value={product.stockStatus}>
@@ -532,7 +561,7 @@ export function AdminProductManager() {
                 >
                   <td className="px-3 py-3">
                     <div className="font-bold text-forest">{item.name}</div>
-                    <div className="text-xs text-forest/60">{item.category}</div>
+                    <div className="text-xs text-forest/60">{getProductCategories(item).join(" · ")}</div>
                   </td>
                   <td className="px-3 py-3 text-xs text-forest/70">
                     <div className="font-bold text-forest">{item.id}</div>

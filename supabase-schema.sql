@@ -4,6 +4,7 @@ create table if not exists products (
   image_url text not null default '',
   is_visible boolean not null default false,
   category text not null,
+  categories jsonb not null default '[]'::jsonb,
   description text not null,
   price numeric not null default 0,
   unit text not null,
@@ -63,6 +64,7 @@ alter table products add column if not exists ingredients text not null default 
 alter table products add column if not exists directions text not null default '';
 alter table products add column if not exists conservation text not null default '';
 alter table products add column if not exists additional_info text not null default '';
+alter table products add column if not exists categories jsonb not null default '[]'::jsonb;
 alter table order_items add column if not exists package_label text not null default '';
 alter table order_items add column if not exists package_quantity numeric not null default 1;
 

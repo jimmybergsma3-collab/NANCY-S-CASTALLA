@@ -2,6 +2,7 @@ import { products as localProducts } from "@/data/products";
 import type { Product } from "@/types/product";
 import { hasSupabaseAdmin } from "./env";
 import { supabaseAdminFetch } from "./supabase-rest";
+import { getProductCategories } from "./product-categories";
 
 type ProductRow = {
   id: string;
@@ -9,6 +10,7 @@ type ProductRow = {
   image_url?: string;
   is_visible?: boolean;
   category: Product["category"];
+  categories?: Product["categories"];
   description: string;
   price: number;
   unit: string;
@@ -39,6 +41,7 @@ export function rowToProduct(row: ProductRow): Product {
     imageUrl: row.image_url ?? "",
     isVisible: row.is_visible ?? true,
     category: row.category,
+    categories: row.categories?.length ? row.categories : [row.category],
     description: row.description,
     price: row.price,
     unit: row.unit,
@@ -70,6 +73,7 @@ export function productToRow(product: Product): ProductRow {
     image_url: product.imageUrl ?? "",
     is_visible: product.isVisible ?? false,
     category: product.category,
+    categories: getProductCategories(product),
     description: product.description,
     price: product.price,
     unit: product.unit,
