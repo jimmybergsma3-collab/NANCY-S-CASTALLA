@@ -9,6 +9,7 @@ export type ProductCategory =
   | "Scandinavian products"
   | "Asian & Indonesian products"
   | "South American products"
+  | "Vegan & vegetarian"
   | "Frozen snacks"
   | "Bread & bakery"
   | "Breakfast products"
