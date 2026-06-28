@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { Eye, EyeOff, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import type { Product } from "@/types/product";
 import { calculatePricing, calculateUnitCost, formatEuro, getSupplierPackQuantity } from "@/lib/pricing";
 import { getProductCategories, productCategories as availableProductCategories, productMatchesCategory } from "@/lib/product-categories";
@@ -100,6 +101,7 @@ export function AdminProductManager() {
   const [productSearch, setProductSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [visibilityFilter, setVisibilityFilter] = useState("All");
+  const [duplicateFilter, setDuplicateFilter] = useState("All");
   const [uploading, setUploading] = useState(false);
   const [packageOptionsText, setPackageOptionsText] = useState("");
   const pricing = calculatePricing(product);
@@ -107,6 +109,18 @@ export function AdminProductManager() {
   const calculatedUnitCost = calculateUnitCost(product.costPriceExVat, product.packSize);
   const isEditing = products.some((item) => item.id === product.id);
   const productCategories = useMemo(() => ["All", ...availableProductCategories], []);
+  const duplicateKeys = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const item of products) {
+      const code = item.supplierCode.trim().toLowerCase();
+      if (!code) continue;
+      const key = `${item.supplier.trim().toLowerCase()}|${code}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return new Set(Array.from(counts.entries()).filter(([, count]) => count > 1).map(([key]) => key));
+  }, [products]);
+  const onlineCount = products.filter((item) => item.isVisible !== false).length;
+  const duplicateCount = products.filter((item) => duplicateKeys.has(`${item.supplier.trim().toLowerCase()}|${item.supplierCode.trim().toLowerCase()}`)).length;
   const filteredProducts = useMemo(() => {
     const query = productSearch.trim().toLowerCase();
 
@@ -118,13 +132,14 @@ export function AdminProductManager() {
             .includes(query)
         : true;
       const matchesCategory = categoryFilter === "All" || productMatchesCategory(item, categoryFilter as Product["category"]);
-      const matchesVisibility =
-        visibilityFilter === "All" ||
-        (visibilityFilter === "Visible" ? item.isVisible !== false : item.isVisible === false);
+      const matchesVisibility = visibilityFilter === "All" ||
+        (visibilityFilter === "Online" ? item.isVisible !== false : item.isVisible === false);
+      const duplicateKey = `${item.supplier.trim().toLowerCase()}|${item.supplierCode.trim().toLowerCase()}`;
+      const matchesDuplicate = duplicateFilter === "All" || duplicateKeys.has(duplicateKey);
 
-      return matchesQuery && matchesCategory && matchesVisibility;
+      return matchesQuery && matchesCategory && matchesVisibility && matchesDuplicate;
     });
-  }, [categoryFilter, productSearch, products, visibilityFilter]);
+  }, [categoryFilter, duplicateFilter, duplicateKeys, productSearch, products, visibilityFilter]);
 
   function setActiveProduct(nextProduct: Product) {
     setProduct(nextProduct);
@@ -188,16 +203,16 @@ export function AdminProductManager() {
   }
 
   async function deleteCurrentProduct() {
-    if (!isEditing) {
-      return;
-    }
+    if (isEditing) await deleteProduct(product);
+  }
 
-    const confirmed = window.confirm(`Delete ${product.name || product.id}? This cannot be undone.`);
+  async function deleteProduct(item: Product) {
+    const confirmed = window.confirm(`Delete ${item.name || item.id} (${item.id})? This cannot be undone.`);
     if (!confirmed) {
       return;
     }
 
-    const response = await fetch(`/api/admin/products?id=${encodeURIComponent(product.id)}`, {
+    const response = await fetch(`/api/admin/products?id=${encodeURIComponent(item.id)}`, {
       method: "DELETE",
     });
     const result = (await response.json()) as { ok: boolean; message?: string };
@@ -209,7 +224,25 @@ export function AdminProductManager() {
 
     setMessage("Product deleted.");
     const refreshedProducts = await loadProductsAndReturn();
-    setActiveProduct(createBlankProduct(refreshedProducts));
+    if (product.id === item.id) {
+      setActiveProduct(createBlankProduct(refreshedProducts));
+    }
+  }
+
+  async function toggleProductVisibility(item: Product) {
+    const nextVisible = item.isVisible === false;
+    const result = await saveProductPayload({ ...item, isVisible: nextVisible });
+
+    if (!result.ok || !result.product) {
+      setMessage(result.message || "Online status could not be changed.");
+      return;
+    }
+
+    setMessage(nextVisible ? "Product is now online." : "Product is now offline.");
+    await loadProductsAndReturn();
+    if (product.id === item.id) {
+      setActiveProduct({ ...defaultProduct, ...result.product });
+    }
   }
 
   async function saveProductPayload(nextProduct: Product) {
@@ -302,7 +335,7 @@ export function AdminProductManager() {
   }
 
   return (
-    <div className="mt-8 grid gap-8 xl:grid-cols-[minmax(0,1fr)_620px]">
+    <div className="mt-8 grid gap-8 xl:grid-cols-[minmax(0,1fr)_760px]">
       <form className="rounded-lg border border-forest/10 bg-white p-6 shadow-soft" onSubmit={saveProduct}>
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <h2 className="font-serif text-3xl font-bold text-forest">{isEditing ? "Edit product" : "Add product manually"}</h2>
@@ -496,7 +529,7 @@ export function AdminProductManager() {
           <div>
             <h2 className="font-serif text-3xl font-bold text-forest">Product overview</h2>
             <p className="mt-2 text-sm text-forest/65">
-              {filteredProducts.length} of {products.length} products shown. Click a row to edit.
+              {filteredProducts.length} of {products.length} products shown.
             </p>
           </div>
           <button
@@ -507,6 +540,17 @@ export function AdminProductManager() {
             New product
           </button>
         </div>
+        <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs font-bold">
+          <button className="rounded-lg border border-forest/10 bg-white px-2 py-3 text-forest" onClick={() => setVisibilityFilter("All")} type="button">
+            <span className="block text-lg">{products.length}</span>All
+          </button>
+          <button className="rounded-lg border border-leaf/20 bg-white px-2 py-3 text-leaf" onClick={() => setVisibilityFilter("Online")} type="button">
+            <span className="block text-lg">{onlineCount}</span>Online
+          </button>
+          <button className="rounded-lg border border-coffee/20 bg-white px-2 py-3 text-coffee" onClick={() => setVisibilityFilter("Offline")} type="button">
+            <span className="block text-lg">{products.length - onlineCount}</span>Offline
+          </button>
+        </div>
         <div className="mt-5 grid gap-3">
           <input
             className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm"
@@ -515,7 +559,7 @@ export function AdminProductManager() {
             type="search"
             value={productSearch}
           />
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <select
               className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm"
               onChange={(event) => setCategoryFilter(event.target.value)}
@@ -531,20 +575,28 @@ export function AdminProductManager() {
               value={visibilityFilter}
             >
               <option>All</option>
-              <option>Visible</option>
-              <option>Hidden</option>
+              <option>Online</option>
+              <option>Offline</option>
+            </select>
+            <select
+              className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm"
+              onChange={(event) => setDuplicateFilter(event.target.value)}
+              value={duplicateFilter}
+            >
+              <option value="All">All products</option>
+              <option value="Duplicates">Possible duplicates ({duplicateCount})</option>
             </select>
           </div>
         </div>
         <div className="mt-4 max-h-[720px] overflow-auto rounded-lg border border-forest/10 bg-white">
-          <table className="w-full min-w-[560px] text-left text-sm">
+          <table className="w-full min-w-[760px] text-left text-sm">
             <thead className="sticky top-0 bg-forest text-cream">
               <tr>
                 <th className="px-3 py-2">Product</th>
                 <th className="px-3 py-2">Code</th>
                 <th className="px-3 py-2">Price</th>
                 <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2">Open</th>
+                <th className="px-3 py-2 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -572,18 +624,16 @@ export function AdminProductManager() {
                     <span className={`rounded-full px-2 py-1 text-xs font-bold ${
                       item.isVisible !== false ? "bg-leaf/10 text-leaf" : "bg-coffee/10 text-coffee"
                     }`}>
-                      {item.isVisible !== false ? "Visible" : "Hidden"}
+                      {item.isVisible !== false ? "Online" : "Offline"}
                     </span>
                   </td>
                   <td className="px-3 py-3">
-                    <Link
-                      className="text-xs font-bold text-forest underline-offset-4 hover:underline"
-                      href={`/en/products/${encodeURIComponent(item.id)}`}
-                      onClick={(event) => event.stopPropagation()}
-                      target="_blank"
-                    >
-                      Page
-                    </Link>
+                    <div className="flex justify-end gap-1">
+                      <button className="grid h-9 w-9 place-items-center rounded-md border border-forest/15 text-forest hover:bg-linen" onClick={(event) => { event.stopPropagation(); setActiveProduct({ ...defaultProduct, ...item }); }} title="Edit product" type="button"><Pencil size={16} /></button>
+                      <Link className="grid h-9 w-9 place-items-center rounded-md border border-forest/15 text-forest hover:bg-linen" href={`/en/products/${encodeURIComponent(item.id)}`} onClick={(event) => event.stopPropagation()} target="_blank" title="Open product page"><ExternalLink size={16} /></Link>
+                      <button className="grid h-9 w-9 place-items-center rounded-md border border-forest/15 text-forest hover:bg-linen" onClick={(event) => { event.stopPropagation(); void toggleProductVisibility(item); }} title={item.isVisible !== false ? "Take offline" : "Put online"} type="button">{item.isVisible !== false ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+                      <button className="grid h-9 w-9 place-items-center rounded-md border border-red-200 text-red-700 hover:bg-red-50" onClick={(event) => { event.stopPropagation(); void deleteProduct(item); }} title="Delete product" type="button"><Trash2 size={16} /></button>
+                    </div>
                   </td>
                 </tr>
               ))}
