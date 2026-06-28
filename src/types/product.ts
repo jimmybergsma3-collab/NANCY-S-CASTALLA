@@ -1,18 +1,19 @@
 export type ProductStatus = "available" | "preorder" | "coming-soon";
 export type ProductType = "frozen" | "fresh" | "ambient";
-export type ProductOrigin = "Dutch" | "British" | "Irish" | "German" | "Asian" | "South American" | "Other";
+export type ProductOrigin = "Dutch" | "British" | "Irish" | "German" | "Scandinavian" | "Asian" | "Indonesian" | "South American" | "Other";
 
 export type ProductCategory =
   | "Dutch products"
   | "British & Irish products"
+  | "German products"
+  | "Scandinavian products"
+  | "Asian & Indonesian products"
+  | "South American products"
   | "Frozen snacks"
   | "Bread & bakery"
   | "Breakfast products"
   | "Coffee & drinks"
   | "Sauces & condiments"
-  | "South American products"
-  | "German products"
-  | "Asian products"
   | "Non-food & packaging";
 
 export type ProductPackageOption = {

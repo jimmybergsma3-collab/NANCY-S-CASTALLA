@@ -376,7 +376,7 @@ export function AdminProductManager() {
           </Field>
           <Field help="Main origin or target range." label="Origin">
             <select className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("origin", event.target.value as Product["origin"])} value={product.origin}>
-              {["Dutch", "British", "Irish", "German", "Asian", "South American", "Other"].map((item) => <option key={item}>{item}</option>)}
+              {["Dutch", "British", "Irish", "German", "Scandinavian", "Asian", "Indonesian", "South American", "Other"].map((item) => <option key={item}>{item}</option>)}
             </select>
           </Field>
           <Field help="Supplier name. Example: Eurofood." label="Supplier">

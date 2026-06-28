@@ -3,14 +3,15 @@ import type { Product, ProductCategory } from "@/types/product";
 export const productCategories: ProductCategory[] = [
   "Dutch products",
   "British & Irish products",
+  "German products",
+  "Scandinavian products",
+  "Asian & Indonesian products",
+  "South American products",
   "Frozen snacks",
   "Bread & bakery",
   "Breakfast products",
   "Coffee & drinks",
   "Sauces & condiments",
-  "South American products",
-  "German products",
-  "Asian products",
   "Non-food & packaging",
 ];
 
