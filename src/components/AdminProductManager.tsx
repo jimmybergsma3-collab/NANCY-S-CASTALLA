@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { Product } from "@/types/product";
-import { calculatePricing, formatEuro, suggestedSalePriceInclVat } from "@/lib/pricing";
+import { calculatePricing, calculateUnitCost, formatEuro, getSupplierPackQuantity } from "@/lib/pricing";
 import { productCategories as availableProductCategories } from "@/lib/product-categories";
 
 const defaultProduct: Product = {
@@ -102,7 +102,8 @@ export function AdminProductManager() {
   const [uploading, setUploading] = useState(false);
   const [packageOptionsText, setPackageOptionsText] = useState("");
   const pricing = calculatePricing(product);
-  const suggestedPrice = suggestedSalePriceInclVat(product.costPriceExVat, product.vatRate, 50);
+  const supplierPackQuantity = getSupplierPackQuantity(product.packSize);
+  const calculatedUnitCost = calculateUnitCost(product.costPriceExVat, product.packSize);
   const isEditing = products.some((item) => item.id === product.id);
   const productCategories = useMemo(() => ["All", ...Array.from(new Set(products.map((item) => item.category)))], [products]);
   const filteredProducts = useMemo(() => {
@@ -355,8 +356,23 @@ export function AdminProductManager() {
           <Field help="How you buy it from the supplier. Example: box 12 x 1kg." label="Supplier pack size">
             <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("packSize", event.target.value)} placeholder="Box 12 x 1kg" value={product.packSize} />
           </Field>
-          <Field help="Wholesale price excluding IVA/VAT for one sellable unit." label="Cost price ex IVA">
+          <Field help="Total supplier invoice price excluding IVA/VAT for the complete box. Example: 31.60 for a box of 12." label="Supplier case cost ex IVA">
             <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("costPriceExVat", Number(event.target.value))} placeholder="4.00" step="0.01" type="number" value={product.costPriceExVat} />
+          </Field>
+          <Field help="Your purchase cost for one unit sold to the customer. This is used for the profit calculation." label="Purchase cost per customer unit ex IVA">
+            <div className="flex gap-2">
+              <input className="min-w-0 flex-1 rounded-lg border px-3 py-2" onChange={(event) => update("unitCost", Number(event.target.value))} placeholder="2.63" step="0.01" type="number" value={product.unitCost} />
+              {supplierPackQuantity > 1 ? (
+                <button
+                  className="shrink-0 rounded-lg border border-forest/20 bg-linen px-3 py-2 text-xs font-bold text-forest"
+                  onClick={() => update("unitCost", calculatedUnitCost)}
+                  title={`${formatEuro(product.costPriceExVat)} divided by ${supplierPackQuantity}`}
+                  type="button"
+                >
+                  Use {formatEuro(calculatedUnitCost)}
+                </button>
+              ) : null}
+            </div>
           </Field>
           <Field help="Usually 10 for food, 4 for bread/basic items, 21 for non-food." label="IVA %">
             <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("vatRate", Number(event.target.value))} placeholder="10" step="1" type="number" value={product.vatRate} />
@@ -378,16 +394,14 @@ export function AdminProductManager() {
           </Field>
         </div>
         <div className="mt-4 rounded-lg bg-cream p-4 text-sm text-forest">
-          <strong>Pricing preview:</strong> 50% target price {formatEuro(suggestedPrice)} incl. IVA. Current sale ex IVA{" "}
-          {formatEuro(pricing.salePriceExVat)}, IVA {formatEuro(pricing.ivaAmount)}, estimated profit{" "}
-          {formatEuro(pricing.profitPerUnit)} per unit, margin {pricing.marginPercent}%.
-          <button
-            className="ml-0 mt-3 rounded-full border border-forest/20 bg-white px-4 py-2 text-xs font-bold text-forest sm:ml-3 sm:mt-0"
-            onClick={() => update("salePriceInclVat", suggestedPrice)}
-            type="button"
-          >
-            Use 50% price
-          </button>
+          <strong>Pricing preview:</strong> purchase cost {formatEuro(pricing.purchaseCostPerUnit)} ex IVA per customer unit.
+          Sale ex IVA {formatEuro(pricing.salePriceExVat)}, IVA {formatEuro(pricing.ivaAmount)}, estimated profit{" "}
+          {formatEuro(pricing.profitPerUnit)} per unit, gross margin {pricing.marginPercent}% and markup {pricing.markupPercent}%.
+          {supplierPackQuantity > 1 ? (
+            <span className="mt-2 block text-xs text-forest/65">
+              Detected supplier case: {supplierPackQuantity} customer units. Case cost per unit: {formatEuro(calculatedUnitCost)} ex IVA.
+            </span>
+          ) : null}
         </div>
         <div className="mt-4 rounded-lg border border-forest/10 bg-linen p-4">
           <span className="text-sm font-bold text-forest">Upload product photo</span>
