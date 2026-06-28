@@ -1,8 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ProductOrder } from "@/components/ProductOrder";
+import { ProductShareButton } from "@/components/ProductShareButton";
 import { defaultLocale, getDictionary, isLocale, type Locale } from "@/i18n/config";
 import { formatEuro } from "@/lib/pricing";
 import { getPublicProductDescription } from "@/lib/product-display";
@@ -10,6 +12,30 @@ import { getProductById, getProducts } from "@/lib/product-store";
 import { getCustomerDisplayUnit, getDisplayedProductPrice, getEffectivePackageOptions } from "@/lib/product-packaging";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<unknown> }): Promise<Metadata> {
+  const { productId: rawProductId } = (await params) as { productId?: string };
+  const productId = rawProductId ? decodeURIComponent(rawProductId) : "";
+  const product = await getProductById(productId, { includeHidden: true });
+
+  if (!product) {
+    return {};
+  }
+
+  const description = getPublicProductDescription(product);
+  const images = product.imageUrl ? [{ url: product.imageUrl, alt: product.name }] : undefined;
+
+  return {
+    title: `${product.name} | Nancy's Castalla`,
+    description,
+    openGraph: {
+      title: product.name,
+      description,
+      type: "website",
+      images,
+    },
+  };
+}
 
 function DetailPanel({ children, open, title }: { children: React.ReactNode; open?: boolean; title: string }) {
   return (
@@ -82,6 +108,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
           <div className="mt-3 text-2xl font-bold text-forest">
             {displayedPrice > 0 ? formatEuro(displayedPrice) : dictionary.common.soon}
           </div>
+          {product.isVisible !== false ? (
+            <ProductShareButton locale={locale} productCode={product.id} productName={product.name} />
+          ) : null}
           <p className="mt-5 leading-7 text-forest/72">{getPublicProductDescription(product)}</p>
           {packageOptions.length ? (
             <div className="mt-6 rounded-lg border border-brass/30 bg-linen p-4">
