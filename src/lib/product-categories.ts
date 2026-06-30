@@ -17,7 +17,14 @@ export const productCategories: ProductCategory[] = [
 ];
 
 export function getProductCategories(product: Product) {
-  return product.categories?.length ? product.categories : [product.category];
+  const source = product.categories?.length ? product.categories : [product.category];
+  const normalized = source
+    .map((category) => category as string)
+    .map((category) => category === "Asian products" ? "Asian & Indonesian products" : category)
+    .filter((category): category is ProductCategory => productCategories.includes(category as ProductCategory));
+
+  const fallback = (product.category as string) === "Asian products" ? "Asian & Indonesian products" : product.category;
+  return Array.from(new Set(normalized.length ? normalized : [fallback as ProductCategory]));
 }
 
 export function productMatchesCategory(product: Product, category: ProductCategory) {

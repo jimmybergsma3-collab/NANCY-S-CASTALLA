@@ -4,6 +4,7 @@ out
 dist
 work
 outputs
+tmp
 .agents
 .codex
 tsconfig.tsbuildinfo
