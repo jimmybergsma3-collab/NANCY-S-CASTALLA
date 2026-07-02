@@ -5,7 +5,7 @@ import { InfoBand } from "@/components/InfoBand";
 import { ProductOrder } from "@/components/ProductOrder";
 import { businessConfig } from "@/config/business";
 import { defaultLocale, getDictionary, isLocale, locales, type Locale } from "@/i18n/config";
-import { getProducts } from "@/lib/product-store";
+import { getHomepageProducts } from "@/lib/product-store";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,7 @@ export default async function HomePage({ params }: { params: Promise<unknown> })
   const { locale: rawLocale } = (await params) as { locale?: string };
   const locale: Locale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const dictionary = getDictionary(locale);
-  const featuredProducts = (await getProducts()).filter((product) => product.featured);
+  const featuredProducts = await getHomepageProducts();
 
   return (
     <>

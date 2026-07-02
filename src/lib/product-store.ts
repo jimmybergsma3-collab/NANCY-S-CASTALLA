@@ -160,6 +160,30 @@ export async function getProducts({ includeHidden = false }: { includeHidden?: b
   }
 }
 
+export async function getHomepageProducts(limit = 8) {
+  if (!hasSupabaseAdmin()) {
+    return localProducts.filter((product) => product.isVisible !== false && product.featured && product.imageUrl).slice(0, limit);
+  }
+
+  try {
+    const featuredRows = await supabaseAdminFetch<ProductRow[]>(
+      `products?select=*&is_visible=eq.true&featured=eq.true&image_url=neq.&order=id.asc&limit=${limit * 3}`,
+    );
+    const featured = featuredRows.map(rowToProduct).filter((product) => product.imageUrl?.trim());
+    if (featured.length >= limit) return featured.slice(0, limit);
+
+    const fallbackRows = await supabaseAdminFetch<ProductRow[]>(
+      `products?select=*&is_visible=eq.true&image_url=neq.&order=id.asc&limit=${limit * 4}`,
+    );
+    const fallback = fallbackRows
+      .map(rowToProduct)
+      .filter((product) => product.imageUrl?.trim() && !featured.some((item) => item.id === product.id));
+    return [...featured, ...fallback].slice(0, limit);
+  } catch {
+    return localProducts.filter((product) => product.isVisible !== false && product.featured && product.imageUrl).slice(0, limit);
+  }
+}
+
 export async function getProductById(id: string, { includeHidden = false }: { includeHidden?: boolean } = {}) {
   const products = await getProducts({ includeHidden });
   return products.find((product) => product.id.toLowerCase() === id.toLowerCase());
