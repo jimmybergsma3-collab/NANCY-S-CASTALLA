@@ -17,9 +17,10 @@ type Props = {
   products: Product[];
   initialCategory?: ProductCategory | "All";
   locale?: Locale;
+  compactCardImages?: boolean;
 };
 
-export function ProductOrder({ products, initialCategory = "All", locale = defaultLocale }: Props) {
+export function ProductOrder({ products, initialCategory = "All", locale = defaultLocale, compactCardImages = false }: Props) {
   const dictionary = getDictionary(locale);
   const [category, setCategory] = useState<ProductCategory | "All">(initialCategory);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -161,7 +162,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
                 className="group rounded-lg border border-forest/10 bg-white p-5 shadow-soft transition hover:-translate-y-0.5 hover:border-brass/50"
               >
                 {product.imageUrl ? (
-                  <Link className="mb-4 block aspect-[4/3] overflow-hidden rounded-md bg-cream" href={productHref}>
+                  <Link className={`mb-4 block aspect-[4/3] overflow-hidden rounded-md bg-cream ${compactCardImages ? "mx-auto w-full max-w-[320px]" : ""}`} href={productHref}>
                     <img alt={product.name} className="h-full w-full object-cover" src={product.imageUrl} />
                   </Link>
                 ) : null}

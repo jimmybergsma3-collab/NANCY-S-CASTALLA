@@ -79,7 +79,7 @@ export default async function HomePage({ params }: { params: Promise<unknown> })
             <ArrowRight size={17} />
           </Link>
         </div>
-        <ProductOrder products={featuredProducts} locale={locale} />
+        <ProductOrder compactCardImages products={featuredProducts} locale={locale} />
       </section>
 
       <section className="bg-forest text-cream">

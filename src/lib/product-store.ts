@@ -6,9 +6,14 @@ import { getProductCategories } from "./product-categories";
 
 type ProductRow = {
   id: string;
+  uuid?: string;
+  sku?: string;
+  ean?: string;
   name: string;
   image_url?: string;
+  images?: string[];
   is_visible?: boolean;
+  is_new?: boolean;
   category: Product["category"];
   categories?: Product["categories"];
   description: string;
@@ -27,6 +32,10 @@ type ProductRow = {
   supplier_code: string;
   pack_size: string;
   unit_cost: number;
+  stock_quantity?: number;
+  minimum_stock?: number;
+  track_inventory?: boolean;
+  weight?: string;
   package_options?: Product["packageOptions"];
   ingredients?: string;
   directions?: string;
@@ -37,9 +46,14 @@ type ProductRow = {
 export function rowToProduct(row: ProductRow): Product {
   return {
     id: row.id,
+    uuid: row.uuid ?? "",
+    sku: row.sku ?? row.id,
+    ean: row.ean ?? "",
     name: row.name,
     imageUrl: row.image_url ?? "",
+    images: row.images ?? (row.image_url ? [row.image_url] : []),
     isVisible: row.is_visible ?? true,
+    isNew: row.is_new ?? false,
     category: row.category,
     categories: row.categories?.length ? row.categories : [row.category],
     description: row.description,
@@ -58,6 +72,10 @@ export function rowToProduct(row: ProductRow): Product {
     supplierCode: row.supplier_code,
     packSize: row.pack_size,
     unitCost: row.unit_cost,
+    stockQuantity: row.stock_quantity ?? 0,
+    minimumStock: row.minimum_stock ?? 0,
+    trackInventory: row.track_inventory ?? false,
+    weight: row.weight ?? "",
     packageOptions: row.package_options ?? [],
     ingredients: row.ingredients ?? "",
     directions: row.directions ?? "",
@@ -69,9 +87,14 @@ export function rowToProduct(row: ProductRow): Product {
 export function productToRow(product: Product): ProductRow {
   return {
     id: product.id,
+    uuid: product.uuid || undefined,
+    sku: product.sku || product.id,
+    ean: product.ean ?? "",
     name: product.name,
     image_url: product.imageUrl ?? "",
+    images: product.images ?? (product.imageUrl ? [product.imageUrl] : []),
     is_visible: product.isVisible ?? false,
+    is_new: product.isNew ?? false,
     category: product.category,
     categories: getProductCategories(product),
     description: product.description,
@@ -90,6 +113,10 @@ export function productToRow(product: Product): ProductRow {
     supplier_code: product.supplierCode,
     pack_size: product.packSize,
     unit_cost: product.unitCost,
+    stock_quantity: product.stockQuantity ?? 0,
+    minimum_stock: product.minimumStock ?? 0,
+    track_inventory: product.trackInventory ?? false,
+    weight: product.weight ?? "",
     package_options: product.packageOptions ?? [],
     ingredients: product.ingredients ?? "",
     directions: product.directions ?? "",

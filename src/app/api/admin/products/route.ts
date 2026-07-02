@@ -33,6 +33,8 @@ export async function POST(request: Request) {
   const product: Product = {
     ...body,
     id: body.id.trim(),
+    sku: (body.sku || body.id).trim(),
+    ean: body.ean?.trim() ?? "",
     category: categories.includes(body.category) ? body.category : categories[0],
     categories,
     price: Number(body.salePriceInclVat),
@@ -53,6 +55,12 @@ export async function POST(request: Request) {
     conservation: body.conservation?.trim() ?? "",
     additionalInfo: body.additionalInfo?.trim() ?? "",
     featured: Boolean(body.featured),
+    isNew: Boolean(body.isNew),
+    stockQuantity: Number(body.stockQuantity ?? 0),
+    minimumStock: Number(body.minimumStock ?? 0),
+    trackInventory: Boolean(body.trackInventory),
+    weight: body.weight?.trim() ?? "",
+    images: (body.images ?? []).map((image) => image.trim()).filter(Boolean),
   };
 
   if (!product.id || !product.name || !product.supplierCode) {

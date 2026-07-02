@@ -25,9 +25,14 @@ export type ProductPackageOption = {
 
 export type Product = {
   id: string;
+  uuid?: string;
+  sku?: string;
+  ean?: string;
   name: string;
   imageUrl?: string;
+  images?: string[];
   isVisible?: boolean;
+  isNew?: boolean;
   category: ProductCategory;
   categories?: ProductCategory[];
   description: string;
@@ -46,6 +51,10 @@ export type Product = {
   supplierCode: string;
   packSize: string;
   unitCost: number;
+  stockQuantity?: number;
+  minimumStock?: number;
+  trackInventory?: boolean;
+  weight?: string;
   packageOptions?: ProductPackageOption[];
   ingredients?: string;
   directions?: string;

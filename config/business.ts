@@ -1,11 +1,18 @@
+export const businessEmails = {
+  info: "info@nancys.es",
+  orders: "orders@nancys.es",
+  account: "account@nancys.es",
+} as const;
+
 export const businessConfig = {
   businessName: "Nancy's Castalla",
   phaseLabel: "Starting soon / pre-order phase",
   address: "Calle Murcia 111, 03420 Castalla",
   whatsappNumber: "+34694269389",
   displayWhatsappNumber: "+34 694 26 93 89",
-  orderEmail: "orders@nancyscastalla.com",
-  fromEmail: "Nancy's Castalla <orders@nancyscastalla.com>",
+  emails: businessEmails,
+  orderEmail: businessEmails.orders,
+  fromEmail: `Nancy's Castalla <${businessEmails.orders}>`,
   bankAccount: "Add bank account details here",
   bizumNumber: "+34 694 26 93 89",
   deliveryMinimum: 25,

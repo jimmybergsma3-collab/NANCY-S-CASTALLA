@@ -6,8 +6,10 @@ export const env = {
   resendApiKey: process.env.RESEND_API_KEY ?? "",
   adminEmail: process.env.ADMIN_EMAIL ?? "",
   adminPassword: process.env.ADMIN_PASSWORD ?? "",
-  orderEmail: process.env.ORDER_EMAIL ?? "orders@nancyscastalla.com",
-  fromEmail: process.env.FROM_EMAIL ?? "Nancy's Castalla <orders@nancyscastalla.com>",
+  infoEmail: process.env.INFO_EMAIL ?? "info@nancys.es",
+  orderEmail: process.env.ORDER_EMAIL ?? "orders@nancys.es",
+  accountEmail: process.env.ACCOUNT_EMAIL ?? "account@nancys.es",
+  fromEmail: process.env.FROM_EMAIL ?? "Nancy's Castalla <orders@nancys.es>",
   productImagesBucket: process.env.PRODUCT_IMAGES_BUCKET ?? "product-images",
 };
 
