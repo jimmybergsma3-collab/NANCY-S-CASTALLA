@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { sendOrderEmails } from "@/lib/email";
-import { createOrder } from "@/services/orders/order-service";
-import { OrderValidationError } from "@/services/orders/order-service";
+import { createOrder, markOrderEmailSent, OrderValidationError } from "@/services/orders/order-service";
 import { getCustomerAuthUser } from "@/lib/customer-auth";
 import type { OrderInput } from "@/types/backoffice";
 
@@ -18,7 +17,7 @@ export async function POST(request: Request) {
   const authUser = await getCustomerAuthUser(request);
   const order = await createOrder({ ...body, customerName: body.customerName, customerEmail: body.customerEmail, lines: body.lines, authUserId: authUser?.id });
 
-  await sendOrderEmails({
+  const emailResult = await sendOrderEmails({
     orderId: order.orderNumber ? `NC-${String(order.orderNumber).padStart(6, "0")}` : order.orderId,
     customerName: body.customerName,
     customerEmail: body.customerEmail,
@@ -28,12 +27,16 @@ export async function POST(request: Request) {
     total: order.total,
     lines: order.lines,
   });
+  await Promise.allSettled([
+    ...(emailResult.admin.sent ? [markOrderEmailSent(order.orderId, "admin_email_sent_at")] : []),
+    ...(emailResult.customer.sent ? [markOrderEmailSent(order.orderId, "customer_email_sent_at")] : []),
+  ]);
 
   return NextResponse.json({
     ok: true,
     orderId: order.orderNumber ? `NC-${String(order.orderNumber).padStart(6, "0")}` : order.orderId,
     stored: order.stored,
-    emailed: Boolean(process.env.RESEND_API_KEY),
+    emailed: emailResult.sent,
     subtotalExVat: order.subtotalExVat,
     vatTotal: order.vatTotal,
   });

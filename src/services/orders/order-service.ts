@@ -65,3 +65,12 @@ export async function listOrders() {
 export async function updateOrder(id: string, status: OrderStatus, paymentStatus: PaymentStatus) {
   return supabaseAdminFetch<BackofficeOrder[]>(`orders?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", body: { status, payment_status: paymentStatus, updated_at: new Date().toISOString() } });
 }
+
+export async function getOrderById(id: string) {
+  const rows = await supabaseAdminFetch<BackofficeOrder[]>(`orders?select=*,order_items(*)&id=eq.${encodeURIComponent(id)}&limit=1`);
+  return rows[0];
+}
+
+export async function markOrderEmailSent(id: string, field: "admin_email_sent_at" | "customer_email_sent_at" | "status_email_sent_at") {
+  await supabaseAdminFetch(`orders?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", body: { [field]: new Date().toISOString() } });
+}
