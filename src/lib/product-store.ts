@@ -189,6 +189,14 @@ export async function getProductById(id: string, { includeHidden = false }: { in
   return products.find((product) => product.id.toLowerCase() === id.toLowerCase());
 }
 
+export async function getProductsByIds(ids: string[]) {
+  if (!ids.length) return [];
+  if (!hasSupabaseAdmin()) return localProducts.filter((product) => ids.includes(product.id));
+  const escaped = ids.map((id) => `"${id.replaceAll('"', '')}"`).join(",");
+  const rows = await supabaseAdminFetch<ProductRow[]>(`products?select=*&id=in.(${encodeURIComponent(escaped)})`);
+  return rows.map(rowToProduct);
+}
+
 export async function createProduct(product: Product) {
   const rows = await supabaseAdminFetch<ProductRow[]>("products?on_conflict=id", {
     method: "POST",

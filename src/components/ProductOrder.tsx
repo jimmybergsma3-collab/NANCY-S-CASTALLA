@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { MailCheck, MessageCircle, Minus, Plus, Search, Send, ShoppingBasket } from "lucide-react";
 import type { Product, ProductCategory } from "@/types/product";
@@ -12,6 +12,7 @@ import { defaultLocale, getDictionary, type Locale } from "@/i18n/config";
 import { getPublicProductDescription } from "@/lib/product-display";
 import { getProductCategories, productMatchesCategory } from "@/lib/product-categories";
 import { getCustomerDisplayUnit, getEffectivePackageOptions } from "@/lib/product-packaging";
+import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 type Props = {
   products: Product[];
@@ -33,6 +34,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [message, setMessage] = useState("");
+  const idempotencyKey = useRef("");
 
   const categories = useMemo(() => ["All", ...Array.from(new Set(products.flatMap(getProductCategories)))] as const, [products]);
   const visibleProducts = (category === "All" ? products : products.filter((product) => productMatchesCategory(product, category))).filter((product) => {
@@ -72,16 +74,18 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
     setMessage("");
 
     try {
+      if (!idempotencyKey.current) idempotencyKey.current = crypto.randomUUID();
+      const { data: authData } = await getSupabaseBrowserClient().auth.getSession();
       const response = await fetch("/api/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(authData.session ? { Authorization: `Bearer ${authData.session.access_token}` } : {}) },
         body: JSON.stringify({
           customerName,
           customerEmail,
           customerPhone,
           fulfillment,
           notes,
-          total,
+          idempotencyKey: idempotencyKey.current,
           lines: cartLines.map((line) => ({
             productId: line.product.id,
             name: line.product.name,
@@ -100,6 +104,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
       }
 
       setStatus("sent");
+      idempotencyKey.current = "";
       setMessage(
         result.emailed
           ? `Order ${result.orderId} sent. Please check your email.`

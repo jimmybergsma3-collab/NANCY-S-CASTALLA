@@ -27,6 +27,8 @@ export type OrderInput = {
   notes?: string;
   total?: number;
   lines: OrderLineInput[];
+  idempotencyKey?: string;
+  authUserId?: string;
 };
 
 export type BackofficeOrder = {
