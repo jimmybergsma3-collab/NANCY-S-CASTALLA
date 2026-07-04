@@ -19,6 +19,7 @@ export function Header({ locale = defaultLocale }: { locale?: Locale }) {
     { href: `/${locale}/about`, label: dictionary.nav.about },
     { href: `/${locale}/contact`, label: dictionary.nav.contact },
     { href: `/${locale}/register`, label: dictionary.nav.register },
+    { href: `/${locale}/login`, label: "Login" },
   ];
 
   return (
