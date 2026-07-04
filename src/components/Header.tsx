@@ -7,10 +7,12 @@ import { businessConfig } from "@/config/business";
 import { defaultLocale, getDictionary, type Locale } from "@/i18n/config";
 import { BrandMark } from "./BrandMark";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { getAuthCopy } from "@/i18n/auth";
 
 export function Header({ locale = defaultLocale }: { locale?: Locale }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const dictionary = getDictionary(locale);
+  const authCopy = getAuthCopy(locale);
   const navItems = [
     { href: `/${locale}`, label: dictionary.nav.home },
     { href: `/${locale}/products`, label: dictionary.nav.products },
@@ -19,7 +21,7 @@ export function Header({ locale = defaultLocale }: { locale?: Locale }) {
     { href: `/${locale}/about`, label: dictionary.nav.about },
     { href: `/${locale}/contact`, label: dictionary.nav.contact },
     { href: `/${locale}/register`, label: dictionary.nav.register },
-    { href: `/${locale}/login`, label: "Login" },
+    { href: `/${locale}/login`, label: authCopy.login },
   ];
 
   return (

@@ -2,6 +2,7 @@ import Image from "next/image";
 import { businessConfig } from "@/config/business";
 import { defaultLocale, getDictionary, type Locale } from "@/i18n/config";
 import { paymentProviders } from "@/payments/providers";
+import Link from "next/link";
 
 export function Footer({ locale = defaultLocale }: { locale?: Locale }) {
   const dictionary = getDictionary(locale);
@@ -41,6 +42,7 @@ export function Footer({ locale = defaultLocale }: { locale?: Locale }) {
             <span>&copy; NANCY&apos;S CASTALLA 2026</span>
           </div>
           <span>International foods, coffee, empanadas and drinks</span>
+          <div className="flex gap-4"><Link href={`/${locale}/privacy`}>Privacy</Link><Link href={`/${locale}/terms`}>Terms</Link></div>
         </div>
       </div>
     </footer>

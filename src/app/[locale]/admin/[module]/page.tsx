@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/admin-page";
 import { productCategories } from "@/lib/product-categories";
 import { getProducts } from "@/lib/product-store";
 import { integrationRegistry } from "@/services/integrations/registry";
+import { supabaseAdminFetch } from "@/lib/supabase-rest";
 
 const moduleCopy = {
   categories: ["Categories", "Manage the structure customers use to browse products."],
@@ -24,6 +25,12 @@ const moduleCopy = {
 
 export const dynamic = "force-dynamic";
 
+function DataTable({ columns, rows }: { columns: string[]; rows: Array<Array<React.ReactNode>> }) {
+  return <div className="mt-6 overflow-x-auto rounded-md border border-forest/10 bg-white"><table className="w-full min-w-[700px] text-left text-sm"><thead className="bg-forest text-cream"><tr>{columns.map((column) => <th className="p-3" key={column}>{column}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr className="border-t border-forest/10" key={index}>{row.map((cell, cellIndex) => <td className="p-3" key={cellIndex}>{cell}</td>)}</tr>)}</tbody></table>{rows.length === 0 ? <p className="p-5 text-forest/60">No records yet.</p> : null}</div>;
+}
+
+async function safeRows<T>(path: string) { try { return await supabaseAdminFetch<T[]>(path); } catch { return []; } }
+
 export default async function AdminModulePage({ params }: { params: Promise<unknown> }) {
   const resolved = await params as { locale?: string; module?: string };
   const locale = await requireAdmin(Promise.resolve(resolved));
@@ -36,6 +43,11 @@ export default async function AdminModulePage({ params }: { params: Promise<unkn
   else if (moduleName === "categories") content = <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{productCategories.map((category) => <div className="rounded-md border border-forest/10 bg-white p-4 font-bold text-forest" key={category}>{category}</div>)}</div>;
   else if (moduleName === "integrations") content = <div className="mt-6 grid gap-3 sm:grid-cols-2">{integrationRegistry.map((item) => <div className="flex items-center justify-between rounded-md border border-forest/10 bg-white p-4" key={item.id}><strong>{item.name}</strong><span className="rounded-full bg-cream px-3 py-1 text-xs font-bold text-forest">{item.status}</span></div>)}</div>;
   else if (moduleName === "settings") content = <div className="mt-6 rounded-md border border-forest/10 bg-white p-5 text-sm leading-7 text-forest"><p><strong>Information:</strong> {businessConfig.emails.info}</p><p><strong>Orders:</strong> {businessConfig.emails.orders}</p><p><strong>Accounts:</strong> {businessConfig.emails.account}</p><p className="mt-3 text-forest/60">Business values are centrally configurable in config/business.ts.</p></div>;
+  else if (moduleName === "customers") { const rows = await safeRows<{ name: string; email: string; phone: string; language: string; created_at: string }>("customers?select=name,email,phone,language,created_at&order=created_at.desc&limit=500"); content = <DataTable columns={["Name", "Email", "Phone", "Language", "Created"]} rows={rows.map((row) => [row.name, row.email, row.phone || "-", row.language, new Date(row.created_at).toLocaleDateString()])}/>; }
+  else if (moduleName === "suppliers") { const rows = await safeRows<{ name: string; code: string; email: string; phone: string; active: boolean }>("suppliers?select=name,code,email,phone,active&order=name.asc&limit=500"); content = <DataTable columns={["Supplier", "Code", "Email", "Phone", "Status"]} rows={rows.map((row) => [row.name, row.code || "-", row.email || "-", row.phone || "-", row.active ? "Active" : "Inactive"])}/>; }
+  else if (moduleName === "purchasing") { const rows = await safeRows<{ purchase_number: number; status: string; total_incl_vat: number; expected_at?: string; created_at: string }>("purchase_orders?select=purchase_number,status,total_incl_vat,expected_at,created_at&order=created_at.desc&limit=500"); content = <DataTable columns={["Purchase order", "Status", "Total", "Expected", "Created"]} rows={rows.map((row) => [`PO-${String(row.purchase_number).padStart(6, "0")}`, row.status, `€${Number(row.total_incl_vat).toFixed(2)}`, row.expected_at ? new Date(row.expected_at).toLocaleDateString() : "-", new Date(row.created_at).toLocaleDateString()])}/>; }
+  else if (moduleName === "invoicing") { const rows = await safeRows<{ invoice_number: number; status: string; total_incl_vat: number; issued_at?: string; created_at: string }>("invoices?select=invoice_number,status,total_incl_vat,issued_at,created_at&order=created_at.desc&limit=500"); content = <DataTable columns={["Invoice", "Status", "Total", "Issued", "Created"]} rows={rows.map((row) => [`INV-${String(row.invoice_number).padStart(6, "0")}`, row.status, `€${Number(row.total_incl_vat).toFixed(2)}`, row.issued_at ? new Date(row.issued_at).toLocaleDateString() : "-", new Date(row.created_at).toLocaleDateString()])}/>; }
+  else if (moduleName === "reports") { const orders = await safeRows<{ total: number; status: string; payment_status: string }>("orders?select=total,status,payment_status&limit=5000"); const products = await getProducts({ includeHidden: true }); const paidRevenue = orders.filter((order) => order.payment_status === "paid" && order.status !== "cancelled").reduce((sum, order) => sum + Number(order.total), 0); const cards = [["Orders", orders.length], ["Paid revenue", `€${paidRevenue.toFixed(2)}`], ["Products", products.length], ["Online", products.filter((product) => product.isVisible).length]]; content = <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{cards.map(([label, value]) => <div className="rounded-md border border-forest/10 bg-white p-5 shadow-soft" key={label}><p className="text-xs font-bold uppercase tracking-[0.14em] text-coffee">{label}</p><p className="mt-2 font-serif text-3xl font-bold text-forest">{value}</p></div>)}</div>; }
   else { const products = await getProducts({ includeHidden: true }); const label = moduleName === "vat" ? `${new Set(products.map((p) => p.vatRate)).size} IVA rates in use` : "Module prepared"; content = <div className="mt-6 rounded-md border border-forest/10 bg-white p-6"><p className="font-bold text-forest">{label}</p><p className="mt-2 text-sm text-forest/65">The database and service boundaries are ready for this module without activating an external provider.</p></div>; }
   return <AdminShell locale={locale} title={title} subtitle={subtitle}>{content}</AdminShell>;
 }
