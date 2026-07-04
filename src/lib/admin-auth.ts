@@ -9,6 +9,18 @@ function adminSessionToken() {
   return createHmac("sha256", env.adminPassword).update(ADMIN_SESSION_MESSAGE).digest("hex");
 }
 
+export function adminCredentialsMatch(email: string, password: string) {
+  if (!env.adminEmail || !env.adminPassword) return false;
+  const suppliedEmail = email.trim().toLowerCase();
+  const expectedEmail = env.adminEmail.trim().toLowerCase();
+  const suppliedPassword = Buffer.from(password);
+  const expectedPassword = Buffer.from(env.adminPassword);
+  const emailMatches = suppliedEmail === expectedEmail;
+  const passwordMatches = suppliedPassword.length === expectedPassword.length
+    && timingSafeEqual(suppliedPassword, expectedPassword);
+  return emailMatches && passwordMatches;
+}
+
 export async function isAdminSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get(ADMIN_COOKIE)?.value;

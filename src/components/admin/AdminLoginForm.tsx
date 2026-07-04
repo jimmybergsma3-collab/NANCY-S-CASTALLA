@@ -42,11 +42,11 @@ export function AdminLoginForm({ locale }: { locale: Locale }) {
       </div>
       <label className="mt-6 block text-sm font-bold text-forest">
         Email
-        <input className="mt-1 w-full rounded-lg border border-forest/15 px-3 py-2" onChange={(event) => setEmail(event.target.value)} required type="email" value={email} />
+        <input autoComplete="username" className="mt-1 w-full rounded-lg border border-forest/15 px-3 py-2" onChange={(event) => setEmail(event.target.value)} required type="email" value={email} />
       </label>
       <label className="mt-4 block text-sm font-bold text-forest">
         Password
-        <input className="mt-1 w-full rounded-lg border border-forest/15 px-3 py-2" onChange={(event) => setPassword(event.target.value)} required type="password" value={password} />
+        <input autoComplete="current-password" className="mt-1 w-full rounded-lg border border-forest/15 px-3 py-2" onChange={(event) => setPassword(event.target.value)} required type="password" value={password} />
       </label>
       <button className="mt-5 w-full rounded-full bg-forest px-5 py-3 font-bold text-cream disabled:opacity-50" disabled={submitting} type="submit">
         {submitting ? "Signing in..." : "Sign in"}

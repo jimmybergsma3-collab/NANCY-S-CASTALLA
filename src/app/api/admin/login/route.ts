@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
-import { setAdminSession } from "@/lib/admin-auth";
+import { adminCredentialsMatch, setAdminSession } from "@/lib/admin-auth";
 
 export async function POST(request: Request) {
   const body = (await request.json()) as { email?: string; password?: string };
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (body.email !== env.adminEmail || body.password !== env.adminPassword) {
+  if (!adminCredentialsMatch(body.email ?? "", body.password ?? "")) {
     return NextResponse.json({ ok: false, message: "Invalid admin login." }, { status: 401 });
   }
 
