@@ -9,6 +9,8 @@ export class OrderValidationError extends Error {
   constructor(message: string, public status = 400) { super(message); }
 }
 
+export class InventoryError extends Error {}
+
 function roundMoney(value: number) { return Math.round((value + Number.EPSILON) * 100) / 100; }
 
 async function validateLines(lines: OrderLineInput[]) {
@@ -63,7 +65,14 @@ export async function listOrders() {
 }
 
 export async function updateOrder(id: string, status: OrderStatus, paymentStatus: PaymentStatus) {
-  return supabaseAdminFetch<BackofficeOrder[]>(`orders?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", body: { status, payment_status: paymentStatus, updated_at: new Date().toISOString() } });
+  try {
+    const rows = await supabaseAdminFetch<BackofficeOrder[]>("rpc/transition_order_status", { method: "POST", body: { p_order_id: id, p_status: status, p_payment_status: paymentStatus } });
+    return rows[0];
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Order status could not be updated.";
+    if (message.includes("INSUFFICIENT_STOCK")) throw new InventoryError(message.split("INSUFFICIENT_STOCK:").pop()?.replace(/["}]/g, "").trim() || "Insufficient stock.");
+    throw error;
+  }
 }
 
 export async function getOrderById(id: string) {
