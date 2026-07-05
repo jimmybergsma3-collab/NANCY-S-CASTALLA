@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { MailCheck, MessageCircle, Minus, Plus, Search, Send, ShoppingBasket } from "lucide-react";
 import type { Product, ProductCategory } from "@/types/product";
@@ -30,11 +30,30 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
   const [notes, setNotes] = useState("");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [message, setMessage] = useState("");
   const idempotencyKey = useRef("");
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data } = await getSupabaseBrowserClient().auth.getSession();
+      if (!data.session || !active) return;
+      const response = await fetch("/api/account/profile", { headers: { Authorization: `Bearer ${data.session.access_token}` } });
+      if (!response.ok || !active) return;
+      const result = await response.json() as { profile?: { name?: string; email?: string; phone?: string; address?: string } };
+      const profile = result.profile;
+      if (!profile) return;
+      setCustomerName((current) => current || profile.name || "");
+      setCustomerEmail((current) => current || profile.email || data.session.user.email || "");
+      setCustomerPhone((current) => current || profile.phone || "");
+      setCustomerAddress((current) => current || profile.address || "");
+    })();
+    return () => { active = false; };
+  }, []);
 
   const categories = useMemo(() => ["All", ...Array.from(new Set(products.flatMap(getProductCategories)))] as const, [products]);
   const visibleProducts = (category === "All" ? products : products.filter((product) => productMatchesCategory(product, category))).filter((product) => {
@@ -84,7 +103,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
           customerEmail,
           customerPhone,
           fulfillment,
-          notes,
+          notes: [customerAddress ? `Address: ${customerAddress}` : "", notes].filter(Boolean).join("\n\n"),
           idempotencyKey: idempotencyKey.current,
           lines: cartLines.map((line) => ({
             productId: line.product.id,
@@ -308,8 +327,14 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
           />
           <textarea
             className="min-h-20 w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm text-forest outline-none focus:border-forest"
+            onChange={(event) => setCustomerAddress(event.target.value)}
+            placeholder="Address"
+            value={customerAddress}
+          />
+          <textarea
+            className="min-h-20 w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm text-forest outline-none focus:border-forest"
             onChange={(event) => setNotes(event.target.value)}
-            placeholder="Notes, preferred time or delivery address"
+            placeholder="Notes or preferred time"
             value={notes}
           />
           <button
