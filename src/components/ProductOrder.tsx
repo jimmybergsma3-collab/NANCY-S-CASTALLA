@@ -13,6 +13,7 @@ import { getPublicProductDescription } from "@/lib/product-display";
 import { getProductCategories, productMatchesCategory } from "@/lib/product-categories";
 import { getCustomerDisplayUnit, getEffectivePackageOptions } from "@/lib/product-packaging";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { formatCustomerPhone } from "@/lib/phone";
 
 type Props = {
   products: Product[];
@@ -49,7 +50,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
       if (!profile) return;
       setCustomerName((current) => current || profile.name || "");
       setCustomerEmail((current) => current || profile.email || data.session.user.email || "");
-      setCustomerPhone((current) => current || profile.phone || "");
+      setCustomerPhone((current) => current || formatCustomerPhone(profile.phone || ""));
       setCustomerAddress((current) => current || profile.address || "");
     })();
     return () => { active = false; };
@@ -136,8 +137,8 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
-      <div>
+    <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="min-w-0">
         <label className="mb-4 flex items-center gap-3 rounded-full border border-forest/15 bg-white px-4 py-3 text-forest shadow-soft">
           <Search size={18} />
           <input
@@ -148,7 +149,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
             value={search}
           />
         </label>
-        <div className="mb-5 flex gap-2 overflow-x-auto pb-2">
+        <div className="mb-5 flex min-w-0 gap-2 overflow-x-auto pb-2 lg:flex-wrap lg:overflow-visible">
           {categories.map((item) => (
             <button
               key={item}
@@ -260,7 +261,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
           })}
         </div>
       </div>
-      <aside className="h-fit rounded-lg border border-forest/10 bg-cream p-5 shadow-soft lg:sticky lg:top-32">
+      <aside className="h-fit min-w-0 rounded-lg border border-forest/10 bg-cream p-5 shadow-soft lg:sticky lg:top-32">
         <div className="flex items-center gap-2 text-forest">
           <ShoppingBasket size={20} />
           <h2 className="font-serif text-2xl font-bold">{dictionary.order.title}</h2>
@@ -321,8 +322,12 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
           />
           <input
             className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm text-forest outline-none focus:border-forest"
+            autoComplete="tel"
+            inputMode="tel"
             onChange={(event) => setCustomerPhone(event.target.value)}
+            onBlur={() => setCustomerPhone((current) => formatCustomerPhone(current))}
             placeholder="Phone / WhatsApp"
+            type="tel"
             value={customerPhone}
           />
           <textarea

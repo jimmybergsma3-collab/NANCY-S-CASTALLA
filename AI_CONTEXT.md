@@ -237,6 +237,7 @@ Praktische regels:
 
 - Mobiel is leidend.
 - Geen horizontale paginascroll.
+- Categoriefilters mogen de pagina nooit verbreden; op desktop breken ze binnen de productkolom om en op kleine schermen scrollen ze alleen binnen hun eigen rij.
 - Productfoto's gebruiken stabiele verhoudingen en mogen layout niet laten verspringen.
 - Productdetailafbeeldingen werken goed en mogen niet zonder aantoonbare noodzaak worden gewijzigd.
 - Mobiel menu werkt en mag niet onnodig worden herbouwd.
@@ -347,4 +348,3 @@ Documentatie mag nooit een geplande functie als werkend presenteren. Het technis
 6. Maak een kleine, duidelijke commit wanneer de gebruiker daarom vraagt.
 7. Push alleen wanneer de gebruiker dat vraagt of dit expliciet onderdeel van de opdracht is.
 8. Rapporteer gewijzigde bestanden, controles, benodigde environmentvariabelen en eventuele open risico's.
-

@@ -10,6 +10,12 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ## [Unreleased]
 
+### Opgelost
+
+- De desktopcategoriepagina blijft binnen de viewport wanneer veel categoriefilters zichtbaar zijn.
+- De header vervangt registreren/inloggen door de accountlink zodra een Supabase-klantsessie actief is.
+- Spaanse klanttelefoonnummers worden in het bestelformulier leesbaar als `+34`-nummer weergegeven.
+
 ### Toegevoegd
 
 - `AI_CONTEXT.md` in de repositoryroot met compacte projectcontext, beschermde onderdelen, risico's en vaste regels voor toekomstige AI-assistenten.
@@ -22,6 +28,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Gewijzigd
 
+- Het databaseformulier heet voortaan “order request” in plaats van “WhatsApp order”; WhatsApp blijft als afzonderlijke support-CTA beschikbaar.
 - README vervangen door een actuele projectingang met documentatielinks, stack, routes, kwaliteitscontrole en deploymentaandachtspunten.
 
 ## [0.9.0] - 2026-07-05

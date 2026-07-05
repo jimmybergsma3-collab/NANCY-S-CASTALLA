@@ -105,8 +105,8 @@ export const dictionaries = {
       note: "Collection times are confirmed per order during the starting soon / pre-order phase.",
     },
     order: {
-      title: "Your WhatsApp order",
-      empty: "Choose products and quantities to prepare a WhatsApp message.",
+      title: "Your order request",
+      empty: "Choose products and quantities to prepare your order request.",
       estimatedTotal: "Estimated total",
       deliveryNote: "Local delivery minimum is",
       after:
@@ -193,8 +193,8 @@ export const dictionaries = {
       note: "Afhaalmomenten worden per bestelling bevestigd tijdens de pre-order fase.",
     },
     order: {
-      title: "Je WhatsApp-bestelling",
-      empty: "Kies producten en aantallen om een WhatsApp-bericht te maken.",
+      title: "Je bestelaanvraag",
+      empty: "Kies producten en aantallen om je bestelaanvraag voor te bereiden.",
       estimatedTotal: "Geschat totaal",
       deliveryNote: "Minimum voor lokale bezorging is",
       after:
@@ -281,8 +281,8 @@ export const dictionaries = {
       note: "Abholzeiten werden pro Bestellung während der Vorbestellphase bestätigt.",
     },
     order: {
-      title: "Ihre WhatsApp-Bestellung",
-      empty: "Wählen Sie Produkte und Mengen, um eine WhatsApp-Nachricht vorzubereiten.",
+      title: "Ihre Bestellanfrage",
+      empty: "Wählen Sie Produkte und Mengen für Ihre Bestellanfrage.",
       estimatedTotal: "Geschätzte Summe",
       deliveryNote: "Mindestbestellung für lokale Lieferung ist",
       after:
@@ -369,8 +369,8 @@ export const dictionaries = {
       note: "Los horarios de recogida se confirman por pedido durante la fase de prepedido.",
     },
     order: {
-      title: "Tu pedido por WhatsApp",
-      empty: "Elige productos y cantidades para preparar un mensaje de WhatsApp.",
+      title: "Tu solicitud de pedido",
+      empty: "Elige productos y cantidades para preparar tu solicitud de pedido.",
       estimatedTotal: "Total estimado",
       deliveryNote: "El mínimo para entrega local es",
       after:
@@ -457,8 +457,8 @@ export const dictionaries = {
       note: "Collection times are confirmed per order during the starting soon / pre-order phase.",
     },
     order: {
-      title: "Your WhatsApp order",
-      empty: "Choose products and quantities to prepare a WhatsApp message.",
+      title: "Your order request",
+      empty: "Choose products and quantities to prepare your order request.",
       estimatedTotal: "Estimated total",
       deliveryNote: "Local delivery minimum is",
       after:

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Menu, MessageCircle, X } from "lucide-react";
 import { businessConfig } from "@/config/business";
@@ -8,11 +8,37 @@ import { defaultLocale, getDictionary, type Locale } from "@/i18n/config";
 import { BrandMark } from "./BrandMark";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { getAuthCopy } from "@/i18n/auth";
+import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 export function Header({ locale = defaultLocale }: { locale?: Locale }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const dictionary = getDictionary(locale);
   const authCopy = getAuthCopy(locale);
+
+  useEffect(() => {
+    let active = true;
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      void supabase.auth.getSession().then(({ data }) => {
+        if (active) setIsAuthenticated(Boolean(data.session));
+      });
+      const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (active) setIsAuthenticated(Boolean(session));
+      });
+
+      return () => {
+        active = false;
+        listener.subscription.unsubscribe();
+      };
+    } catch {
+      return () => {
+        active = false;
+      };
+    }
+  }, []);
+
   const navItems = [
     { href: `/${locale}`, label: dictionary.nav.home },
     { href: `/${locale}/products`, label: dictionary.nav.products },
@@ -20,8 +46,12 @@ export function Header({ locale = defaultLocale }: { locale?: Locale }) {
     { href: `/${locale}/collection-delivery`, label: dictionary.nav.delivery },
     { href: `/${locale}/about`, label: dictionary.nav.about },
     { href: `/${locale}/contact`, label: dictionary.nav.contact },
-    { href: `/${locale}/register`, label: dictionary.nav.register },
-    { href: `/${locale}/login`, label: authCopy.login },
+    ...(isAuthenticated
+      ? [{ href: `/${locale}/account`, label: authCopy.account }]
+      : [
+          { href: `/${locale}/register`, label: dictionary.nav.register },
+          { href: `/${locale}/login`, label: authCopy.login },
+        ]),
   ];
 
   return (

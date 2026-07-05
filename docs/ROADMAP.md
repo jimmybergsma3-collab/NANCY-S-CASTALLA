@@ -27,7 +27,7 @@ Deze roadmap beschrijft de actuele prioriteiten. Gereed werk wordt uit de actiev
 
 - [ ] Toon volledig klantprofiel en maak adresgegevens duidelijk bewerkbaar.
 - [ ] Toon orderregels en statushistorie in orderhistorie.
-- [ ] Zorg dat ingelogde klantgegevens op iedere bestelplek consequent vooraf worden ingevuld.
+- [x] Zorg dat ingelogde klantgegevens op iedere bestelplek consequent vooraf worden ingevuld.
 - [ ] Voeg duidelijke feedback toe wanneer profiel- of orderdata niet kan worden geladen.
 
 ## Daarna
