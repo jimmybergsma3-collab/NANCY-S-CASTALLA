@@ -15,7 +15,7 @@ export function RegisterForm({ locale }: { locale: Locale }) {
     const response = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email, password, locale }),
     });
     const result = (await response.json()) as { ok: boolean; message: string };
     setMessage(result.message);

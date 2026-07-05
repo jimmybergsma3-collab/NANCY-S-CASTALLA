@@ -40,12 +40,12 @@ export async function supabaseAdminFetch<T>(path: string, options: RequestOption
   return (await response.json()) as T;
 }
 
-export async function supabaseAuthSignup(input: { email: string; password: string; name: string }) {
+export async function supabaseAuthSignup(input: { email: string; password: string; name: string; redirectTo: string }) {
   if (!env.supabaseUrl || !env.supabasePublishableKey) {
     throw new Error("Supabase public environment variables are not configured.");
   }
 
-  const response = await fetch(`${env.supabaseUrl}/auth/v1/signup`, {
+  const response = await fetch(`${env.supabaseUrl}/auth/v1/signup?redirect_to=${encodeURIComponent(input.redirectTo)}`, {
     method: "POST",
     headers: {
       apikey: env.supabasePublishableKey,
