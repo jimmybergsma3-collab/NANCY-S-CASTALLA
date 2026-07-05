@@ -1,44 +1,61 @@
 # Nancy's Castalla
 
-Vercel-ready Next.js website for Nancy's Castalla.
+Meertalige Next.js-webwinkel en backoffice voor Nancy's Castalla, gericht op internationale foodproducten, pre-orders, afhalen in Castalla en lokale bezorging.
 
-## Edit business settings
+## Documentatie
 
-Update `config/business.ts` for the WhatsApp number, address, delivery minimum, delivery fee, delivery radius, Bizum number and bank details.
+De actuele projectdocumentatie staat in [`docs`](docs):
 
-## Edit products and prices
+- [`TECHNICAL_HANDOVER.md`](docs/TECHNICAL_HANDOVER.md): actuele technische architectuur en projectstatus.
+- [`BUSINESS_LOG.md`](docs/BUSINESS_LOG.md): zakelijke keuzes en motivatie.
+- [`ROADMAP.md`](docs/ROADMAP.md): actuele prioriteiten en toekomstig werk.
+- [`DECISIONS.md`](docs/DECISIONS.md): chronologische technische beslissingen.
+- [`CHANGELOG.md`](docs/CHANGELOG.md): wijzigingsgeschiedenis met semantische versies.
 
-Update `src/data/products.ts`. Each product contains cost price, VAT, sale price, supplier details and margin fields. The admin pricing helper at `/admin/pricing` recalculates margin and profit from the editable values.
+De documentatie is onderdeel van iedere belangrijke wijziging. Werk alleen de documenten bij waarop een wijziging daadwerkelijk invloed heeft.
 
-## Run locally
+## Technologie
+
+- Next.js App Router en React
+- TypeScript
+- Tailwind CSS
+- Supabase PostgreSQL, Auth en Storage
+- Resend voor transactionele e-mail
+- Vercel voor productiehosting
+
+Zie het [technische overdrachtsrapport](docs/TECHNICAL_HANDOVER.md) voor versies, datamodel, API's, authenticatie, deployment, security en bekende aandachtspunten.
+
+## Lokaal starten
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Deploy
+De ontwikkelserver gebruikt standaard `http://localhost:3000`.
 
-Import this folder into Vercel. No database or Stripe setup is required for version 1.
-
-## Admin, orders and email
-
-Version 2 is prepared for Supabase and Resend:
-
-- Run `supabase-schema.sql` in Supabase SQL editor.
-- Add the values from `.env.example` to Vercel environment variables.
-- Supabase URL is `https://kylianmqyewlfoypcjve.supabase.co`.
-- Add `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SERVICE_ROLE_KEY` from Supabase project settings under API keys.
-- If you install Supabase CLI, link this project with:
+## Kwaliteitscontrole
 
 ```bash
-supabase login
-supabase init
-supabase link --project-ref kylianmqyewlfoypcjve
-supabase db push
+npm run lint
+npm run build
 ```
 
-- Do not commit the PostgreSQL connection string or service role key.
-- Admin products page: `/en/admin/products`.
-- Customer registration page: `/en/register`.
-- Orders are sent through `/api/orders` and email is sent through Resend when `RESEND_API_KEY` is configured.
+## Configuratie
+
+Openbare bedrijfsinstellingen staan in `config/business.ts`. Geheime of omgevingsafhankelijke instellingen horen in lokale/Vercel-environmentvariabelen. Gebruik `.env.example` als namenlijst en commit nooit echte wachtwoorden, service-role keys, SMTP-credentials of API-keys.
+
+Databasewijzigingen staan chronologisch in `supabase/migrations`. Deze migraties zijn leidend; voer ze gecontroleerd uit in de juiste Supabase-omgeving.
+
+## Belangrijke routes
+
+- Publieke website: `/en`, `/nl`, `/de`, `/es`, `/sv`
+- Producten: `/{locale}/products`
+- Klantlogin: `/{locale}/login`
+- Klantaccount: `/{locale}/account`
+- Adminlogin: `/{locale}/admin/login`
+- Backoffice: `/{locale}/admin`
+
+## Deployment
+
+Productie draait op Vercel en gebruikt Supabase en Resend. Een succesvolle build bewijst niet dat externe dashboardinstellingen correct staan. Controleer bij releases ook Vercel-environmentvariabelen, Supabase-migraties en Auth-redirects, Resend-domein/SMTP en DNS. De actuele checklist en open punten staan in de [roadmap](docs/ROADMAP.md).
