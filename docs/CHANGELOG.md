@@ -12,6 +12,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Toegevoegd
 
+- `AI_CONTEXT.md` in de repositoryroot met compacte projectcontext, beschermde onderdelen, risico's en vaste regels voor toekomstige AI-assistenten.
 - Professionele documentatiestructuur onder `/docs`.
 - Actueel technisch overdrachtsrapport.
 - Business log met motivatie achter bedrijfskeuzes.

@@ -6,6 +6,7 @@ Meertalige Next.js-webwinkel en backoffice voor Nancy's Castalla, gericht op int
 
 De actuele projectdocumentatie staat in [`docs`](docs):
 
+- [`AI_CONTEXT.md`](AI_CONTEXT.md): compacte projectbriefing en werkinstructies voor AI-assistenten.
 - [`TECHNICAL_HANDOVER.md`](docs/TECHNICAL_HANDOVER.md): actuele technische architectuur en projectstatus.
 - [`BUSINESS_LOG.md`](docs/BUSINESS_LOG.md): zakelijke keuzes en motivatie.
 - [`ROADMAP.md`](docs/ROADMAP.md): actuele prioriteiten en toekomstig werk.

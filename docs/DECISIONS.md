@@ -147,6 +147,12 @@ Dit document legt belangrijke technische beslissingen en hun motivatie vast. Het
 
 **Waarom:** code en documentatie moeten synchroon blijven. Een nieuw team of een nieuwe ChatGPT-sessie moet de projectstatus kunnen begrijpen zonder eerst de volledige broncode te analyseren.
 
+### Compacte AI-context in de repositoryroot
+
+**Besluit:** `AI_CONTEXT.md` vormt de eerste briefing voor iedere toekomstige AI-assistent en verwijst voor verdieping naar `/docs`.
+
+**Waarom:** een compacte, praktische context verkleint de kans dat een nieuwe assistent bestaande mobiele, order-, voorraad- of beveiligingskeuzes per ongeluk doorbreekt. De rootlocatie maakt het bestand direct vindbaar.
+
 ## Beslisregel voor toekomstige wijzigingen
 
 Leg een besluit hier vast wanneer het een architectuurgrens, datamodel, beveiligingsmodel, externe provider, kernworkflow of blijvende ontwikkelconventie verandert. Vermeld altijd datum, besluit, motivatie, gevolgen en eventueel het vervangen besluit.
