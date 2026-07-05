@@ -3,9 +3,9 @@ import Link from "next/link";
 import { ArrowRight, Coffee, PackageCheck, Truck } from "lucide-react";
 import { InfoBand } from "@/components/InfoBand";
 import { ProductOrder } from "@/components/ProductOrder";
-import { businessConfig } from "@/config/business";
 import { defaultLocale, getDictionary, isLocale, locales, type Locale } from "@/i18n/config";
 import { getHomepageProducts } from "@/lib/product-store";
+import { getUiCopy } from "@/i18n/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +17,7 @@ export default async function HomePage({ params }: { params: Promise<unknown> })
   const { locale: rawLocale } = (await params) as { locale?: string };
   const locale: Locale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const dictionary = getDictionary(locale);
+  const ui = getUiCopy(locale);
   const featuredProducts = await getHomepageProducts();
 
   return (
@@ -92,7 +93,7 @@ export default async function HomePage({ params }: { params: Promise<unknown> })
           <div>
             <Coffee className="text-brass" />
             <h3 className="mt-4 font-serif text-2xl font-bold">{dictionary.home.breadDemand}</h3>
-            <p className="mt-2 text-sm leading-6 text-cream/78">{businessConfig.openingTexts.preorderNote}</p>
+            <p className="mt-2 text-sm leading-6 text-cream/78">{ui.home.breadPreorderNote}</p>
           </div>
           <div>
             <Truck className="text-brass" />

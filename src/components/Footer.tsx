@@ -3,9 +3,17 @@ import { businessConfig } from "@/config/business";
 import { defaultLocale, getDictionary, type Locale } from "@/i18n/config";
 import { paymentProviders } from "@/payments/providers";
 import Link from "next/link";
+import { getUiCopy } from "@/i18n/ui";
 
 export function Footer({ locale = defaultLocale }: { locale?: Locale }) {
   const dictionary = getDictionary(locale);
+  const ui = getUiCopy(locale);
+  const paymentLabels: Record<string, string> = {
+    bizum: "Bizum",
+    "bank-transfer": ui.footer.bankTransfer,
+    "cash-collection": ui.footer.cashCollection,
+    "cash-delivery": ui.footer.cashDelivery,
+  };
 
   return (
     <footer className="border-t border-forest/10 bg-forest text-cream">
@@ -17,19 +25,19 @@ export function Footer({ locale = defaultLocale }: { locale?: Locale }) {
           </p>
         </div>
         <div>
-          <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-brass">Visit</h3>
+          <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-brass">{ui.footer.visit}</h3>
           <p className="mt-3 text-sm text-cream/85">{businessConfig.address}</p>
           <p className="mt-2 text-sm text-cream/85">WhatsApp: {businessConfig.displayWhatsappNumber}</p>
         </div>
         <div>
-          <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-brass">Payment V1</h3>
+          <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-brass">{ui.footer.payment}</h3>
           <ul className="mt-3 space-y-1 text-sm text-cream/85">
             {paymentProviders
               .filter((provider) => provider.active)
               .map((provider) => (
-                <li key={provider.id}>{provider.label}</li>
+                <li key={provider.id}>{paymentLabels[provider.id] ?? provider.label}</li>
               ))}
-            <li>Card payment later</li>
+            <li>{ui.footer.cardLater}</li>
           </ul>
         </div>
       </div>
@@ -41,8 +49,8 @@ export function Footer({ locale = defaultLocale }: { locale?: Locale }) {
             </div>
             <span>&copy; NANCY&apos;S CASTALLA 2026</span>
           </div>
-          <span>International foods, coffee, empanadas and drinks</span>
-          <div className="flex gap-4"><Link href={`/${locale}/privacy`}>Privacy</Link><Link href={`/${locale}/terms`}>Terms</Link></div>
+          <span>{ui.footer.tagline}</span>
+          <div className="flex gap-4"><Link href={`/${locale}/privacy`}>{ui.footer.privacy}</Link><Link href={`/${locale}/terms`}>{ui.footer.terms}</Link></div>
         </div>
       </div>
     </footer>

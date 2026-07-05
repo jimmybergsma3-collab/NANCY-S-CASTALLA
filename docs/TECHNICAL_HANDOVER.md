@@ -194,7 +194,7 @@ De publieke frontend en serverbackend staan in dezelfde Next.js-repository, maar
 |   |-- imports/
 |   |-- migrations/
 |   `-- templates/
-|-- middleware.ts
+|-- src/proxy.ts
 |-- next.config.ts
 |-- tailwind.config.ts
 `-- package.json
@@ -222,7 +222,7 @@ De publieke frontend en serverbackend staan in dezelfde Next.js-repository, maar
 | `supabase/migrations` | Chronologische, gezaghebbende SQL-schemawijzigingen |
 | `supabase/imports` | Grote leveranciersimports, standaard verborgen voor de publieke winkel |
 | `supabase/templates` | Branded HTML voor bevestiging en wachtwoordherstel via Supabase Auth |
-| `middleware.ts` | Taalroutering voor routes zonder locale |
+| `src/proxy.ts` | Next.js 16 taalroutering voor routes zonder locale op basis van cookie, browsertaal, optionele landcode en Engelse fallback |
 
 ## 3.4 Belangrijke ontwerpgrenzen
 
@@ -439,13 +439,16 @@ sequenceDiagram
     N->>D: profiel/orders via service-role
 ```
 
-Registratie gebruikt momenteel de Supabase JS-client rechtstreeks in de browser. `emailRedirectTo` wijst naar `/{locale}/login?confirmed=1` op de actuele origin. De oude `/api/auth/register` bestaat nog als alternatieve/legacy route en verdient consolidatie.
+Registratie gebruikt momenteel de Supabase JS-client rechtstreeks in de browser. `emailRedirectTo` wijst naar `/{locale}/login?confirmed=1` op de actuele origin. Naam en actuele locale worden als Auth-metadata meegestuurd; de customer-trigger neemt de geldige taalcode over voor nieuwe klanten. De oude `/api/auth/register` bestaat nog als alternatieve/legacy route en verdient consolidatie.
 
 ## 5.2 Klantsessies
 
 - Supabase bewaart de sessie standaard in browserstorage en vernieuwt tokens automatisch.
 - De sessie is geen HttpOnly-cookie van Next.js.
 - Accountcomponenten controleren client-side of een sessie bestaat en sturen anders naar login.
+- De profieltaal is voor ingelogde klanten leidend. Een client-side synchronisatie leest `customers.language` en vervangt een afwijkende niet-admin-localeroute door de voorkeurslocale.
+- Taalkeuze wordt tegelijk opgeslagen in `customers.language`, cookie `nancys_locale` en localStorage onder dezelfde sleutel.
+- Adminroutes zijn uitgesloten van profielgestuurde localeredirects.
 - Beveiligde API-routes vertrouwen niet alleen op de UI, maar verifiëren het bearer-token bij Supabase.
 - Uitloggen roept `supabase.auth.signOut()` aan.
 - Wachtwoordherstel gebruikt Supabase `resetPasswordForEmail`; een herstelsessie kan op de accountpagina een nieuw wachtwoord instellen.
@@ -572,7 +575,7 @@ Ondersteunde localecodes:
 | `es` | Spaans, belangrijk voor Spaanse en Zuid-Amerikaanse klanten |
 | `sv` | Zweeds als huidige Scandinavische representatie |
 
-De vertaaldekking is niet volledig. Sommige productcategorieën, juridische teksten, backofficeteksten en productinhoud blijven Engels. `sv` is geen volledige dekking voor alle Scandinavische talen.
+Header, homepage, catalogus, productgerichte bediening, orderpaneel en klantaccount gebruiken centrale woordenboeken. Productnamen en leveranciersinhoud blijven onvertaald zolang daarvoor geen databasevelden bestaan. Juridische teksten, backoffice en delen van de overige informatieve content zijn nog niet volledig vertaald. `sv` is Zweeds en fungeert tevens als fallback voor Noors, Deens, Fins en IJslands; dit is geen volledige taaldekking voor iedere Scandinavische taal.
 
 ## 7.2 Paginaoverzicht
 
@@ -593,7 +596,7 @@ De vertaaldekking is niet volledig. Sommige productcategorieën, juridische teks
 | `/{locale}/privacy` | Privacytekst |
 | `/{locale}/terms` | Voorwaarden |
 
-Routes zonder locale sturen door naar de Engelse variant. Er is geen aparte FAQ-route, conventionele winkelwagenpagina of betaalcheckout.
+Routes zonder locale worden door `src/proxy.ts` gestuurd naar de beste taal. De volgorde is opgeslagen cookie, `Accept-Language`, optionele Vercel-landcode en daarna Engels. Een expliciete locale in de URL blijft voor gasten leidend. Er is geen aparte FAQ-route, conventionele winkelwagenpagina of betaalcheckout.
 
 ## 7.3 Homepage
 
@@ -658,7 +661,7 @@ Er is geen klassiek contactformulier. Contact loopt via `info@nancys.es`, WhatsA
 
 ## 8.2 Gedeeltelijk werkend
 
-- **Vertalingen:** structuur aanwezig, inhoud niet overal volledig vertaald.
+- **Vertalingen:** kernwinkel, productbediening en klantaccount vertaald; juridische, backoffice- en productinhoud nog niet volledig vertaald.
 - **Orderhistorie:** zichtbaar, maar beperkt detail en geen herhaalbestelling/download.
 - **Voorraad:** correct bij statuswijziging, maar geen reservering tijdens `new`.
 - **E-mail:** geen queue/retrydashboard; externe configuratie is essentieel.
@@ -1043,7 +1046,7 @@ De integratielaag kan later providers implementeren voor facturatie, POS, SumUp 
 
 - Product- en categorie-URL's staan niet volledig in de sitemap.
 - Geen JSON-LD voor `LocalBusiness`, `Product`, `Offer`, `BreadcrumbList` en FAQ.
-- De root-HTML-taal kan voor alle locales nog `en` zijn.
+- De server-gerenderde root-HTML-taal is nog `en`; na hydration zet de locale-synchronisatie `document.documentElement.lang` correct. Een volledig server-side dynamische `lang`-waarde blijft SEO-technische schuld.
 - Veel pagina's erven algemene metadata in plaats van unieke content.
 - Geen productfeed voor Google Merchant.
 - Geen Search Console-/analyticsintegratie in de repository.
@@ -1249,7 +1252,7 @@ Klantnaam, e-mail, telefoon, adres en orderhistorie zijn persoonsgegevens. Bij v
 ## 19.5 SEO, toegankelijkheid en kwaliteit
 
 - Geen product-/categoriesitemap of structured data.
-- HTML `lang` kan niet met locale meeschakelen.
+- HTML `lang` schakelt client-side mee, maar is in de eerste serverresponse nog `en`.
 - Onvolledige vertalingen, vooral juridische en Scandinavische dekking.
 - Geen automatische accessibilityscan.
 - Geen browser-/visuele regressietests.

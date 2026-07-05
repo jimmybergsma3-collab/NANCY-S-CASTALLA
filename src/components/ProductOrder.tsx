@@ -14,6 +14,7 @@ import { getProductCategories, productMatchesCategory } from "@/lib/product-cate
 import { getCustomerDisplayUnit, getEffectivePackageOptions } from "@/lib/product-packaging";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { formatCustomerPhone } from "@/lib/phone";
+import { getUiCopy } from "@/i18n/ui";
 
 type Props = {
   products: Product[];
@@ -24,6 +25,7 @@ type Props = {
 
 export function ProductOrder({ products, initialCategory = "All", locale = defaultLocale, compactCardImages = false }: Props) {
   const dictionary = getDictionary(locale);
+  const ui = getUiCopy(locale);
   const [category, setCategory] = useState<ProductCategory | "All">(initialCategory);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [fulfillment, setFulfillment] = useState<"Collection" | "Local delivery">("Collection");
@@ -82,7 +84,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
     })
     .filter((line) => line.quantity > 0);
   const total = cartLines.reduce((sum, line) => sum + line.salePriceInclVat * line.quantity, 0);
-  const whatsAppUrl = buildWhatsAppUrl(buildWhatsAppMessage(cartLines, fulfillment));
+  const whatsAppUrl = buildWhatsAppUrl(buildWhatsAppMessage(cartLines, fulfillment, locale));
 
   function updateQuantity(id: string, nextQuantity: number) {
     setQuantities((current) => ({ ...current, [id]: Math.max(0, nextQuantity) }));
@@ -120,19 +122,19 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
       const result = (await response.json()) as { ok: boolean; message?: string; orderId?: string; emailed?: boolean };
 
       if (!response.ok || !result.ok) {
-        throw new Error(result.message || "Order could not be sent.");
+        throw new Error(result.message || ui.order.orderError);
       }
 
       setStatus("sent");
       idempotencyKey.current = "";
       setMessage(
         result.emailed
-          ? `Order ${result.orderId} sent. Please check your email.`
-          : `Order ${result.orderId} received. Email provider is not configured yet.`,
+          ? `${result.orderId}: ${ui.order.orderSent}`
+          : `${result.orderId}: ${ui.order.orderReceived}. ${ui.order.emailUnavailable}`,
       );
     } catch (error) {
       setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Order could not be sent.");
+      setMessage(error instanceof Error ? error.message : ui.order.orderError);
     }
   }
 
@@ -144,7 +146,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
           <input
             className="w-full bg-transparent text-sm outline-none placeholder:text-forest/45"
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by product name or product code"
+            placeholder={ui.products.searchPlaceholder}
             type="search"
             value={search}
           />
@@ -161,14 +163,14 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
               type="button"
               onClick={() => setCategory(item)}
             >
-              {item === "All" ? dictionary.common.all : item}
+              {item === "All" ? dictionary.common.all : ui.categories[item]}
             </button>
           ))}
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           {visibleProducts.length === 0 ? (
             <div className="rounded-lg border border-forest/10 bg-white p-6 text-sm text-forest/70 shadow-soft md:col-span-2">
-              No products found. Try another product name, category or product code.
+              {ui.products.noProducts}
             </div>
           ) : null}
           {visibleProducts.map((product) => {
@@ -193,7 +195,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
                 ) : null}
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-coffee">{getProductCategories(product).join(" · ")}</p>
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-coffee">{getProductCategories(product).map((item) => ui.categories[item]).join(" · ")}</p>
                     <Link href={productHref}>
                       <h3 className="mt-2 font-serif text-2xl font-bold text-forest transition group-hover:text-coffee">
                         {product.name}
@@ -201,7 +203,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
                     </Link>
                   </div>
                   <span className="rounded-full bg-cream px-3 py-1 text-xs font-bold capitalize text-forest">
-                    {product.stockStatus.replace("-", " ")}
+                    {ui.statuses[product.stockStatus]}
                   </span>
                 </div>
                 <p className="mt-3 min-h-12 text-sm leading-6 text-forest/75">{getPublicProductDescription(product)}</p>
@@ -209,11 +211,11 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
                   className="mt-3 inline-flex text-sm font-bold text-coffee underline-offset-4 hover:underline"
                   href={productHref}
                 >
-                  View product details
+                  {ui.products.viewDetails}
                 </Link>
                 {packageOptions.length > 1 ? (
                   <label className="mt-4 block text-sm font-bold text-forest">
-                    Package
+                    {ui.products.package}
                     <select
                       className="mt-1 w-full rounded-lg border border-forest/15 bg-linen px-3 py-2 text-sm font-normal text-forest"
                       onChange={(event) => setSelectedOptions((current) => ({ ...current, [product.id]: Number(event.target.value) }))}
@@ -264,7 +266,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
       <aside className="h-fit min-w-0 rounded-lg border border-forest/10 bg-cream p-5 shadow-soft lg:sticky lg:top-32">
         <div className="flex items-center gap-2 text-forest">
           <ShoppingBasket size={20} />
-          <h2 className="font-serif text-2xl font-bold">{dictionary.order.title}</h2>
+          <h2 className="font-serif text-2xl font-bold">{ui.order.title}</h2>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2 rounded-full bg-white p-1">
           {(["Collection", "Local delivery"] as const).map((option) => (
@@ -282,7 +284,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
         </div>
         <div className="mt-5 space-y-3">
           {cartLines.length === 0 ? (
-            <p className="text-sm text-forest/70">{dictionary.order.empty}</p>
+            <p className="text-sm text-forest/70">{ui.order.empty}</p>
           ) : (
             cartLines.map((line) => (
               <div key={line.product.id} className="flex justify-between gap-3 text-sm text-forest">
@@ -296,26 +298,26 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
         </div>
         <div className="mt-5 border-t border-forest/15 pt-4">
           <div className="flex justify-between text-lg font-bold text-forest">
-            <span>{dictionary.order.estimatedTotal}</span>
+            <span>{ui.order.estimatedTotal}</span>
             <span>{formatEuro(total)}</span>
           </div>
           <p className="mt-2 text-xs leading-5 text-forest/65">
-            {dictionary.order.deliveryNote} {formatEuro(businessConfig.deliveryMinimum)}. Delivery fee from{" "}
-            {formatEuro(businessConfig.deliveryFee)} within around {businessConfig.deliveryRadiusKm} km when possible.
+            {ui.order.deliveryMinimum} {formatEuro(businessConfig.deliveryMinimum)}. {ui.order.deliveryFeeFrom}{" "}
+            {formatEuro(businessConfig.deliveryFee)} {ui.order.withinRadius.replace("{km}", String(businessConfig.deliveryRadiusKm))}
           </p>
         </div>
         <form className="mt-5 space-y-3" onSubmit={submitOrder}>
           <input
             className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm text-forest outline-none focus:border-forest"
             onChange={(event) => setCustomerName(event.target.value)}
-            placeholder="Name"
+            placeholder={ui.order.name}
             required
             value={customerName}
           />
           <input
             className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm text-forest outline-none focus:border-forest"
             onChange={(event) => setCustomerEmail(event.target.value)}
-            placeholder="Email for confirmation"
+            placeholder={ui.order.email}
             required
             type="email"
             value={customerEmail}
@@ -326,20 +328,20 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
             inputMode="tel"
             onChange={(event) => setCustomerPhone(event.target.value)}
             onBlur={() => setCustomerPhone((current) => formatCustomerPhone(current))}
-            placeholder="Phone / WhatsApp"
+            placeholder={ui.order.phone}
             type="tel"
             value={customerPhone}
           />
           <textarea
             className="min-h-20 w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm text-forest outline-none focus:border-forest"
             onChange={(event) => setCustomerAddress(event.target.value)}
-            placeholder="Address"
+            placeholder={ui.order.address}
             value={customerAddress}
           />
           <textarea
             className="min-h-20 w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm text-forest outline-none focus:border-forest"
             onChange={(event) => setNotes(event.target.value)}
-            placeholder="Notes or preferred time"
+            placeholder={ui.order.notes}
             value={notes}
           />
           <button
@@ -348,7 +350,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
             type="submit"
           >
             {status === "sent" ? <MailCheck size={18} /> : <Send size={18} />}
-            {status === "sending" ? "Sending..." : "Send order request"}
+            {status === "sending" ? ui.order.sending : ui.order.send}
           </button>
         </form>
         {message ? (
@@ -360,10 +362,10 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
           target="_blank"
         >
           <MessageCircle size={18} />
-          {businessConfig.whatsappCtaLabel}
+          {ui.header.orderSupport}
         </a>
         <p className="mt-4 text-xs leading-5 text-forest/65">
-          {dictionary.order.after}
+          {ui.order.after}
         </p>
       </aside>
     </div>

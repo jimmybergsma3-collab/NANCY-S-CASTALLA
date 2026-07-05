@@ -3,6 +3,7 @@ import { Header } from "@/components/Header";
 import { defaultLocale, isLocale, locales, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/config";
 import type { Metadata } from "next";
+import { LocalePreferenceSync } from "@/components/LocalePreferenceSync";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -35,6 +36,7 @@ export default async function LocaleLayout({
 
   return (
     <>
+      <LocalePreferenceSync locale={locale} />
       <Header locale={locale} />
       <main>{children}</main>
       <Footer locale={locale} />

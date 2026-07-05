@@ -1,6 +1,6 @@
 import { env } from "./env";
 
-export type CustomerAuthUser = { id: string; email?: string; user_metadata?: { name?: string } };
+export type CustomerAuthUser = { id: string; email?: string; user_metadata?: { language?: string; name?: string } };
 
 export async function getCustomerAuthUser(request: Request): Promise<CustomerAuthUser | null> {
   const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim();

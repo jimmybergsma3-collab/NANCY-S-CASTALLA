@@ -1,5 +1,7 @@
 import { businessConfig } from "@/config/business";
 import type { Product } from "@/types/product";
+import type { Locale } from "@/i18n/config";
+import { getUiCopy } from "@/i18n/ui";
 
 export type CartLine = {
   product: Product;
@@ -8,7 +10,8 @@ export type CartLine = {
   salePriceInclVat?: number;
 };
 
-export function buildWhatsAppMessage(lines: CartLine[], fulfillment: "Collection" | "Local delivery") {
+export function buildWhatsAppMessage(lines: CartLine[], fulfillment: "Collection" | "Local delivery", locale: Locale) {
+  const copy = getUiCopy(locale).whatsappMessage;
   const selected = lines.filter((line) => line.quantity > 0);
   const total = selected.reduce((sum, line) => sum + (line.salePriceInclVat ?? line.product.salePriceInclVat) * line.quantity, 0);
   const productLines = selected
@@ -16,18 +19,18 @@ export function buildWhatsAppMessage(lines: CartLine[], fulfillment: "Collection
     .join("\n");
 
   return [
-    `Hello ${businessConfig.businessName},`,
+    `${copy.greeting} ${businessConfig.businessName},`,
     "",
-    "I would like to place a pre-order:",
-    productLines || "- I would like to ask about current availability.",
+    copy.preOrder,
+    productLines || `- ${copy.availability}`,
     "",
-    `Preferred option: ${fulfillment}`,
-    `Estimated product total: €${total.toFixed(2)}`,
+    `${copy.preferredOption}: ${fulfillment === "Collection" ? copy.collection : copy.localDelivery}`,
+    `${copy.total}: €${total.toFixed(2)}`,
     "",
-    "Payment preference: Bizum / bank transfer / cash",
-    "Name:",
-    "Preferred collection or delivery time:",
-    "Delivery address, if needed:",
+    copy.payment,
+    copy.name,
+    copy.preferredTime,
+    copy.address,
   ].join("\n");
 }
 

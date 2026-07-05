@@ -11,6 +11,7 @@ Deze roadmap beschrijft de actuele prioriteiten. Gereed werk wordt uit de actiev
 
 - [ ] Controleer alle productie-environmentvariabelen in Vercel zonder geheime waarden te documenteren.
 - [ ] Controleer of alle Supabase-migraties in productie zijn uitgevoerd.
+- [ ] Voer `202607050001_customer_signup_language.sql` uit in productie zodat nieuwe registraties direct de gekozen locale krijgen.
 - [ ] Leg Supabase Auth Site URL en redirect-URL's voor `https://www.nancys.es` vast in een operationele checklist.
 - [ ] Controleer Resend domeinverificatie, SPF, DKIM, DMARC en SMTP-instellingen.
 - [ ] Test registratie, bevestiging, login, wachtwoordherstel en logout end-to-end op productie.

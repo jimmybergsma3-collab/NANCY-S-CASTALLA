@@ -11,6 +11,7 @@ import { getPublicProductDescription } from "@/lib/product-display";
 import { getProductById, getProducts } from "@/lib/product-store";
 import { getCustomerDisplayUnit, getDisplayedProductPrice, getEffectivePackageOptions } from "@/lib/product-packaging";
 import { getProductCategories } from "@/lib/product-categories";
+import { getUiCopy } from "@/i18n/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,7 @@ function getPublicAdditionalInfo(product: {
   additionalInfo?: string;
   unit: string;
   origin: string;
-} & Parameters<typeof getCustomerDisplayUnit>[0]) {
+} & Parameters<typeof getCustomerDisplayUnit>[0], soldAs: string, originLabel: string) {
   const info = product.additionalInfo?.trim() ?? "";
   const supplierNote = /^(supplier section|supplier category|dutch name):/i.test(info);
 
@@ -62,7 +63,7 @@ function getPublicAdditionalInfo(product: {
     return info;
   }
 
-  return `Sold as: ${getCustomerDisplayUnit(product)}. Origin: ${product.origin}.`;
+  return `${soldAs}: ${getCustomerDisplayUnit(product)}. ${originLabel}: ${product.origin}.`;
 }
 
 export default async function ProductDetailPage({ params }: { params: Promise<unknown> }) {
@@ -72,6 +73,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
   };
   const locale: Locale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const dictionary = getDictionary(locale);
+  const ui = getUiCopy(locale);
   const productId = rawProductId ? decodeURIComponent(rawProductId) : "";
   const product = await getProductById(productId, { includeHidden: true });
 
@@ -89,7 +91,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
   return (
     <section className="mx-auto max-w-7xl px-4 py-12">
       <Link className="text-sm font-bold text-coffee underline-offset-4 hover:underline" href={`/${locale}/products`}>
-        Back to products
+        {ui.products.backToProducts}
       </Link>
       <div className="mt-6 grid gap-10 lg:grid-cols-[minmax(0,1fr)_460px]">
         <div>
@@ -99,12 +101,12 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
             </div>
           ) : (
             <div className="grid aspect-[4/3] place-items-center rounded-lg border border-forest/10 bg-cream text-sm font-bold text-forest/55 shadow-soft">
-              Photo coming soon
+              {ui.products.photoSoon}
             </div>
           )}
         </div>
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-coffee">{getProductCategories(product).join(" · ")}</p>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-coffee">{getProductCategories(product).map((item) => ui.categories[item]).join(" · ")}</p>
           <h1 className="mt-2 font-serif text-5xl font-bold text-forest">{product.name}</h1>
           <div className="mt-3 text-2xl font-bold text-forest">
             {displayedPrice > 0 ? formatEuro(displayedPrice) : dictionary.common.soon}
@@ -115,13 +117,13 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
           <p className="mt-5 leading-7 text-forest/72">{getPublicProductDescription(product)}</p>
           {packageOptions.length ? (
             <div className="mt-6 rounded-lg border border-brass/30 bg-linen p-4">
-              <h2 className="font-serif text-2xl font-bold text-forest">Available package sizes</h2>
+              <h2 className="font-serif text-2xl font-bold text-forest">{ui.products.availablePackageSizes}</h2>
               <div className="mt-3 grid gap-2">
                 {packageOptions.map((option) => (
                   <div className="flex justify-between gap-4 text-sm text-forest" key={option.label}>
                     <span>
                       {option.label}
-                      {option.quantity > 1 ? <span className="text-forest/55"> ({option.quantity} pieces)</span> : null}
+                      {option.quantity > 1 ? <span className="text-forest/55"> ({option.quantity} {ui.products.pieces})</span> : null}
                     </span>
                     <strong>{formatEuro(option.salePriceInclVat)}</strong>
                   </div>
@@ -131,32 +133,31 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
           ) : null}
           <div className="mt-6 grid gap-3 rounded-lg border border-forest/10 bg-cream p-4 text-sm text-forest">
             <div className="flex justify-between gap-4">
-              <span>Product code</span>
+              <span>{ui.products.productCode}</span>
               <strong>{product.id}</strong>
             </div>
             <div className="flex justify-between gap-4">
-              <span>Unit</span>
+              <span>{ui.products.unit}</span>
               <strong>{getCustomerDisplayUnit(product)}</strong>
             </div>
             <div className="flex justify-between gap-4">
-              <span>Status</span>
-              <strong className="capitalize">{product.stockStatus.replace("-", " ")}</strong>
+              <span>{ui.products.status}</span>
+              <strong>{ui.statuses[product.stockStatus]}</strong>
             </div>
             <div className="flex justify-between gap-4">
-              <span>Origin</span>
+              <span>{ui.products.origin}</span>
               <strong>{product.origin}</strong>
             </div>
           </div>
           <p className="mt-5 text-sm leading-6 text-forest/65">
-            Add this item below and send the request. Nancy&apos;s Castalla confirms availability, pickup or delivery, and
-            payment instructions.
+            {ui.products.addInstruction}
           </p>
           <div className="mt-6 border-b border-forest/15">
-            {product.ingredients ? <DetailPanel open title="Ingredients">{product.ingredients}</DetailPanel> : null}
-            {product.directions ? <DetailPanel title="Directions for use">{product.directions}</DetailPanel> : null}
-            {product.conservation ? <DetailPanel title="Conservation">{product.conservation}</DetailPanel> : null}
-            <DetailPanel title="Additional information">
-              {getPublicAdditionalInfo(product)}
+            {product.ingredients ? <DetailPanel open title={ui.products.ingredients}>{product.ingredients}</DetailPanel> : null}
+            {product.directions ? <DetailPanel title={ui.products.directions}>{product.directions}</DetailPanel> : null}
+            {product.conservation ? <DetailPanel title={ui.products.conservation}>{product.conservation}</DetailPanel> : null}
+            <DetailPanel title={ui.products.additionalInformation}>
+              {getPublicAdditionalInfo(product, ui.products.soldAs, ui.products.origin)}
             </DetailPanel>
           </div>
         </div>
@@ -166,7 +167,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
       </div>
       {relatedProducts.length > 0 ? (
         <div className="mt-14">
-          <h2 className="font-serif text-3xl font-bold text-forest">You may also like</h2>
+          <h2 className="font-serif text-3xl font-bold text-forest">{ui.products.youMayAlsoLike}</h2>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {relatedProducts.map((item) => (
               <Link
@@ -180,7 +181,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
                   </div>
                 ) : (
                   <div className="grid aspect-[4/3] place-items-center rounded-md bg-cream text-xs font-bold text-forest/50">
-                    Photo soon
+                    {ui.products.photoSoon}
                   </div>
                 )}
                 <h3 className="mt-4 min-h-12 text-sm font-bold text-forest">{item.name}</h3>

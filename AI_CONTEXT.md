@@ -41,6 +41,15 @@ De primaire doelgroep bestaat uit internationale inwoners en expats rond Castall
 
 Engels is de hoofdtaal. Ondersteunde localecodes zijn `en`, `nl`, `de`, `es` en `sv`. Spaans is essentieel voor Spaanse en Zuid-Amerikaanse klanten. Vertalingen zijn nog niet overal volledig.
 
+Localevoorkeur volgt deze regels:
+
+1. Een expliciete locale in de URL is leidend voor gasten.
+2. Routes zonder locale gebruiken cookie `nancys_locale`, daarna `Accept-Language`, optionele Vercel-landcode en vervolgens Engels.
+3. `nl` gaat naar Nederlands, `de` naar Duits, `es` naar Spaans en `en` naar Engels.
+4. `sv`, Noors, Deens, Fins en IJslands gebruiken `sv` als Scandinavische fallback.
+5. Voor ingelogde klanten is `customers.language` leidend op alle niet-adminroutes.
+6. Handmatige taalkeuze synchroniseert URL, cookie, localStorage en indien ingelogd het klantprofiel.
+
 ## 3. Huidige technische stack
 
 | Onderdeel | Technologie |
@@ -66,6 +75,8 @@ npm run build
 ```
 
 Databasewijzigingen staan in `supabase/migrations`. Deze migraties zijn leidend. Leveranciersimports staan in `supabase/imports`.
+
+Next.js 16 gebruikt `src/proxy.ts` voor locale-detectie en redirects. Maak niet opnieuw een root `middleware.ts`; dat bestand wordt in deze `src`-projectstructuur niet als actieve proxy gebruikt.
 
 ## 4. Belangrijkste routes
 
@@ -278,7 +289,7 @@ Verwijder geen bestaande functionaliteit, migratie of data-import omdat deze ver
 - Sommige productqueries laden te veel of de volledige catalogus.
 - Lokale productfallback kan een Supabase-storing maskeren.
 - Account/order e-mails hebben geen volwaardige queue en retryflow.
-- Vertalingen, juridische content en Scandinavische dekking zijn onvolledig.
+- Kernwinkel en klantaccount zijn vertaald; juridische content, backoffice, productinhoud en volledige Scandinavische dekking zijn nog onvolledig.
 - Geen volledige product-/categoriesitemap of structured data.
 - Inkoop, facturatie en rapportages zijn nog gedeeltelijk.
 - Klantadres is nog geen apart onveranderlijk ordersnapshot.

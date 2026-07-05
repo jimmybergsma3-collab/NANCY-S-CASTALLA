@@ -153,6 +153,24 @@ Dit document legt belangrijke technische beslissingen en hun motivatie vast. Het
 
 **Waarom:** een compacte, praktische context verkleint de kans dat een nieuwe assistent bestaande mobiele, order-, voorraad- of beveiligingskeuzes per ongeluk doorbreekt. De rootlocatie maakt het bestand direct vindbaar.
 
+### Klantprofieltaal als leidende voorkeur
+
+**Besluit:** `customers.language` is voor ingelogde klanten de bron van waarheid buiten adminroutes. Taalkeuze synchroniseert profiel, URL, cookie en localStorage.
+
+**Waarom:** een accounttaal die alleen als databaseveld wordt opgeslagen verandert de werkelijke gebruikerservaring niet. De gecombineerde aanpak werkt voor volgende bezoeken, handmatige taalwissels en directe links, terwijl adminroutes stabiel blijven.
+
+### Next.js 16 proxy voor automatische localedetectie
+
+**Besluit:** locale-routing voor routes zonder taalprefix draait in `src/proxy.ts` en gebruikt cookie, `Accept-Language`, optionele landcode en Engelse fallback.
+
+**Waarom:** Next.js 16 gebruikt de proxyconventie. Het eerdere rootbestand `middleware.ts` werd in de huidige `src`-structuur niet uitgevoerd, waardoor hardcoded `/en`-redirectpagina's onbedoeld de taal bepaalden.
+
+### Canonieke productdata blijft onvertaald
+
+**Besluit:** UI-teksten en categorielabels worden vertaald, maar productnamen en leveranciersinhoud blijven voorlopig canonieke databasewaarden.
+
+**Waarom:** er bestaat nog geen betrouwbaar productvertalingsmodel. Automatisch vertalen zou voedsel-, merk- en allergeneninformatie kunnen vervormen.
+
 ## Beslisregel voor toekomstige wijzigingen
 
 Leg een besluit hier vast wanneer het een architectuurgrens, datamodel, beveiligingsmodel, externe provider, kernworkflow of blijvende ontwikkelconventie verandert. Vermeld altijd datum, besluit, motivatie, gevolgen en eventueel het vervangen besluit.

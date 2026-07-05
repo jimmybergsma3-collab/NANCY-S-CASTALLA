@@ -12,12 +12,20 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Opgelost
 
+- De accounttaal stuurt nu de locale-route, navigatie en kerninterface van ingelogde klanten.
+- Routes zonder locale detecteren cookie, browsertaal en optionele landcode in plaats van altijd naar Engels te sturen.
+- Nederlandse, Duitse, Spaanse en Scandinavische bezoekers krijgen de juiste locale-fallback zonder redirectlus.
+- Hardcoded Engelse teksten rond homepageproducten, categorieën, productbediening, orderpaneel, registratie en account zijn naar centrale woordenboeken verplaatst.
 - De desktopcategoriepagina blijft binnen de viewport wanneer veel categoriefilters zichtbaar zijn.
 - De header vervangt registreren/inloggen door de accountlink zodra een Supabase-klantsessie actief is.
 - Spaanse klanttelefoonnummers worden in het bestelformulier leesbaar als `+34`-nummer weergegeven.
 
 ### Toegevoegd
 
+- `src/proxy.ts` voor Next.js 16 localedetectie en voorkeurscookies.
+- Profiel-, cookie- en localStorage-synchronisatie voor klanttaal.
+- Gecentraliseerde UI-vertalingen voor categorieën, productkaarten, orderaanvraag, footer en WhatsApp-bericht.
+- Database-migratie die de registratielocale bij nieuwe customers opslaat.
 - `AI_CONTEXT.md` in de repositoryroot met compacte projectcontext, beschermde onderdelen, risico's en vaste regels voor toekomstige AI-assistenten.
 - Professionele documentatiestructuur onder `/docs`.
 - Actueel technisch overdrachtsrapport.

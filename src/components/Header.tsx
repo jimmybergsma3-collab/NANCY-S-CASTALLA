@@ -9,12 +9,14 @@ import { BrandMark } from "./BrandMark";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { getAuthCopy } from "@/i18n/auth";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { getUiCopy } from "@/i18n/ui";
 
 export function Header({ locale = defaultLocale }: { locale?: Locale }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const dictionary = getDictionary(locale);
   const authCopy = getAuthCopy(locale);
+  const ui = getUiCopy(locale);
 
   useEffect(() => {
     let active = true;
@@ -61,12 +63,12 @@ export function Header({ locale = defaultLocale }: { locale?: Locale }) {
       </div>
       <div className="mx-auto max-w-7xl px-4 py-3 md:flex md:items-center md:gap-6 md:py-4">
         <div className="flex items-center justify-between gap-4">
-          <Link href={`/${locale}`} aria-label="Nancy's Castalla home" onClick={() => setMenuOpen(false)}>
+          <Link href={`/${locale}`} aria-label={ui.header.home} onClick={() => setMenuOpen(false)}>
             <BrandMark />
           </Link>
           <button
             aria-expanded={menuOpen}
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-label={menuOpen ? ui.header.closeMenu : ui.header.openMenu}
             className="grid h-11 w-11 place-items-center rounded-full border border-forest/15 bg-white text-forest md:hidden"
             onClick={() => setMenuOpen((current) => !current)}
             type="button"
@@ -89,7 +91,7 @@ export function Header({ locale = defaultLocale }: { locale?: Locale }) {
               href={`https://wa.me/${businessConfig.whatsappNumber.replace(/\D/g, "")}`}
             >
               <MessageCircle size={17} />
-              {businessConfig.whatsappCtaLabel}
+              {ui.header.orderSupport}
             </a>
           </div>
         </div>
