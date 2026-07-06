@@ -54,6 +54,7 @@ Deze roadmap beschrijft de actuele prioriteiten. Gereed werk wordt uit de actiev
 
 ### Orders en voorraad
 
+- [x] Volledige responsieve admin-orderdetails met klant, regels, btw-totalen en contactacties.
 - [ ] Formele order-state-machine met toegestane overgangen.
 - [ ] Voorraadreservering of expliciet per product instelbaar reserveringsbeleid.
 - [ ] Handmatige voorraadcorrectie in één database-transactie/RPC.

@@ -53,7 +53,7 @@ De applicatie is online als productie-implementatie op Vercel, maar functioneel 
 | Productbeheer | Werkend | Toevoegen, wijzigen, verwijderen, foto's uploaden en zichtbaarheid beheren |
 | Klantregistratie en login | Werkend | Supabase Auth, e-mailbevestiging en wachtwoordherstel |
 | Klantprofiel | Werkend, beperkt | Naam, e-mail, telefoon, adres en taal; account toont orderhistorie op hoofdniveau |
-| Database-orders | Werkend | Server-side prijscontrole, idempotentie en orderopslag |
+| Database-orders | Werkend | Server-side prijscontrole, idempotentie, orderopslag en volledige admin-detailweergave |
 | WhatsApp-bestellen | Werkend | CTA en samengesteld bericht; dit is een apart kanaal naast database-orders |
 | Voorraad | Werkend voor kernflow | Afboeken bij bevestiging, terugboeken bij annulering |
 | E-mail | Werkend mits extern correct ingesteld | Resend voor orders, Supabase Custom SMTP voor accounts |
@@ -514,7 +514,11 @@ De prijshelper kan btw, winst en marge tonen. De oude automatische 50%-regel is 
 
 ## 6.3 Orders
 
-Het orderpaneel toont orders en maakt status- en betaalstatuswijziging mogelijk. Belangrijke statussen zijn:
+Het orderpaneel toont een aanklikbare, responsieve orderlijst. De detailweergave bevat het gekoppelde klantprofiel, datum en fulfilment, notities, alle `order_items`, prijzen en btw-totalen. De beheerder kan status en betaalstatus wijzigen of de klant direct bellen, via WhatsApp benaderen of e-mailen. Orders zonder regels krijgen een expliciete waarschuwing.
+
+De orderservice haalt orderregels genest op en verrijkt de resultaten in een gebundelde tweede query met de profielen uit `customers`. Omdat oudere orders nog geen afzonderlijk adressnapshot hebben, gebruikt de weergave eerst het klantprofiel en kan zij daarnaast een gelokaliseerde `Address`/`Adres`/`Adresse`/`Dirección`/`Adress`-regel uit de ordernotitie herkennen.
+
+Belangrijke statussen zijn:
 
 - `new`
 - `confirmed`
@@ -775,7 +779,7 @@ Ondersteunt productcreatie/upsert, wijziging en verwijdering. Input omvat de pro
 
 ### `/api/admin/orders`
 
-Leest orders en wijzigt status/betaalstatus. Mutaties gebruiken de database-RPC voor atomische voorraadtransities. Belangrijke statussen kunnen een klantmail activeren.
+`GET` leest maximaal 500 orders inclusief geneste `order_items` en verrijkt gekoppelde orders met naam, e-mail, telefoon, adres en taal uit `customers`. `PATCH` wijzigt status of betaalstatus. Beide acties vereisen een geldige adminsessie. Mutaties gebruiken de database-RPC voor atomische voorraadtransities; belangrijke statussen kunnen een klantmail activeren.
 
 ## 9.7 Adminvoorraad
 

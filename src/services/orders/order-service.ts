@@ -4,7 +4,7 @@ import { getEffectivePackageOptions } from "@/lib/product-packaging";
 import { getProductsByIds } from "@/lib/product-store";
 import { supabaseAdminFetch } from "@/lib/supabase-rest";
 import { evaluateProductAvailability } from "@/lib/product-availability";
-import type { BackofficeOrder, OrderInput, OrderLineInput, OrderStatus, PaymentStatus } from "@/types/backoffice";
+import type { BackofficeCustomer, BackofficeOrder, OrderInput, OrderLineInput, OrderStatus, PaymentStatus } from "@/types/backoffice";
 
 export class OrderValidationError extends Error {
   constructor(message: string, public status = 400, public code = "invalid_order") { super(message); }
@@ -115,9 +115,20 @@ export async function createOrder(input: OrderInput) {
   return { orderId: saved.order_id, orderNumber: saved.order_number, alreadyExisted: saved.already_existed, stored: true, total, subtotalExVat, vatTotal, lines: validatedLines };
 }
 
+async function enrichOrdersWithCustomers(orders: BackofficeOrder[]) {
+  const customerIds = Array.from(new Set(orders.map((order) => order.customer_id).filter((id): id is string => Boolean(id))));
+  if (customerIds.length === 0) return orders;
+  const customers = await supabaseAdminFetch<BackofficeCustomer[]>(
+    `customers?select=id,name,email,phone,address,language&id=in.(${customerIds.map(encodeURIComponent).join(",")})`,
+  );
+  const customerMap = new Map(customers.map((customer) => [customer.id, customer]));
+  return orders.map((order) => ({ ...order, order_items: order.order_items ?? [], customer: order.customer_id ? customerMap.get(order.customer_id) : undefined }));
+}
+
 export async function listOrders() {
   if (!hasSupabaseAdmin()) return [];
-  return supabaseAdminFetch<BackofficeOrder[]>("orders?select=*,order_items(*)&order=created_at.desc&limit=500");
+  const orders = await supabaseAdminFetch<BackofficeOrder[]>("orders?select=*,order_items(*)&order=created_at.desc&limit=500");
+  return enrichOrdersWithCustomers(orders);
 }
 
 export async function updateOrder(id: string, status: OrderStatus, paymentStatus: PaymentStatus) {
@@ -133,7 +144,7 @@ export async function updateOrder(id: string, status: OrderStatus, paymentStatus
 
 export async function getOrderById(id: string) {
   const rows = await supabaseAdminFetch<BackofficeOrder[]>(`orders?select=*,order_items(*)&id=eq.${encodeURIComponent(id)}&limit=1`);
-  return rows[0];
+  return (await enrichOrdersWithCustomers(rows))[0];
 }
 
 export async function markOrderEmailSent(id: string, field: "admin_email_sent_at" | "customer_email_sent_at" | "status_email_sent_at") {

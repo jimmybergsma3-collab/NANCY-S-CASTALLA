@@ -192,6 +192,8 @@ Beschikbare modules:
 
 Producten, orders en voorraad zijn de meest functionele onderdelen. Klanten en leveranciers zijn grotendeels overzicht/read-only. Inkoop, facturatie, rapportages en integraties zijn voorbereid maar niet volledig operationeel.
 
+Het orderoverzicht is aanklikbaar en opent per order een responsieve detailweergave met klantprofiel, ordergegevens, alle orderregels, btw-totalen en directe bel-, WhatsApp- en e-mailacties. De server levert `order_items` samen met de order en verrijkt gekoppelde orders met het klantprofiel. Bij oudere orders wordt het afleveradres zo nodig uit de gelokaliseerde adresregel in `notes` gehaald; een afzonderlijk onveranderlijk adressnapshot op de order blijft gewenst.
+
 Productbeheer ondersteunt onder meer:
 
 - Automatische Nancy-productcode.

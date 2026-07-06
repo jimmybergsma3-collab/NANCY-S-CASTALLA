@@ -10,6 +10,17 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ## [Unreleased]
 
+### Toegevoegd
+
+- Volledige responsieve admin-orderdetailweergave met klantgegevens, ordermetadata, orderregels, btw-totalen en directe contactacties.
+- Aanklikbaar orderoverzicht en een duidelijke waarschuwing voor historische orders zonder orderregels.
+
+### Verbeterd
+
+- Adminorders worden server-side samen met `order_items` opgehaald en in een gebundelde query met gekoppelde klantprofielen verrijkt.
+- Status- en betaalstatuswijzigingen behouden de reeds geladen klant- en orderregelgegevens in de beheerinterface.
+- Afleveradressen van oudere orders worden waar nodig uit de gelokaliseerde adresregel in de bestelnotitie gelezen.
+
 ## [0.10.0] - 2026-07-06
 
 ### Toegevoegd
