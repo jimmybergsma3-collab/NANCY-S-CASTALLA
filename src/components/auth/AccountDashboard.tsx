@@ -115,7 +115,7 @@ export function AccountDashboard({ locale }: { locale: Locale }) {
   async function updatePassword(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const { error } = await getSupabaseBrowserClient().auth.updateUser({ password });
-    setMessage(error ? error.message : copy.passwordUpdated);
+    setMessage(error ? copy.passwordFailed : copy.passwordUpdated);
     if (!error) setPassword("");
   }
 

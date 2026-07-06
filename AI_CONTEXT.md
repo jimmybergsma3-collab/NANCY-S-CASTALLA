@@ -1,7 +1,7 @@
 # AI Context: Nancy's Castalla
 
 **Doel:** snelle, zelfstandige projectcontext voor ChatGPT, Codex en andere AI-assistenten.  
-**Laatst bijgewerkt:** 5 juli 2026  
+**Laatst bijgewerkt:** 6 juli 2026
 **Productie:** `https://www.nancys.es`
 
 Lees dit bestand voordat je een wijziging plant of uitvoert. Gebruik voor diepere details de documenten in `/docs`:
@@ -96,6 +96,7 @@ Alle publieke hoofdroutes hebben een locale-prefix.
 | `/{locale}/login` | Klantlogin |
 | `/{locale}/forgot-password` | Wachtwoordherstel |
 | `/{locale}/account` | Klantprofiel en orderhistorie |
+| `/{locale}/cart` | Persistente winkelmand en checkout voor bestelaanvragen |
 | `/{locale}/privacy` | Privacy |
 | `/{locale}/terms` | Voorwaarden |
 | `/{locale}/admin/login` | Verborgen adminlogin |
@@ -105,6 +106,7 @@ Alle publieke hoofdroutes hebben een locale-prefix.
 Belangrijke API's:
 
 - `POST /api/orders`
+- `POST /api/cart/validate`
 - `GET/PATCH /api/account/profile`
 - `GET /api/account/orders`
 - `/api/admin/products`
@@ -138,17 +140,16 @@ Er zijn twee orderkanalen:
 
 ### Database-order
 
-1. Klant kiest producten, klantverpakking en aantallen.
-2. Een ingelogde klant krijgt profielgegevens vooraf ingevuld.
-3. Browser stuurt productcodes en keuzes naar `POST /api/orders`.
-4. Server vertrouwt geen browserprijzen of totalen.
-5. Server haalt actuele producten, prijzen, btw, verpakking en voorraad uit Supabase.
-6. Server berekent subtotalen, btw en totaal opnieuw.
+1. Klant kiest een verpakking en voegt producten toe aan de persistente lokale winkelmand.
+2. `/{locale}/cart` laat aantallen wijzigen, regels verwijderen en de checkout invullen.
+3. `POST /api/cart/validate` haalt actuele productdata op en toont serverprijzen, btw, status en beschikbaarheid.
+4. Een ingelogde klant krijgt profielgegevens vooraf ingevuld.
+5. Browser stuurt alleen productcodes, verpakkingen en aantallen naar `POST /api/orders`.
+6. Server vertrouwt geen browserprijzen of totalen en voert dezelfde controle opnieuw uit.
 7. Een idempotency key voorkomt dubbele orders bij retries.
-8. Order en orderregels worden via een database-RPC opgeslagen.
-9. Order krijgt UUID en oplopend ordernummer.
-10. Resend verstuurt admin- en klantmail als e-mailconfiguratie werkt.
-11. Nieuwe order start als `new` met betaalstatus `pending`.
+8. Order en orderregels worden via een database-RPC opgeslagen en krijgen UUID plus oplopend ordernummer.
+9. Resend verstuurt admin- en klantmail als e-mailconfiguratie werkt.
+10. Nieuwe order start als `new` met betaalstatus `pending`.
 
 ### WhatsApp-order
 
@@ -156,7 +157,9 @@ De CTA opent een samengesteld bericht naar het zakelijke WhatsApp-nummer uit `co
 
 ## 7. Voorraadflow
 
-- `track_inventory` bepaalt of voorraad wordt gecontroleerd.
+- `coming-soon` is nooit bestelbaar.
+- `preorder` is altijd bestelbaar, ook bij voorraad nul; er wordt bij bevestiging geen fysieke voorraad afgeboekt.
+- Alleen `available` met `track_inventory=true` wordt tegen fysieke voorraad gecontroleerd en bij bevestiging afgeboekt.
 - `stock_quantity` is de actuele hoeveelheid.
 - `minimum_stock` bepaalt de lagevoorraadwaarschuwing.
 - Een `new` order reserveert momenteel geen voorraad.
@@ -289,7 +292,7 @@ Verwijder geen bestaande functionaliteit, migratie of data-import omdat deze ver
 - Sommige productqueries laden te veel of de volledige catalogus.
 - Lokale productfallback kan een Supabase-storing maskeren.
 - Account/order e-mails hebben geen volwaardige queue en retryflow.
-- Kernwinkel en klantaccount zijn vertaald; juridische content, backoffice, productinhoud en volledige Scandinavische dekking zijn nog onvolledig.
+- Publieke interface en juridische basiscontent zijn vertaald; backoffice, productinhoud en transactionele e-mails zijn nog niet volledig meertalig.
 - Geen volledige product-/categoriesitemap of structured data.
 - Inkoop, facturatie en rapportages zijn nog gedeeltelijk.
 - Klantadres is nog geen apart onveranderlijk ordersnapshot.

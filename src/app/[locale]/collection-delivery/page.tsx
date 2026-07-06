@@ -2,11 +2,13 @@ import { Truck } from "lucide-react";
 import { businessConfig } from "@/config/business";
 import { defaultLocale, getDictionary, isLocale, type Locale } from "@/i18n/config";
 import { formatEuro } from "@/lib/pricing";
+import { getUiCopy } from "@/i18n/ui";
 
 export default async function CollectionDeliveryPage({ params }: { params: Promise<unknown> }) {
   const { locale: rawLocale } = (await params) as { locale?: string };
   const locale: Locale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const dictionary = getDictionary(locale);
+  const ui = getUiCopy(locale);
 
   return (
     <section className="mx-auto max-w-5xl px-4 py-12">
@@ -25,8 +27,8 @@ export default async function CollectionDeliveryPage({ params }: { params: Promi
         <div className="rounded-lg border border-forest/10 bg-white p-6 shadow-soft">
           <h2 className="font-serif text-3xl font-bold text-forest">{dictionary.delivery.localTitle}</h2>
           <p className="mt-3 leading-7 text-forest/72">
-            {dictionary.delivery.localText} Current minimum order is {formatEuro(businessConfig.deliveryMinimum)}, within
-            around {businessConfig.deliveryRadiusKm} km, with a delivery fee from {formatEuro(businessConfig.deliveryFee)}.
+            {dictionary.delivery.localText} {ui.order.deliveryMinimum} {formatEuro(businessConfig.deliveryMinimum)}. {ui.order.deliveryFeeFrom}{" "}
+            {formatEuro(businessConfig.deliveryFee)} {ui.order.withinRadius.replace("{km}", String(businessConfig.deliveryRadiusKm))}
           </p>
         </div>
       </div>

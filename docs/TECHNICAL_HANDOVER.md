@@ -585,6 +585,7 @@ Header, homepage, catalogus, productgerichte bediening, orderpaneel en klantacco
 | `/{locale}/products` | Categorieoverzicht met aantallen |
 | `/{locale}/products/category/{slug}` | Zoekbare productlijst binnen een categorie en bestelmogelijkheid |
 | `/{locale}/products/{productId}` | Productdetail op productcode, inhoud, verpakking, prijs, delen en bestellen |
+| `/{locale}/cart` | Persistente winkelmand, servervalidatie en checkout voor bestelaanvragen |
 | `/{locale}/bread` | Broodassortiment en pre-orderuitleg |
 | `/{locale}/collection-delivery` | Afhalen, lokaal bezorgen, minimum en kosten |
 | `/{locale}/about` | Bedrijfsconcept en achtergrond |
@@ -661,7 +662,7 @@ Er is geen klassiek contactformulier. Contact loopt via `info@nancys.es`, WhatsA
 
 ## 8.2 Gedeeltelijk werkend
 
-- **Vertalingen:** kernwinkel, productbediening en klantaccount vertaald; juridische, backoffice- en productinhoud nog niet volledig vertaald.
+- **Vertalingen:** publieke winkel, cart, checkout, klantaccount en juridische basiscontent zijn vertaald; backoffice, productinhoud en transactionele e-mails nog niet volledig.
 - **Orderhistorie:** zichtbaar, maar beperkt detail en geen herhaalbestelling/download.
 - **Voorraad:** correct bij statuswijziging, maar geen reservering tijdens `new`.
 - **E-mail:** geen queue/retrydashboard; externe configuratie is essentieel.
@@ -693,6 +694,16 @@ Er is geen klassiek contactformulier. Contact loopt via `info@nancys.es`, WhatsA
 Alle responses zijn JSON tenzij anders aangegeven.
 
 ## 9.1 Publieke orders
+
+### `POST /api/cart/validate`
+
+**Doel:** een lokale winkelmand verrijken met actuele, server-authoritatieve productdata zonder een order te maken.
+
+**Input:** regels met product-ID, aantal, verpakkingslabel en verpakkingshoeveelheid. Browserprijzen worden genegeerd.
+
+**Output:** productnaam en afbeelding, actuele verkoopprijs, btw, subtotalen, voorraadstatus, voorraadgegevens, bestelbaarheid en een stabiele foutcode per regel.
+
+**Regels:** `coming-soon` is geblokkeerd; `preorder` blijft bij voorraad nul bestelbaar; `available` met `track_inventory=true` controleert het benodigde aantal verkoopeenheden.
 
 ### `POST /api/orders`
 
@@ -858,7 +869,7 @@ Deze kanalen moeten in communicatie duidelijk blijven om dubbel werk en niet-ger
 ```mermaid
 sequenceDiagram
     participant K as Klant
-    participant C as ProductOrder
+    participant C as Cart en checkout
     participant A as /api/orders
     participant D as Supabase DB
     participant E as Resend
@@ -921,7 +932,7 @@ Per product:
 - `minimum_stock`: waarschuwinggrens.
 - `stock_status`: commerciele status zoals available/preorder/coming-soon.
 
-Deze velden zijn bewust gescheiden. Een preorderproduct kan bijvoorbeeld commercieel bestelbaar zijn zonder directe voorraad.
+Deze velden zijn bewust gescheiden. `preorder` is commercieel altijd bestelbaar en boekt bij bevestiging geen fysieke voorraad af. `coming-soon` is niet bestelbaar. Alleen `available` met actieve voorraadtracking wordt gecontroleerd en gemuteerd.
 
 ## 12.2 Ordermutaties
 
@@ -934,7 +945,7 @@ Deze velden zijn bewust gescheiden. Een preorderproduct kan bijvoorbeeld commerc
 ## 12.3 Risico's
 
 - Twee `new` orders kunnen dezelfde laatste voorraad claimen. De eerste bevestiging slaagt; de tweede krijgt bij bevestiging onvoldoende voorraad.
-- Pre-orders en fysieke voorraad hebben nog geen expliciete allocatie.
+- Pre-orders worden bewust niet aan fysieke voorraad gealloceerd; toekomstige inkoopkoppeling en vraagaggregatie ontbreken nog.
 - Geen lotnummer, houdbaarheidsdatum, locatie of beschadigde voorraad.
 - Handmatige correcties verdienen één atomische RPC.
 
@@ -1219,7 +1230,7 @@ Klantnaam, e-mail, telefoon, adres en orderhistorie zijn persoonsgegevens. Bij v
 - WhatsApp-orders worden niet automatisch in de database geregistreerd.
 - Klantadres wordt niet als ordersnapshot gemodelleerd.
 - Account toont beperkte orderdetails.
-- Geen conventionele cart die navigatie/reload overleeft.
+- De cart gebruikt browseropslag en synchroniseert niet tussen apparaten of browsers.
 - Geen online betaling.
 - Bankrekening is placeholder.
 - Bizum-nummer kan nog het oude telefoonnummer zijn en moet zakelijk worden bevestigd.
@@ -1253,7 +1264,7 @@ Klantnaam, e-mail, telefoon, adres en orderhistorie zijn persoonsgegevens. Bij v
 
 - Geen product-/categoriesitemap of structured data.
 - HTML `lang` schakelt client-side mee, maar is in de eerste serverresponse nog `en`.
-- Onvolledige vertalingen, vooral juridische en Scandinavische dekking.
+- Productinhoud, backoffice en transactionele e-mails zijn nog niet volledig meertalig.
 - Geen automatische accessibilityscan.
 - Geen browser-/visuele regressietests.
 - Geen observability, error tracker of uptimealarm.

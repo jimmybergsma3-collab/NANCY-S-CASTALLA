@@ -1,6 +1,6 @@
 # Roadmap: Nancy's Castalla
 
-**Peildatum:** 5 juli 2026  
+**Peildatum:** 6 juli 2026
 **Status:** levende roadmap
 
 Deze roadmap beschrijft de actuele prioriteiten. Gereed werk wordt uit de actieve lijsten verwijderd en vastgelegd in `CHANGELOG.md`. Belangrijke keuzes en motivaties staan in `DECISIONS.md` en `BUSINESS_LOG.md`.
@@ -11,7 +11,8 @@ Deze roadmap beschrijft de actuele prioriteiten. Gereed werk wordt uit de actiev
 
 - [ ] Controleer alle productie-environmentvariabelen in Vercel zonder geheime waarden te documenteren.
 - [ ] Controleer of alle Supabase-migraties in productie zijn uitgevoerd.
-- [ ] Voer `202607050001_customer_signup_language.sql` uit in productie zodat nieuwe registraties direct de gekozen locale krijgen.
+- [x] Voer `202607050001_customer_signup_language.sql` uit in productie zodat nieuwe registraties direct de gekozen locale krijgen.
+- [ ] Voer `202607060001_preorder_inventory_rules.sql` uit in productie zodat pre-orders bij bevestiging geen fysieke voorraad vereisen of afboeken.
 - [ ] Leg Supabase Auth Site URL en redirect-URL's voor `https://www.nancys.es` vast in een operationele checklist.
 - [ ] Controleer Resend domeinverificatie, SPF, DKIM, DMARC en SMTP-instellingen.
 - [ ] Test registratie, bevestiging, login, wachtwoordherstel en logout end-to-end op productie.
@@ -30,6 +31,13 @@ Deze roadmap beschrijft de actuele prioriteiten. Gereed werk wordt uit de actiev
 - [ ] Toon orderregels en statushistorie in orderhistorie.
 - [x] Zorg dat ingelogde klantgegevens op iedere bestelplek consequent vooraf worden ingevuld.
 - [ ] Voeg duidelijke feedback toe wanneer profiel- of orderdata niet kan worden geladen.
+
+### Winkelmand en checkout
+
+- [x] Persistente lokale winkelmand met badge, aantallen, verwijderen en locale-routes.
+- [x] Server-authoritatieve cartvalidatie voor prijzen, btw, verpakking en voorraadstatus.
+- [x] Pre-order altijd bestelbaar; coming-soon geblokkeerd; beschikbare tracked voorraad gecontroleerd.
+- [ ] Productie-orderflow met echte klantdata end-to-end uitvoeren na de nieuwe voorraadmigratie.
 
 ## Daarna
 

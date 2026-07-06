@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { businessConfig } from "@/config/business";
+import { CartProvider } from "@/components/cart/CartProvider";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.nancys.es"),
@@ -25,7 +26,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html data-scroll-behavior="smooth" lang="en">
       <body className="font-sans">
-        {children}
+        <CartProvider>{children}</CartProvider>
       </body>
     </html>
   );

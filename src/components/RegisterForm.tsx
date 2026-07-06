@@ -27,7 +27,7 @@ export function RegisterForm({ locale }: { locale: Locale }) {
     if (error) {
       setMessage(error.code === "over_email_send_rate_limit"
         ? copy.registrationRateLimit
-        : error.message);
+        : copy.registrationFailed);
       setBusy(false);
       return;
     }

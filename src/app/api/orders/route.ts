@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   const body = (await request.json()) as OrderBody;
 
   if (!body.customerName || !body.customerEmail || !body.lines?.length) {
-    return NextResponse.json({ ok: false, message: "Name, email and at least one product are required." }, { status: 400 });
+    return NextResponse.json({ ok: false, errorCode: "missing_fields" }, { status: 400 });
   }
 
   try {
@@ -42,6 +42,6 @@ export async function POST(request: Request) {
   });
   } catch (error) {
     const status = error instanceof OrderValidationError ? error.status : 500;
-    return NextResponse.json({ ok: false, message: error instanceof Error ? error.message : "Order could not be sent." }, { status });
+    return NextResponse.json({ ok: false, errorCode: error instanceof OrderValidationError ? error.code : "order_failed" }, { status });
   }
 }

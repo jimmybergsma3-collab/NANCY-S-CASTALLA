@@ -10,6 +10,32 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-07-06
+
+### Toegevoegd
+
+- Persistente winkelmand via `CartProvider`, met lokale opslag en aantallenbadge in de header.
+- Nieuwe route `/{locale}/cart` met aantallen wijzigen, verwijderen, subtotalen, btw, totaal en checkout.
+- `POST /api/cart/validate` voor actuele server-side product-, prijs-, verpakking- en voorraadcontrole.
+- Gedeelde productbeschikbaarheidsregel voor browser en server.
+- Meertalige winkelmand-, checkout- en juridische woordenboeken voor `en`, `nl`, `de`, `es` en `sv`.
+- Migratie `202607060001_preorder_inventory_rules.sql` voor correcte voorraadafhandeling bij pre-orders.
+
+### Gewijzigd
+
+- Het inline bestelformulier onder productlijsten is vervangen door normale toevoegen-aan-winkelmand-UX.
+- Productkaarten bewaren hun beeldverhouding en tonen een lokale beschikbaarheidsmelding bij de bestelknop.
+- Checkout vult klantprofielgegevens vooraf in en verstuurt alleen productcodes, verpakking en aantallen.
+- Order-API retourneert stabiele foutcodes in plaats van Engelstalige servertekst aan klanten.
+
+### Opgelost
+
+- Pre-orders met voorraad nul worden niet langer door client- of servervalidatie geblokkeerd.
+- Coming-soon-producten kunnen niet worden toegevoegd of besteld.
+- Beschikbare voorraadgevolgde producten worden op gevraagde verkoopeenheden gecontroleerd.
+- Juridische pagina's en resterende bezorgtekst zijn niet langer hardcoded Engels.
+- Mobiele cart en productoverzichten veroorzaken geen horizontale paginascroll.
+
 ### Opgelost
 
 - De accounttaal stuurt nu de locale-route, navigatie en kerninterface van ingelogde klanten.

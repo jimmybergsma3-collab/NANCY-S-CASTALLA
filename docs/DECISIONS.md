@@ -171,6 +171,32 @@ Dit document legt belangrijke technische beslissingen en hun motivatie vast. Het
 
 **Waarom:** er bestaat nog geen betrouwbaar productvertalingsmodel. Automatisch vertalen zou voedsel-, merk- en allergeneninformatie kunnen vervormen.
 
+## 2026-07-06
+
+### Persistente winkelmand vervangt het inline orderpaneel
+
+**Besluit:** productkaarten voegen een gekozen verpakking toe aan een locale-onafhankelijke, lokaal opgeslagen winkelmand. Checkout staat op `/{locale}/cart`.
+
+**Waarom:** klanten moeten aantallen kunnen beheren zonder terug te scrollen en hun selectie moet navigatie en reload overleven. WhatsApp blijft een supportkanaal en is niet de primaire databasecheckout.
+
+### Eén beschikbaarheidsregel voor cart en order
+
+**Besluit:** `evaluateProductAvailability` bepaalt zowel in de UI als op de server dat `coming-soon` geblokkeerd is, `preorder` altijd bestelbaar is en alleen `available` plus `track_inventory` fysieke voorraad vereist.
+
+**Waarom:** verschillende regels in productkaart, winkelmand, order-API en database veroorzaakten tegenstrijdige uitkomsten. De order-API valideert alles opnieuw en blijft de uiteindelijke bron van waarheid.
+
+### Pre-orders boeken geen fysieke voorraad af
+
+**Besluit:** de orderstatus-RPC boekt bij bevestiging alleen `available`-producten met voorraadtracking af. Annulering herstelt uitsluitend regels waarvoor een eerdere verkoopmutatie bestaat.
+
+**Waarom:** een pre-order vertegenwoordigt toekomstige inkoop en moet bij voorraad nul bevestigd kunnen worden zonder negatieve voorraad te creëren.
+
+### Client ontvangt stabiele orderfoutcodes
+
+**Besluit:** publieke orderfouten gebruiken codes die de locale-UI vertaalt; interne serverteksten worden niet rechtstreeks aan klanten getoond.
+
+**Waarom:** foutmeldingen moeten meertalig en voorspelbaar zijn zonder bedrijfslogica per taal te dupliceren.
+
 ## Beslisregel voor toekomstige wijzigingen
 
 Leg een besluit hier vast wanneer het een architectuurgrens, datamodel, beveiligingsmodel, externe provider, kernworkflow of blijvende ontwikkelconventie verandert. Vermeld altijd datum, besluit, motivatie, gevolgen en eventueel het vervangen besluit.
