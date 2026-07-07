@@ -13,7 +13,8 @@ Deze roadmap beschrijft de actuele prioriteiten. Gereed werk wordt uit de actiev
 - [ ] Controleer of alle Supabase-migraties in productie zijn uitgevoerd.
 - [x] Voer `202607050001_customer_signup_language.sql` uit in productie zodat nieuwe registraties direct de gekozen locale krijgen.
 - [ ] Voer `202607060001_preorder_inventory_rules.sql` uit in productie zodat pre-orders bij bevestiging geen fysieke voorraad vereisen of afboeken.
-- [ ] Voer `202607060002_order_invoicing.sql` uit in productie voordat facturen worden aangemaakt.
+- [x] `202607060002_order_invoicing.sql` is in productie aanwezig.
+- [ ] Voer `202607070001_normalize_invoice_sequence.sql` eenmalig uit na de pre-live factuurtest.
 - [ ] Leg Supabase Auth Site URL en redirect-URL's voor `https://www.nancys.es` vast in een operationele checklist.
 - [ ] Controleer Resend domeinverificatie, SPF, DKIM, DMARC en SMTP-instellingen.
 - [ ] Test registratie, bevestiging, login, wachtwoordherstel en logout end-to-end op productie.

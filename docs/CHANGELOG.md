@@ -20,6 +20,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 - Responsieve facturatielijst met PDF- en e-mailacties op `/{locale}/admin/invoicing`.
 - Uitklapbare klantorders met orderregels, totalen en factuurdownload in `/{locale}/account`.
 - Migratie `202607060002_order_invoicing.sql` met factuursnapshots, `invoice_items` en transactionele creatie-RPC.
+- Veilige pre-live normalisatie van het volgende factuurnummer via `202607070001_normalize_invoice_sequence.sql`.
 - Bewerkbare admin-ordernotities met afzonderlijke beveiligde opslagactie.
 - Registratie met wachtwoordbevestiging, twee toon/verbergknoppen en browservriendelijke autocomplete.
 - Meertalige operationele e-mails voor order ontvangen, bevestigd, betaling ontvangen, klaar voor afhalen, onderweg en afgeleverd.
