@@ -82,7 +82,7 @@ export function CartView({ locale }: { locale: Locale }) {
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {}) },
-        body: JSON.stringify({ customerName, customerEmail, customerPhone, fulfillment, notes: [customerAddress ? `${ui.order.address}: ${customerAddress}` : "", notes].filter(Boolean).join("\n\n"), idempotencyKey: idempotencyKey.current, lines: items.map((item) => ({ ...item, unit: item.packageLabel, salePriceInclVat: 0 })) }),
+        body: JSON.stringify({ customerName, customerEmail, customerPhone, fulfillment, locale, notes: [customerAddress ? `${ui.order.address}: ${customerAddress}` : "", notes].filter(Boolean).join("\n\n"), idempotencyKey: idempotencyKey.current, lines: items.map((item) => ({ ...item, unit: item.packageLabel, salePriceInclVat: 0 })) }),
       });
       const result = await response.json() as { ok: boolean; errorCode?: CartValidationCode | "missing_fields" | "service_unavailable" | "order_failed"; orderId?: string; emailed?: boolean };
       if (!response.ok || !result.ok) throw new Error(result.errorCode && ["coming_soon", "insufficient_stock", "package_unavailable", "product_unavailable"].includes(result.errorCode) ? availabilityMessage(result.errorCode as CartValidationCode) : copy.orderError);

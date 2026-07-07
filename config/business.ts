@@ -8,6 +8,7 @@ export const businessConfig = {
   businessName: "Nancy's Castalla",
   phaseLabel: "Starting soon / pre-order phase",
   address: "Calle Murcia 111, 03420 Castalla",
+  taxId: "",
   whatsappNumber: "+34644059769",
   displayWhatsappNumber: "+34 644 05 97 69",
   emails: businessEmails,

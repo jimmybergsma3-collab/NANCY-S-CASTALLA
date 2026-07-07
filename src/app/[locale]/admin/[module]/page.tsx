@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { InventoryPanel } from "@/components/admin/InventoryPanel";
 import { OrdersPanel } from "@/components/admin/OrdersPanel";
+import { InvoicesPanel } from "@/components/admin/InvoicesPanel";
 import { businessConfig } from "@/config/business";
 import { requireAdmin } from "@/lib/admin-page";
 import { productCategories } from "@/lib/product-categories";
@@ -16,7 +17,7 @@ const moduleCopy = {
   inventory: ["Inventory", "Stock control, deliveries and low-stock monitoring."],
   suppliers: ["Suppliers", "Supplier details are separated from public product information."],
   purchasing: ["Purchasing", "Purchase orders and incoming deliveries are ready for the next phase."],
-  invoicing: ["Invoicing", "Invoice records are prepared; no external invoicing service is active."],
+  invoicing: ["Invoicing", "Review, download and email invoices created from eligible orders."],
   vat: ["VAT", "Review IVA rates used by products and future invoices."],
   reports: ["Reports", "Reporting is prepared for sales, margins, stock and VAT."],
   settings: ["Settings", "Central business and communication settings."],
@@ -46,7 +47,7 @@ export default async function AdminModulePage({ params }: { params: Promise<unkn
   else if (moduleName === "customers") { const rows = await safeRows<{ name: string; email: string; phone: string; language: string; created_at: string }>("customers?select=name,email,phone,language,created_at&order=created_at.desc&limit=500"); content = <DataTable columns={["Name", "Email", "Phone", "Language", "Created"]} rows={rows.map((row) => [row.name, row.email, row.phone || "-", row.language, new Date(row.created_at).toLocaleDateString()])}/>; }
   else if (moduleName === "suppliers") { const rows = await safeRows<{ name: string; code: string; email: string; phone: string; active: boolean }>("suppliers?select=name,code,email,phone,active&order=name.asc&limit=500"); content = <DataTable columns={["Supplier", "Code", "Email", "Phone", "Status"]} rows={rows.map((row) => [row.name, row.code || "-", row.email || "-", row.phone || "-", row.active ? "Active" : "Inactive"])}/>; }
   else if (moduleName === "purchasing") { const rows = await safeRows<{ purchase_number: number; status: string; total_incl_vat: number; expected_at?: string; created_at: string }>("purchase_orders?select=purchase_number,status,total_incl_vat,expected_at,created_at&order=created_at.desc&limit=500"); content = <DataTable columns={["Purchase order", "Status", "Total", "Expected", "Created"]} rows={rows.map((row) => [`PO-${String(row.purchase_number).padStart(6, "0")}`, row.status, `€${Number(row.total_incl_vat).toFixed(2)}`, row.expected_at ? new Date(row.expected_at).toLocaleDateString() : "-", new Date(row.created_at).toLocaleDateString()])}/>; }
-  else if (moduleName === "invoicing") { const rows = await safeRows<{ invoice_number: number; status: string; total_incl_vat: number; issued_at?: string; created_at: string }>("invoices?select=invoice_number,status,total_incl_vat,issued_at,created_at&order=created_at.desc&limit=500"); content = <DataTable columns={["Invoice", "Status", "Total", "Issued", "Created"]} rows={rows.map((row) => [`INV-${String(row.invoice_number).padStart(6, "0")}`, row.status, `€${Number(row.total_incl_vat).toFixed(2)}`, row.issued_at ? new Date(row.issued_at).toLocaleDateString() : "-", new Date(row.created_at).toLocaleDateString()])}/>; }
+  else if (moduleName === "invoicing") content = <InvoicesPanel />;
   else if (moduleName === "reports") { const orders = await safeRows<{ total: number; status: string; payment_status: string }>("orders?select=total,status,payment_status&limit=5000"); const products = await getProducts({ includeHidden: true }); const paidRevenue = orders.filter((order) => order.payment_status === "paid" && order.status !== "cancelled").reduce((sum, order) => sum + Number(order.total), 0); const cards = [["Orders", orders.length], ["Paid revenue", `€${paidRevenue.toFixed(2)}`], ["Products", products.length], ["Online", products.filter((product) => product.isVisible).length]]; content = <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{cards.map(([label, value]) => <div className="rounded-md border border-forest/10 bg-white p-5 shadow-soft" key={label}><p className="text-xs font-bold uppercase tracking-[0.14em] text-coffee">{label}</p><p className="mt-2 font-serif text-3xl font-bold text-forest">{value}</p></div>)}</div>; }
   else { const products = await getProducts({ includeHidden: true }); const label = moduleName === "vat" ? `${new Set(products.map((p) => p.vatRate)).size} IVA rates in use` : "Module prepared"; content = <div className="mt-6 rounded-md border border-forest/10 bg-white p-6"><p className="font-bold text-forest">{label}</p><p className="mt-2 text-sm text-forest/65">The database and service boundaries are ready for this module without activating an external provider.</p></div>; }
   return <AdminShell locale={locale} title={title} subtitle={subtitle}>{content}</AdminShell>;

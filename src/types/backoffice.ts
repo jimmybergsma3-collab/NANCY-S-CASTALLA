@@ -9,6 +9,13 @@ export type OrderStatus =
 
 export type PaymentStatus = "pending" | "paid" | "failed" | "refunded" | "cancelled";
 
+export type InvoiceSummary = {
+  id: string;
+  invoice_number: number;
+  status: string;
+  email_sent_at?: string;
+};
+
 export type BackofficeCustomer = {
   id: string;
   name: string;
@@ -53,6 +60,7 @@ export type OrderInput = {
   lines: OrderLineInput[];
   idempotencyKey?: string;
   authUserId?: string;
+  locale?: string;
 };
 
 export type BackofficeOrder = {
@@ -75,4 +83,37 @@ export type BackofficeOrder = {
   updated_at?: string;
   customer?: BackofficeCustomer;
   order_items: BackofficeOrderItem[];
+  invoices?: InvoiceSummary[];
+};
+
+export type BackofficeInvoiceItem = {
+  id: number;
+  invoice_id: string;
+  product_id?: string;
+  product_name: string;
+  package_label: string;
+  quantity: number;
+  unit_price_incl_vat: number;
+  vat_rate: number;
+  line_total_ex_vat: number;
+  line_vat: number;
+  line_total_incl_vat: number;
+};
+
+export type BackofficeInvoice = InvoiceSummary & {
+  order_id: string;
+  customer_id?: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  billing_address: string;
+  customer_language: string;
+  order_number?: number;
+  payment_method?: string;
+  total_ex_vat: number;
+  total_vat: number;
+  total_incl_vat: number;
+  issued_at: string;
+  created_at: string;
+  invoice_items: BackofficeInvoiceItem[];
 };

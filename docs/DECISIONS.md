@@ -173,6 +173,18 @@ Dit document legt belangrijke technische beslissingen en hun motivatie vast. Het
 
 ## 2026-07-06
 
+### Interne factuursnapshot is leidend
+
+**Besluit:** een factuur wordt éénmaal transactioneel uit een factureerbare order gemaakt en bewaart daarna eigen klant-, adres-, orderregel-, prijs- en btw-snapshots. Een unieke index op `order_id` voorkomt een tweede normale factuur.
+
+**Waarom:** een factuur moet historisch gelijk blijven wanneer een klantprofiel, productnaam, verpakking of prijs later wijzigt. Correcties horen later via creditnota's te lopen, niet door een bestaande factuur te overschrijven.
+
+### PDF-generatie blijft server-side en providerneutraal
+
+**Besluit:** `pdf-lib` genereert de factuur uit interne data; Resend is alleen het verzendkanaal en niet de factuurbron.
+
+**Waarom:** download en administratie blijven werken wanneer e-mail uitstaat of faalt. Adminroutes gebruiken de adminsessie; klantdownloads vereisen Supabase Auth plus eigendomscontrole.
+
 ### Persistente winkelmand vervangt het inline orderpaneel
 
 **Besluit:** productkaarten voegen een gekozen verpakking toe aan een locale-onafhankelijke, lokaal opgeslagen winkelmand. Checkout staat op `/{locale}/cart`.
@@ -196,6 +208,26 @@ Dit document legt belangrijke technische beslissingen en hun motivatie vast. Het
 **Besluit:** publieke orderfouten gebruiken codes die de locale-UI vertaalt; interne serverteksten worden niet rechtstreeks aan klanten getoond.
 
 **Waarom:** foutmeldingen moeten meertalig en voorspelbaar zijn zonder bedrijfslogica per taal te dupliceren.
+
+## 2026-07-07
+
+### Ordernotities staan los van statusovergangen
+
+**Besluit:** adminnotities gebruiken een afzonderlijke API-actie en starten geen orderstatus-RPC.
+
+**Waarom:** een tekstcorrectie mag nooit voorraad afboeken, terugboeken of onbedoeld een statusmail sturen.
+
+### E-mailfalen is operationeel, niet transactioneel
+
+**Besluit:** orders en facturen worden vóór verzending opgeslagen. Resend-fouten worden gelogd en zichtbaar teruggegeven, maar draaien de bedrijfsdata niet terug.
+
+**Waarom:** een tijdelijke mailstoring mag geen dubbele order of ontbrekende factuur veroorzaken. De beheerder kan facturen later opnieuw verzenden.
+
+### Klantmails volgen ordergebeurtenissen en klanttaal
+
+**Besluit:** ontvangen, bevestigd, betaald, afhaal-klaar, onderweg, afgeleverd en geannuleerd hebben eigen teksten in de vijf ondersteunde locales.
+
+**Waarom:** één generieke statuszin gaf onvoldoende betaal- en afhaalinstructie en paste niet bij de internationale doelgroep.
 
 ## Beslisregel voor toekomstige wijzigingen
 

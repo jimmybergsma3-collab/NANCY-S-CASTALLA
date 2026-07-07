@@ -1,7 +1,7 @@
 # Technisch overdrachtsrapport: Nancy's Castalla
 
 **Documentstatus:** actuele technische situatie  
-**Peildatum:** 5 juli 2026  
+**Peildatum:** 7 juli 2026
 **Productiedomein:** `https://www.nancys.es`  
 **Repository:** `jimmybergsma3-collab/NANCY-S-CASTALLA`  
 **Doelgroep:** ontwikkelaars, beheerders en technische partners die het project zonder voorafgaande broncodekennis moeten kunnen overnemen.
@@ -58,7 +58,8 @@ De applicatie is online als productie-implementatie op Vercel, maar functioneel 
 | Voorraad | Werkend voor kernflow | Afboeken bij bevestiging, terugboeken bij annulering |
 | E-mail | Werkend mits extern correct ingesteld | Resend voor orders, Supabase Custom SMTP voor accounts |
 | Online betaling | Niet actief | Bizum, bankoverschrijving en contant worden handmatig afgehandeld |
-| Inkoop/facturatie/rapportages | Voorbereid | Datamodel en/of read-only schermen, nog geen complete bedrijfsworkflow |
+| Inkoop/rapportages | Voorbereid | Datamodel en/of read-only schermen, nog geen complete bedrijfsworkflow |
+| Facturatie | Werkend na migratie | Orderfactuur, snapshots, PDF, klantdownload en Resend-verzending; nog geen creditnota of boekhoudexport |
 
 ## 1.3 Productie versus development
 
@@ -366,9 +367,15 @@ RLS: ingeschakeld.
 
 ## 4.9 `invoices`
 
-**Doel:** datamodelvoorbereiding voor verkoopfacturen.
+**Doel:** onveranderlijke verkoopfactuurkop gekoppeld aan een order en klant.
 
-Kolommen: UUID, oplopend uniek factuurnummer, order, klant, status, totalen excl. btw/btw/incl. btw, uitgiftedatum en creatiedatum.
+Kolommen omvatten UUID, oplopend uniek factuurnummer, order/ordernummer, klant, klant-/adres-/taalsnapshot, status, betaalmethode indien bekend, totalen excl. btw/btw/incl. btw, uitgiftedatum, e-mailtijdstip en timestamps. Een partiele unieke index op `order_id` staat maximaal één normale factuur per order toe.
+
+## 4.10 `invoice_items`
+
+**Doel:** onveranderlijke factuurregels los van latere product- of orderwijzigingen.
+
+Iedere regel bewaart productcode, naam, verpakking, aantal, prijs incl. btw, btw-tarief, grondslag, btw-bedrag en regeltotaal. De foreign key naar `invoices` gebruikt cascade delete. RLS staat aan; toegang loopt via server-side service-role en beveiligde API's.
 
 Relaties: optionele foreign keys naar `orders` en `customers`, beide `ON DELETE SET NULL`.
 
@@ -516,6 +523,8 @@ De prijshelper kan btw, winst en marge tonen. De oude automatische 50%-regel is 
 
 Het orderpaneel toont een aanklikbare, responsieve orderlijst. De detailweergave bevat het gekoppelde klantprofiel, datum en fulfilment, notities, alle `order_items`, prijzen en btw-totalen. De beheerder kan status en betaalstatus wijzigen of de klant direct bellen, via WhatsApp benaderen of e-mailen. Orders zonder regels krijgen een expliciete waarschuwing.
 
+Ordernotities zijn in het detailpaneel bewerkbaar en worden via een afzonderlijke adminactie opgeslagen met een limiet van 5000 tekens. Dit voorkomt dat een notitiewijziging onbedoeld een status- of voorraadtransitie start.
+
 De orderservice haalt orderregels genest op en verrijkt de resultaten in een gebundelde tweede query met de profielen uit `customers`. Omdat oudere orders nog geen afzonderlijk adressnapshot hebben, gebruikt de weergave eerst het klantprofiel en kan zij daarnaast een gelokaliseerde `Address`/`Adres`/`Adresse`/`Dirección`/`Adress`-regel uit de ordernotitie herkennen.
 
 Belangrijke statussen zijn:
@@ -551,7 +560,9 @@ Leveranciers worden uit de database getoond. Inkooporders hebben een voorbereid 
 
 ## 6.7 Facturatie en btw
 
-Facturen en btw-overzichten zijn voorbereid. Het btw-scherm groepeert of telt aanwezige tarieven; er is geen volledige btw-aangifte, factuur-PDF, creditnota of boekhoudexport.
+De orderdetailweergave maakt een factuur wanneer de order `confirmed`, `ready_for_collection` of `delivered` is, of wanneer de betaling `paid` is. De database-RPC maakt kop en regels transactioneel en retourneert bij herhaling dezelfde bestaande factuur. De facturatielijst toont nummer, klant, order, datum, totaal, status en e-mailstatus, met download- en verzendacties.
+
+PDF's worden server-side met `pdf-lib` opgebouwd uit de factuursnapshot en centrale bedrijfsconfiguratie. Resend verstuurt de PDF als bijlage. Klantdownloads controleren eerst Supabase Auth en daarna dat `invoice.customer_id` bij de ingelogde gebruiker hoort. Nog niet aanwezig: creditnota's, formele btw-aangifte, boekhoudexport, betalingsmatching en definitieve fiscale bedrijfsidentificatie in `businessConfig.taxId`.
 
 ## 6.8 Rapportages
 
@@ -781,6 +792,18 @@ Ondersteunt productcreatie/upsert, wijziging en verwijdering. Input omvat de pro
 
 `GET` leest maximaal 500 orders inclusief geneste `order_items` en verrijkt gekoppelde orders met naam, e-mail, telefoon, adres en taal uit `customers`. `PATCH` wijzigt status of betaalstatus. Beide acties vereisen een geldige adminsessie. Mutaties gebruiken de database-RPC voor atomische voorraadtransities; belangrijke statussen kunnen een klantmail activeren.
 
+### `/api/admin/invoices`
+
+`GET` geeft de factuurlijst met regels terug. `POST` ondersteunt `create` vanuit een order en `email` via Resend. Beide vereisen een adminsessie. Creatie gebruikt `create_invoice_from_order`; mailfalen verandert of verwijdert de factuur niet.
+
+### `/api/admin/invoices/{id}/pdf`
+
+Genereert de actuele branded PDF uit de onveranderlijke factuursnapshot. Alleen toegankelijk met admincookie.
+
+### `/api/account/invoices/{id}/pdf`
+
+Vereist een geldig Supabase bearer-token en controleert via `customers.auth_user_id` dat de factuur van de ingelogde klant is.
+
 ## 9.7 Adminvoorraad
 
 ### `/api/admin/inventory`
@@ -822,7 +845,7 @@ Nog nodig:
 
 `supabase/templates/confirmation.html` en `recovery.html` bevatten merkgebonden accounttemplates. Deze moeten in het Supabase-dashboard bij Auth e-mailtemplates worden toegepast; bestanden in Git alleen veranderen de productie-template niet automatisch.
 
-Ordermails worden in applicatiecode als transactionele tekstinhoud opgebouwd. Er is nog geen componentgebaseerde HTML-templatebibliotheek.
+Ordermails worden in applicatiecode als transactionele tekstinhoud opgebouwd. Er zijn teksten voor ontvangen, bevestigd, betaling ontvangen, klaar voor afhalen, onderweg, afgeleverd en geannuleerd in `en`, `nl`, `de`, `es` en `sv`. De eerste mail vermeldt dat beschikbaarheid eerst wordt gecontroleerd en dat betaalinstructies voor Bizum of bankoverschrijving daarna volgen. Er is nog geen componentgebaseerde HTML-templatebibliotheek.
 
 ## 10.3 Environmentvariabelen
 
@@ -842,8 +865,12 @@ Voor Supabase Custom SMTP staan host, poort, username, password, afzender en naa
 ## 10.4 Betrouwbaarheid
 
 - Order wordt eerst opgeslagen; een mislukte e-mail verwijdert de order niet.
+- Factuur wordt eerst opgeslagen; een mislukte factuurmail verwijdert de factuur niet.
 - Resend-idempotency headers beperken dubbele verzending bij retries.
 - Tijdstempels registreren dat hoofdmailsoorten zijn verzonden.
+- API- en netwerkfouten van Resend worden zonder secrets via `console.error` gelogd en als zichtbaar resultaat aan admin teruggegeven.
+
+De lokale omgeving bevat momenteel geen `RESEND_API_KEY`; e-mailacties worden daar bewust als `skipped` afgehandeld. De Vercel CLI is niet aan het productieproject gekoppeld, waardoor aanwezigheid van de productievariabele vanuit deze werkmap niet aantoonbaar is.
 - Statusmail wordt verstuurd bij belangrijke statuswijzigingen.
 
 Beperkingen:
@@ -1020,12 +1047,9 @@ Onder `src/payments` bestaan provider/typestructuren zodat een latere Stripe-, S
 
 ## 14.3 Facturatiestatus
 
-Aanwezig:
+Aanwezig: transactionele factuurcreatie vanuit factureerbare orders, uniek nummer, kop- en regelsnapshots, btw per tarief, branded PDF, admin- en klantdownload, facturatielijst en Resend-bijlage met verzendregistratie.
 
-- `invoices`-tabel.
-- Moduleplaats in backoffice.
-- Bedragvelden excl. btw, btw en incl. btw.
-- Relatie met order en klant.
+Ontbreekt: creditnota's, factuurcorrectieworkflow, boekhoudexport, betalingsmatching en formele validatie van verplichte Spaanse factuurvelden. Vul vóór echt fiscaal gebruik `businessConfig.taxId` met het correcte NIF/CIF in en laat de factuurlay-out administratief controleren.
 
 Ontbreekt:
 
@@ -1357,6 +1381,8 @@ Producten worden primair uit Supabase geladen. De catalogus bevat rijke commerci
 De backoffice is bereikbaar via een verborgen adminlogin. Adminauth gebruikt een gedeelde e-mail en wachtwoord uit Vercel-environmentvariabelen en een beveiligde HttpOnly-cookie. Productbeheer is het meest volwassen onderdeel: toevoegen, wijzigen, verwijderen, foto's uploaden, meerdere categorieën, prijzen, btw, klantverpakkingen en online zichtbaarheid. Orders en voorraad zijn operationeel bruikbaar. Klanten, leveranciers en eenvoudige rapportages zijn zichtbaar. Inkoop, facturatie, btw en integraties zijn vooral voorbereid en nog niet volledig uitvoerbaar.
 
 Klantaccounts gebruiken Supabase Auth. Registratie verstuurt via Supabase en Resend SMTP een branded bevestigingsmail van `account@nancys.es`. Na bevestiging kan de klant inloggen, het profiel met naam, telefoon, adres en taal beheren, het wachtwoord herstellen en orderhistorie bekijken. Een database-trigger koppelt de Auth-user aan de `customers`-tabel. De Supabase-sessie leeft in browserstorage; account-API's verifiëren ieder bearer-token opnieuw en gebruiken daarna server-side service-role toegang.
+
+Het registratieformulier heeft aparte wachtwoord- en bevestigingsvelden, vergelijkt deze voor signup, ondersteunt gegenereerde browserwachtwoorden via `new-password` en biedt per veld toon/verbergbediening. Login gebruikt `current-password`.
 
 Bij bestellen verstuurt de browser alleen productcodes, aantallen en verpakkingskeuzes. De server vertrouwt geen prijzen of totalen uit de browser. Hij leest actuele producten uit Supabase, controleert zichtbaarheid, status, verpakking en voorraad en berekent excl.-btw, btw en incl.-btw opnieuw. Een idempotency key en unieke database-index voorkomen dubbele orders bij retries. De order krijgt een UUID en oplopend ordernummer. Ingelogde klanten worden via `customer_id` gekoppeld; gastorders blijven mogelijk.
 

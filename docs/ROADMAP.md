@@ -13,6 +13,7 @@ Deze roadmap beschrijft de actuele prioriteiten. Gereed werk wordt uit de actiev
 - [ ] Controleer of alle Supabase-migraties in productie zijn uitgevoerd.
 - [x] Voer `202607050001_customer_signup_language.sql` uit in productie zodat nieuwe registraties direct de gekozen locale krijgen.
 - [ ] Voer `202607060001_preorder_inventory_rules.sql` uit in productie zodat pre-orders bij bevestiging geen fysieke voorraad vereisen of afboeken.
+- [ ] Voer `202607060002_order_invoicing.sql` uit in productie voordat facturen worden aangemaakt.
 - [ ] Leg Supabase Auth Site URL en redirect-URL's voor `https://www.nancys.es` vast in een operationele checklist.
 - [ ] Controleer Resend domeinverificatie, SPF, DKIM, DMARC en SMTP-instellingen.
 - [ ] Test registratie, bevestiging, login, wachtwoordherstel en logout end-to-end op productie.
@@ -55,10 +56,12 @@ Deze roadmap beschrijft de actuele prioriteiten. Gereed werk wordt uit de actiev
 ### Orders en voorraad
 
 - [x] Volledige responsieve admin-orderdetails met klant, regels, btw-totalen en contactacties.
+- [x] Interne orderfacturen met snapshots, PDF, klantdownload en Resend-verzending.
 - [ ] Formele order-state-machine met toegestane overgangen.
 - [ ] Voorraadreservering of expliciet per product instelbaar reserveringsbeleid.
 - [ ] Handmatige voorraadcorrectie in één database-transactie/RPC.
 - [ ] Orderstatushistorie en interne notities.
+- [ ] Creditnota's en formele factuurcorrecties.
 - [ ] Apart afleveradres-snapshot op de order.
 - [ ] WhatsApp-orders eenvoudig handmatig registreren of later via Business API importeren.
 - [ ] Duidelijke afhandeling van onvoldoende voorraad in klant- en adminscherm.

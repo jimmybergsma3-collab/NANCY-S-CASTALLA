@@ -1,7 +1,7 @@
 # AI Context: Nancy's Castalla
 
 **Doel:** snelle, zelfstandige projectcontext voor ChatGPT, Codex en andere AI-assistenten.  
-**Laatst bijgewerkt:** 6 juli 2026
+**Laatst bijgewerkt:** 7 juli 2026
 **Productie:** `https://www.nancys.es`
 
 Lees dit bestand voordat je een wijziging plant of uitvoert. Gebruik voor diepere details de documenten in `/docs`:
@@ -102,6 +102,7 @@ Alle publieke hoofdroutes hebben een locale-prefix.
 | `/{locale}/admin/login` | Verborgen adminlogin |
 | `/{locale}/admin` | Backoffice |
 | `/{locale}/admin/products` | Productbeheer |
+| `/{locale}/admin/invoicing` | Facturenlijst, PDF-download en e-mail |
 
 Belangrijke API's:
 
@@ -111,6 +112,9 @@ Belangrijke API's:
 - `GET /api/account/orders`
 - `/api/admin/products`
 - `/api/admin/orders`
+- `/api/admin/invoices`
+- `/api/admin/invoices/{id}/pdf`
+- `/api/account/invoices/{id}/pdf`
 - `/api/admin/inventory`
 - `POST /api/admin/upload-product-image`
 - `POST /api/admin/login`
@@ -127,7 +131,8 @@ Belangrijke API's:
 | `inventory_movements` | Audittrail van voorraadmutaties |
 | `suppliers` | Leveranciersstamgegevens |
 | `purchase_orders` | Voorbereiding voor inkooporders |
-| `invoices` | Voorbereiding voor facturen |
+| `invoices` | Verkoopfactuurkop, klant-/adres-snapshot, nummering en verzendstatus |
+| `invoice_items` | Onveranderlijke product-, prijs- en btw-snapshot per factuurregel |
 | `integration_settings` | Niet-geheime providerinstellingen |
 
 Row Level Security staat aan. De applicatie gebruikt server-side service-role toegang voor bedrijfsdata. Plaats de service-role key nooit in browsercode of documentatie.
@@ -193,6 +198,12 @@ Beschikbare modules:
 Producten, orders en voorraad zijn de meest functionele onderdelen. Klanten en leveranciers zijn grotendeels overzicht/read-only. Inkoop, facturatie, rapportages en integraties zijn voorbereid maar niet volledig operationeel.
 
 Het orderoverzicht is aanklikbaar en opent per order een responsieve detailweergave met klantprofiel, ordergegevens, alle orderregels, btw-totalen en directe bel-, WhatsApp- en e-mailacties. De server levert `order_items` samen met de order en verrijkt gekoppelde orders met het klantprofiel. Bij oudere orders wordt het afleveradres zo nodig uit de gelokaliseerde adresregel in `notes` gehaald; een afzonderlijk onveranderlijk adressnapshot op de order blijft gewenst.
+
+Admin kan ordernotities afzonderlijk opslaan. Statuswijzigingen naar bevestigd, klaar voor afhalen, onderweg en afgeleverd versturen een gerichte klantmail; `payment_status=paid` verstuurt een aparte betalingsbevestiging. Resend-fouten worden server-side gelogd en aan de beheerinterface teruggegeven zonder order of factuur te verwijderen.
+
+Facturen worden intern uit een order aangemaakt via een transactionele databasefunctie. Alleen bevestigde, afhaalgerede, afgeleverde of betaalde orders zijn factureerbaar. Een unieke orderindex voorkomt dubbele facturen. Facturen bewaren eigen klant-, adres-, orderregel-, prijs- en btw-snapshots, krijgen een oplopend `INV-000001`-nummer en zijn als branded PDF downloadbaar. Admin kan de PDF via Resend mailen; een mailfout verwijdert de factuur niet. Klanten zien en downloaden uitsluitend facturen die via hun `customer_id` bij hun eigen order horen.
+
+Registratie gebruikt aparte wachtwoord- en bevestigingsvelden met `autocomplete="new-password"`, browserwachtwoordsuggesties, gelijkheidscontrole en toon/verbergbediening. Login gebruikt `autocomplete="current-password"`.
 
 Productbeheer ondersteunt onder meer:
 
@@ -312,7 +323,7 @@ Actuele prioriteit:
 5. Server-side bezorging en adressnapshots.
 6. Directe/gepagineerde productqueries en afbeeldingsoptimalisatie.
 7. Inkoopontvangst en volledig voorraadbeheer.
-8. Facturatie, boekhouding en kaartbetaling.
+8. Creditnota's, boekhoudexport en kaartbetaling boven op de interne factuurflow.
 9. Volledige vertalingen, SEO en compliance.
 10. POS, WhatsApp Business en overige integraties.
 

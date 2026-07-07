@@ -14,12 +14,24 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 - Volledige responsieve admin-orderdetailweergave met klantgegevens, ordermetadata, orderregels, btw-totalen en directe contactacties.
 - Aanklikbaar orderoverzicht en een duidelijke waarschuwing voor historische orders zonder orderregels.
+- Interne factuurflow vanuit factureerbare orders, met oplopend factuurnummer en dubbele-factuurbeveiliging.
+- Professionele Nancy's Castalla-factuur-PDF met klant-, order-, product- en btw-gegevens.
+- Beveiligde PDF-download voor admins en voor de eigenaar van een klantorder.
+- Responsieve facturatielijst met PDF- en e-mailacties op `/{locale}/admin/invoicing`.
+- Uitklapbare klantorders met orderregels, totalen en factuurdownload in `/{locale}/account`.
+- Migratie `202607060002_order_invoicing.sql` met factuursnapshots, `invoice_items` en transactionele creatie-RPC.
+- Bewerkbare admin-ordernotities met afzonderlijke beveiligde opslagactie.
+- Registratie met wachtwoordbevestiging, twee toon/verbergknoppen en browservriendelijke autocomplete.
+- Meertalige operationele e-mails voor order ontvangen, bevestigd, betaling ontvangen, klaar voor afhalen, onderweg en afgeleverd.
 
 ### Verbeterd
 
 - Adminorders worden server-side samen met `order_items` opgehaald en in een gebundelde query met gekoppelde klantprofielen verrijkt.
 - Status- en betaalstatuswijzigingen behouden de reeds geladen klant- en orderregelgegevens in de beheerinterface.
 - Afleveradressen van oudere orders worden waar nodig uit de gelokaliseerde adresregel in de bestelnotitie gelezen.
+- Resend kan een factuur als PDF-bijlage versturen; een verzendfout laat de opgeslagen factuur intact.
+- Resend-netwerk- en API-fouten worden server-side gelogd en als beheerfout teruggegeven zonder bedrijfsdata terug te draaien.
+- De orderbevestiging zegt expliciet dat beschikbaarheid eerst wordt gecontroleerd en betaalinstructies daarna via WhatsApp of e-mail volgen.
 
 ## [0.10.0] - 2026-07-06
 

@@ -26,6 +26,7 @@ export async function POST(request: Request) {
     notes: body.notes,
     total: order.total,
     lines: order.lines,
+    locale: body.locale,
   });
   await Promise.allSettled([
     ...(emailResult.admin.sent ? [markOrderEmailSent(order.orderId, "admin_email_sent_at")] : []),
