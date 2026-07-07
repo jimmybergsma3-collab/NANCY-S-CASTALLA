@@ -38,6 +38,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 - Resend-netwerk- en API-fouten worden server-side gelogd en als beheerfout teruggegeven zonder bedrijfsdata terug te draaien.
 - De orderbevestiging zegt expliciet dat beschikbaarheid eerst wordt gecontroleerd en betaalinstructies daarna via WhatsApp of e-mail volgen.
 - Factuurmail gebruikt een duidelijk Spaans/Engels onderwerp en begeleidende tekst met PDF-bijlage.
+- Factuurmail-idempotency is geversioneerd voor de nieuwe tweetalige template, zodat Resend geen gewijzigde body onder een oude sleutel weigert.
 - Admin waarschuwt wanneer fiscale naam of NIF/NIE van de verkoper nog ontbreekt.
 - Fiscale factuurconfiguratie ingesteld met handelsnaam `NANCY'S CASTALLA`, titular `JIMMY BERGSMA` en NIF/NIE `Y8875740P`; titular tevens toegevoegd aan Terms.
 
