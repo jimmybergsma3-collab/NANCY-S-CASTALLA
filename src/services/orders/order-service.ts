@@ -127,7 +127,7 @@ async function enrichOrdersWithCustomers(orders: BackofficeOrder[]) {
 
 export async function listOrders() {
   if (!hasSupabaseAdmin()) return [];
-  const orders = await supabaseAdminFetch<BackofficeOrder[]>("orders?select=*,order_items(*),invoices(id,invoice_number,status,email_sent_at)&order=created_at.desc&limit=500");
+  const orders = await supabaseAdminFetch<BackofficeOrder[]>("orders?select=*,order_items(*),invoices(id,invoice_number,status,email_sent_at,issued_at,created_at)&order=created_at.desc&limit=500");
   return enrichOrdersWithCustomers(orders);
 }
 
@@ -150,7 +150,7 @@ export async function updateOrderNotes(id: string, notes: string) {
 }
 
 export async function getOrderById(id: string) {
-  const rows = await supabaseAdminFetch<BackofficeOrder[]>(`orders?select=*,order_items(*),invoices(id,invoice_number,status,email_sent_at)&id=eq.${encodeURIComponent(id)}&limit=1`);
+  const rows = await supabaseAdminFetch<BackofficeOrder[]>(`orders?select=*,order_items(*),invoices(id,invoice_number,status,email_sent_at,issued_at,created_at)&id=eq.${encodeURIComponent(id)}&limit=1`);
   return (await enrichOrdersWithCustomers(rows))[0];
 }
 

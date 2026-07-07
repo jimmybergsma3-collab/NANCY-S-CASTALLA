@@ -2,14 +2,48 @@
 
 import { useEffect, useState } from "react";
 import { Download, Mail } from "lucide-react";
+import { businessConfig } from "@/config/business";
+import { invoiceLabel } from "@/lib/invoice-format";
 import { formatEuro } from "@/lib/pricing";
 import type { BackofficeInvoice } from "@/types/backoffice";
 
 export function InvoicesPanel() {
-  const [invoices, setInvoices] = useState<BackofficeInvoice[]>([]); const [message, setMessage] = useState("Loading invoices..."); const [sending, setSending] = useState("");
-  useEffect(() => { fetch("/api/admin/invoices").then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.message); setInvoices(data.invoices ?? []); setMessage(""); }).catch((error) => setMessage(error instanceof Error ? error.message : "Invoices could not be loaded.")); }, []);
-  async function emailInvoice(invoice: BackofficeInvoice) { setSending(invoice.id); setMessage(""); const response = await fetch("/api/admin/invoices", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "email", invoiceId: invoice.id }) }); const data = await response.json(); setSending(""); if (!response.ok) { setMessage(data.message ?? "Invoice email failed. The invoice remains saved."); return; } setInvoices((current) => current.map((item) => item.id === invoice.id ? data.invoice : item)); setMessage(data.email?.sent ? "Invoice emailed to the customer." : "Email is not configured; the invoice remains available for download."); }
-  return <div className="mt-6 min-w-0">{message ? <p className="mb-4 rounded-md border border-brass/30 bg-cream p-3 text-sm text-forest">{message}</p> : null}<div className="grid gap-3 md:hidden">{invoices.map((invoice) => <article className="rounded-md border border-forest/10 bg-white p-4" key={invoice.id}><div className="flex justify-between gap-3"><strong>INV-{String(invoice.invoice_number).padStart(6, "0")}</strong><strong>{formatEuro(Number(invoice.total_incl_vat))}</strong></div><p className="mt-2 text-sm font-bold">{invoice.customer_name}</p><p className="mt-1 text-xs text-forest/60">Order NC-{String(invoice.order_number).padStart(6, "0")} · {new Date(invoice.issued_at).toLocaleDateString()} · {invoice.status}</p><InvoiceActions invoice={invoice} onEmail={emailInvoice} sending={sending === invoice.id} /></article>)}</div><div className="hidden overflow-x-auto rounded-md border border-forest/10 bg-white md:block"><table className="w-full min-w-[850px] text-left text-sm"><thead className="bg-forest text-cream"><tr><th className="p-3">Invoice</th><th className="p-3">Customer</th><th className="p-3">Order</th><th className="p-3">Date</th><th className="p-3">Total</th><th className="p-3">Status</th><th className="p-3">Email sent</th><th className="p-3">Actions</th></tr></thead><tbody>{invoices.map((invoice) => <tr className="border-t border-forest/10" key={invoice.id}><td className="p-3 font-bold">INV-{String(invoice.invoice_number).padStart(6, "0")}</td><td className="p-3">{invoice.customer_name}<br/><span className="text-xs text-forest/55">{invoice.customer_email}</span></td><td className="p-3">NC-{String(invoice.order_number).padStart(6, "0")}</td><td className="p-3">{new Date(invoice.issued_at).toLocaleDateString()}</td><td className="p-3 font-bold">{formatEuro(Number(invoice.total_incl_vat))}</td><td className="p-3">{invoice.status}</td><td className="p-3">{invoice.email_sent_at ? "Yes" : "No"}</td><td className="p-3"><InvoiceActions invoice={invoice} onEmail={emailInvoice} sending={sending === invoice.id} /></td></tr>)}</tbody></table></div>{!message && invoices.length === 0 ? <p className="rounded-md border border-forest/10 bg-white p-5 text-sm text-forest/60">No invoices yet.</p> : null}</div>;
+  const [invoices, setInvoices] = useState<BackofficeInvoice[]>([]);
+  const [message, setMessage] = useState("Loading invoices...");
+  const [sending, setSending] = useState("");
+
+  useEffect(() => {
+    fetch("/api/admin/invoices")
+      .then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.message); return data.invoices ?? []; })
+      .then((rows) => { setInvoices(rows); setMessage(""); })
+      .catch((error) => setMessage(error instanceof Error ? error.message : "Invoices could not be loaded."));
+  }, []);
+
+  async function emailInvoice(invoice: BackofficeInvoice) {
+    setSending(invoice.id); setMessage("");
+    const response = await fetch("/api/admin/invoices", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "email", invoiceId: invoice.id }) });
+    const data = await response.json(); setSending("");
+    if (!response.ok) { setMessage(data.message ?? "Invoice email failed. The invoice remains saved."); return; }
+    setInvoices((current) => current.map((item) => item.id === invoice.id ? data.invoice : item));
+    setMessage(data.email?.sent ? "Invoice emailed to the customer." : "Email is not configured; the invoice remains available for download.");
+  }
+
+  const fiscalIncomplete = !businessConfig.fiscalName || !businessConfig.fiscalId;
+  return (
+    <div className="mt-6 min-w-0">
+      {fiscalIncomplete ? <p className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-800">Fiscal business details are incomplete. Invoice may not be legally complete.</p> : null}
+      {message ? <p className="mb-4 rounded-md border border-brass/30 bg-cream p-3 text-sm text-forest">{message}</p> : null}
+      <div className="grid gap-3 md:hidden">
+        {invoices.map((invoice) => <article className="rounded-md border border-forest/10 bg-white p-4" key={invoice.id}><div className="flex justify-between gap-3"><strong>{invoiceLabel(invoice)}</strong><strong>{formatEuro(Number(invoice.total_incl_vat))}</strong></div><p className="mt-2 text-sm font-bold">{invoice.customer_name}</p><p className="mt-1 text-xs text-forest/60">Order NC-{String(invoice.order_number).padStart(6, "0")} · {new Date(invoice.issued_at).toLocaleDateString()} · {invoice.status}</p><InvoiceActions invoice={invoice} onEmail={emailInvoice} sending={sending === invoice.id} /></article>)}
+      </div>
+      <div className="hidden overflow-x-auto rounded-md border border-forest/10 bg-white md:block">
+        <table className="w-full min-w-[850px] text-left text-sm"><thead className="bg-forest text-cream"><tr><th className="p-3">Invoice</th><th className="p-3">Customer</th><th className="p-3">Order</th><th className="p-3">Date</th><th className="p-3">Total</th><th className="p-3">Status</th><th className="p-3">Email sent</th><th className="p-3">Actions</th></tr></thead><tbody>{invoices.map((invoice) => <tr className="border-t border-forest/10" key={invoice.id}><td className="p-3 font-bold">{invoiceLabel(invoice)}</td><td className="p-3">{invoice.customer_name}<br/><span className="text-xs text-forest/55">{invoice.customer_email}</span></td><td className="p-3">NC-{String(invoice.order_number).padStart(6, "0")}</td><td className="p-3">{new Date(invoice.issued_at).toLocaleDateString()}</td><td className="p-3 font-bold">{formatEuro(Number(invoice.total_incl_vat))}</td><td className="p-3">{invoice.status}</td><td className="p-3">{invoice.email_sent_at ? "Yes" : "No"}</td><td className="p-3"><InvoiceActions invoice={invoice} onEmail={emailInvoice} sending={sending === invoice.id} /></td></tr>)}</tbody></table>
+      </div>
+      {!message && invoices.length === 0 ? <p className="rounded-md border border-forest/10 bg-white p-5 text-sm text-forest/60">No invoices yet.</p> : null}
+    </div>
+  );
 }
 
-function InvoiceActions({ invoice, onEmail, sending }: { invoice: BackofficeInvoice; onEmail: (invoice: BackofficeInvoice) => Promise<void>; sending: boolean }) { return <div className="mt-3 flex flex-wrap gap-2 md:mt-0"><a className="inline-flex min-h-9 items-center gap-2 rounded-md border border-forest/15 px-3 py-2 text-xs font-bold text-forest" href={`/api/admin/invoices/${invoice.id}/pdf`}><Download size={15}/>PDF</a><button className="inline-flex min-h-9 items-center gap-2 rounded-md bg-forest px-3 py-2 text-xs font-bold text-cream disabled:opacity-50" disabled={sending} onClick={() => void onEmail(invoice)} type="button"><Mail size={15}/>{sending ? "Sending..." : "Email"}</button></div>; }
+function InvoiceActions({ invoice, onEmail, sending }: { invoice: BackofficeInvoice; onEmail: (invoice: BackofficeInvoice) => Promise<void>; sending: boolean }) {
+  return <div className="mt-3 flex flex-wrap gap-2 md:mt-0"><a className="inline-flex min-h-9 items-center gap-2 rounded-md border border-forest/15 px-3 py-2 text-xs font-bold text-forest" href={`/api/admin/invoices/${invoice.id}/pdf`}><Download size={15}/>PDF</a><button className="inline-flex min-h-9 items-center gap-2 rounded-md bg-forest px-3 py-2 text-xs font-bold text-cream disabled:opacity-50" disabled={sending} onClick={() => void onEmail(invoice)} type="button"><Mail size={15}/>{sending ? "Sending..." : invoice.email_sent_at ? "Email again" : "Email"}</button></div>;
+}

@@ -14,6 +14,8 @@ export type InvoiceSummary = {
   invoice_number: number;
   status: string;
   email_sent_at?: string;
+  issued_at?: string;
+  created_at?: string;
 };
 
 export type BackofficeCustomer = {
@@ -108,6 +110,9 @@ export type BackofficeInvoice = InvoiceSummary & {
   customer_phone: string;
   billing_address: string;
   customer_language: string;
+  customer_fiscal_id?: string;
+  customer_company_name?: string;
+  customer_fiscal_address?: string;
   order_number?: number;
   payment_method?: string;
   total_ex_vat: number;

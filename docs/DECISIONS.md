@@ -211,6 +211,20 @@ Dit document legt belangrijke technische beslissingen en hun motivatie vast. Het
 
 ## 2026-07-07
 
+### Jaar in factuurlabel zonder risicovolle renummering
+
+**Besluit:** de bestaande globale `invoice_number` identity blijft de unieke, oplopende bron. PDF, admin, downloads en e-mail tonen `NC-{UTC-jaar issued_at}-{zes cijfers}`.
+
+**Waarom:** hiermee krijgt de administratie een herkenbaar jaarlabel zonder bestaande facturen, foreign keys, sequences of orderkoppelingen te herschrijven. De teller wordt niet jaarlijks hergebruikt.
+
+### Spaanse factuurpresentatie met configureerbare fiscale identiteit
+
+**Besluit:** facturen zijn Spaans/Engels en tonen IVA per tarief. Verkopergegevens komen uitsluitend uit `config/business.ts`; ontbrekende fiscale naam of NIF/NIE veroorzaakt een zichtbare adminwaarschuwing.
+
+**Waarom:** er mogen geen fiscale persoonsgegevens worden verzonnen. De technische structuur kan gereed zijn terwijl de definitieve gegevens en tekst nog door een gestor/boekhouder worden gecontroleerd.
+
+**Ingestelde keuze:** facturen tonen `NANCY'S CASTALLA` prominent als handelsnaam en `JIMMY BERGSMA` kleiner als titular/autónomo, met NIF/NIE `Y8875740P` en het centrale adres. De titular staat ook in Terms/disclaimer.
+
 ### Ordernotities staan los van statusovergangen
 
 **Besluit:** adminnotities gebruiken een afzonderlijke API-actie en starten geen orderstatus-RPC.

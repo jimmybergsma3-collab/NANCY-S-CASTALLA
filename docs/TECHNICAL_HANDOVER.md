@@ -369,7 +369,7 @@ RLS: ingeschakeld.
 
 **Doel:** onveranderlijke verkoopfactuurkop gekoppeld aan een order en klant.
 
-Kolommen omvatten UUID, oplopend uniek factuurnummer, order/ordernummer, klant, klant-/adres-/taalsnapshot, status, betaalmethode indien bekend, totalen excl. btw/btw/incl. btw, uitgiftedatum, e-mailtijdstip en timestamps. Een partiele unieke index op `order_id` staat maximaal één normale factuur per order toe.
+Kolommen omvatten UUID, oplopend uniek factuurnummer, order/ordernummer, klant, klant-/adres-/taalsnapshot, optioneel klant-NIF/CIF/NIE, bedrijfsnaam en fiscaal adres, status, betaalmethode indien bekend, totalen excl. btw/btw/incl. btw, uitgiftedatum, e-mailtijdstip en timestamps. Een partiele unieke index op `order_id` staat maximaal één normale factuur per order toe.
 
 ## 4.10 `invoice_items`
 
@@ -377,13 +377,11 @@ Kolommen omvatten UUID, oplopend uniek factuurnummer, order/ordernummer, klant, 
 
 Iedere regel bewaart productcode, naam, verpakking, aantal, prijs incl. btw, btw-tarief, grondslag, btw-bedrag en regeltotaal. De foreign key naar `invoices` gebruikt cascade delete. RLS staat aan; toegang loopt via server-side service-role en beveiligde API's.
 
-Relaties: optionele foreign keys naar `orders` en `customers`, beide `ON DELETE SET NULL`.
-
-Beperking: geen factuurregels, PDF-generatie, fiscale nummerreeksen per jaar, creditnota's of export naar boekhouding.
+Relaties: optionele foreign keys naar `orders` en `customers`, beide `ON DELETE SET NULL`. De externe nummerweergave combineert het UTC-jaar van `issued_at` met de bestaande globale identity: `NC-{jaar}-{invoice_number}`. De globale teller blijft oplopend en wordt niet per jaar gereset of hergebruikt.
 
 RLS: ingeschakeld.
 
-## 4.10 `integration_settings`
+## 4.11 `integration_settings`
 
 **Doel:** voorbereidende configuratie voor externe diensten.
 
@@ -393,7 +391,7 @@ Geheimen horen niet in het JSON-veld maar in environmentvariabelen of een secret
 
 RLS: ingeschakeld.
 
-## 4.11 Functies en triggers
+## 4.12 Functies en triggers
 
 | Functie/trigger | Doel |
 |---|---|
@@ -404,13 +402,13 @@ RLS: ingeschakeld.
 
 `transition_order_status` gebruikt row locks op order en producten. Daardoor kunnen twee bevestigingen niet tegelijk dezelfde voorraad overschrijven.
 
-## 4.12 Toekomstige database-uitbreidingen
+## 4.13 Toekomstige database-uitbreidingen
 
 - `addresses` als aparte tabel met meerdere klantadressen.
 - `order_status_history` en `payment_status_history`.
 - `email_events`/transactional outbox in plaats van enkele timestamps.
 - `purchase_order_items`, ontvangstregels en batch/lotbeheer.
-- `invoice_items`, creditnota's en fiscale nummerreeksen.
+- Creditnota's en formele annulering/correctie van facturen.
 - Productvertalingen per locale.
 - Productvarianten en genormaliseerde verpakkingsopties.
 - Gerichte zoekindexen, eventueel PostgreSQL full-text search.
@@ -562,7 +560,9 @@ Leveranciers worden uit de database getoond. Inkooporders hebben een voorbereid 
 
 De orderdetailweergave maakt een factuur wanneer de order `confirmed`, `ready_for_collection` of `delivered` is, of wanneer de betaling `paid` is. De database-RPC maakt kop en regels transactioneel en retourneert bij herhaling dezelfde bestaande factuur. De facturatielijst toont nummer, klant, order, datum, totaal, status en e-mailstatus, met download- en verzendacties.
 
-PDF's worden server-side met `pdf-lib` opgebouwd uit de factuursnapshot en centrale bedrijfsconfiguratie. Resend verstuurt de PDF als bijlage. Klantdownloads controleren eerst Supabase Auth en daarna dat `invoice.customer_id` bij de ingelogde gebruiker hoort. Nog niet aanwezig: creditnota's, formele btw-aangifte, boekhoudexport, betalingsmatching en definitieve fiscale bedrijfsidentificatie in `businessConfig.taxId`.
+PDF's worden server-side met `pdf-lib` opgebouwd uit de factuursnapshot en centrale bedrijfsconfiguratie. Ze zijn Spaans/Engels, gebruiken Spaanse euro-notatie, tonen verkoper- en klantgegevens, productregels en een IVA-uitsplitsing per aanwezig tarief. Resend verstuurt de PDF als bijlage. Klantdownloads controleren eerst Supabase Auth en daarna dat `invoice.customer_id` bij de ingelogde gebruiker hoort. Admin waarschuwt wanneer `businessConfig.fiscalName` of `fiscalId` ontbreekt.
+
+Nog niet aanwezig: creditnota's, formele btw-aangifte, boekhoudexport en betalingsmatching. De factuur toont `NANCY'S CASTALLA` prominent als handelsnaam en `JIMMY BERGSMA` kleiner als titular/autónomo, met NIF/NIE `Y8875740P` en Calle Murcia 111. Dezelfde titular staat in Terms. Laat deze keuze en de fiscale inhoud vóór officieel gebruik controleren door een gestor/boekhouder.
 
 ## 6.8 Rapportages
 
@@ -1047,20 +1047,9 @@ Onder `src/payments` bestaan provider/typestructuren zodat een latere Stripe-, S
 
 ## 14.3 Facturatiestatus
 
-Aanwezig: transactionele factuurcreatie vanuit factureerbare orders, uniek nummer, kop- en regelsnapshots, btw per tarief, branded PDF, admin- en klantdownload, facturatielijst en Resend-bijlage met verzendregistratie.
+Aanwezig: transactionele factuurcreatie vanuit factureerbare orders, uniek oplopend nummer, kop- en regelsnapshots, IVA per tarief, Spaans/Engelse PDF, admin- en klantdownload, facturatielijst en Resend-bijlage met verzendregistratie. Externe nummerweergave is `NC-{jaar}-{zes cijfers}` zonder de bestaande identity of orderkoppeling te wijzigen.
 
-Ontbreekt: creditnota's, factuurcorrectieworkflow, boekhoudexport, betalingsmatching en formele validatie van verplichte Spaanse factuurvelden. Vul vóór echt fiscaal gebruik `businessConfig.taxId` met het correcte NIF/CIF in en laat de factuurlay-out administratief controleren.
-
-Ontbreekt:
-
-- Factuurregels en snapshots van fiscale klantgegevens.
-- Officiele nummerreeksregels.
-- PDF-template en opslag.
-- Creditnota's.
-- Spaanse fiscale/IVA-validatie.
-- Automatische creatie na betaling.
-- Verzending naar klant.
-- Boekhoudexport of API.
+Ontbreekt: creditnota's, factuurcorrectieworkflow, boekhoudexport, betalingsmatching, automatische factuurcreatie na betaling en formele fiscale validatie door een gestor/boekhouder.
 
 ## 14.4 API-mogelijkheden
 

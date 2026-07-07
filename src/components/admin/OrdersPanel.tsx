@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { CalendarClock, ChevronRight, Download, FileText, Mail, MessageCircle, Phone, Send, ShoppingBag, UserRound } from "lucide-react";
 import { formatEuro } from "@/lib/pricing";
 import type { BackofficeOrder, BackofficeOrderItem, OrderStatus, PaymentStatus } from "@/types/backoffice";
+import { businessConfig } from "@/config/business";
+import { invoiceLabel } from "@/lib/invoice-format";
 
 const statuses: OrderStatus[] = ["new", "confirmed", "processing", "ready_for_collection", "shipped", "delivered", "cancelled"];
 const paymentStatuses: PaymentStatus[] = ["pending", "paid", "failed", "refunded", "cancelled"];
@@ -66,7 +68,7 @@ export function OrdersPanel() {
     const response = await fetch("/api/admin/invoices", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(action === "create" ? { action, orderId: order.id } : { action, invoiceId }) });
     const data = await response.json(); setInvoiceBusy("");
     if (!response.ok) { setMessage(data.message ?? "Invoice action failed."); return; }
-    if (data.invoice) setOrders((current) => current.map((item) => item.id === order.id ? { ...item, invoices: [{ id: data.invoice.id, invoice_number: data.invoice.invoice_number, status: data.invoice.status, email_sent_at: data.invoice.email_sent_at }] } : item));
+    if (data.invoice) setOrders((current) => current.map((item) => item.id === order.id ? { ...item, invoices: [{ id: data.invoice.id, invoice_number: data.invoice.invoice_number, status: data.invoice.status, email_sent_at: data.invoice.email_sent_at, issued_at: data.invoice.issued_at, created_at: data.invoice.created_at }] } : item));
     setMessage(action === "create" ? "Invoice created." : data.email?.sent ? "Invoice emailed to the customer." : "Invoice saved, but email is not configured.");
   }
 
@@ -150,7 +152,7 @@ function OrderDetail({ invoiceBusy, notesDraft, onInvoiceAction, onNotesChange, 
 
       <div className="border-b border-forest/10 bg-cream/45 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div><h3 className="flex items-center gap-2 font-serif text-xl font-bold text-forest"><FileText size={19} />Invoice</h3><p className="mt-1 text-sm text-forest/60">{invoice ? `INV-${String(invoice.invoice_number).padStart(6, "0")} · ${statusLabel(invoice.status)}` : canInvoice ? "This order is eligible for invoicing." : "Confirm, complete or mark the order as paid first."}</p></div>
+          <div><h3 className="flex items-center gap-2 font-serif text-xl font-bold text-forest"><FileText size={19} />Invoice</h3><p className="mt-1 text-sm text-forest/60">{invoice ? `${invoiceLabel(invoice)} · ${statusLabel(invoice.status)}` : canInvoice ? "This order is eligible for invoicing." : "Confirm, complete or mark the order as paid first."}</p>{!businessConfig.fiscalName || !businessConfig.fiscalId ? <p className="mt-2 text-sm font-bold text-red-700">Fiscal business details are incomplete. Invoice may not be legally complete.</p> : null}</div>
           <div className="flex flex-wrap gap-2">
             {!invoice ? <button className="inline-flex min-h-10 items-center gap-2 rounded-md bg-forest px-4 py-2 text-sm font-bold text-cream disabled:opacity-50" disabled={!canInvoice || Boolean(invoiceBusy)} onClick={() => void onInvoiceAction(order, "create")} type="button"><FileText size={16} />{invoiceBusy === "create" ? "Creating..." : "Create invoice"}</button> : <>
               <a className="inline-flex min-h-10 items-center gap-2 rounded-md border border-forest/15 bg-white px-3 py-2 text-sm font-bold text-forest" href={`/api/admin/invoices/${invoice.id}/pdf`}><Download size={16} />PDF</a>

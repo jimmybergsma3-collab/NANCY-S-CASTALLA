@@ -1,15 +1,12 @@
 import { supabaseAdminFetch } from "@/lib/supabase-rest";
 import type { BackofficeInvoice } from "@/types/backoffice";
+export { invoiceLabel } from "@/lib/invoice-format";
 
 export class InvoiceError extends Error {
   constructor(message: string, public status = 400) { super(message); }
 }
 
 const invoiceSelect = "*,invoice_items(*)";
-
-export function invoiceLabel(invoice: Pick<BackofficeInvoice, "invoice_number">) {
-  return `INV-${String(invoice.invoice_number).padStart(6, "0")}`;
-}
 
 export async function listInvoices() {
   return supabaseAdminFetch<BackofficeInvoice[]>(`invoices?select=${invoiceSelect}&order=created_at.desc&limit=500`);

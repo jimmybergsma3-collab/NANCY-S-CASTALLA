@@ -41,8 +41,8 @@ async function sendEmail(to: string, subject: string, text: string, idempotencyK
 }
 
 export async function sendInvoiceEmail(input: { invoiceId: string; invoiceNumber: string; orderNumber: string; customerName: string; customerEmail: string; pdf: Uint8Array }) {
-  const text = [`Hello ${input.customerName},`, "", `Attached is invoice ${input.invoiceNumber} for order ${input.orderNumber}.`, "", `Questions? Reply to this email or contact ${businessConfig.businessName}.`, "", businessConfig.businessName].join("\n");
-  return sendEmail(input.customerEmail, `Invoice ${input.invoiceNumber} - ${businessConfig.businessName}`, text, `${input.invoiceId}-invoice`, [
+  const text = [`Beste klant / Estimado cliente / Dear customer,`, "", "In de bijlage vindt u de factuur voor uw bestelling.", "Adjuntamos la factura correspondiente a su pedido.", "Please find the invoice for your order attached.", "", `Factura / Invoice: ${input.invoiceNumber}`, `Pedido / Order: ${input.orderNumber}`, "", "Gracias por su compra.", "Thank you for your order.", "", businessConfig.businessName].join("\n");
+  return sendEmail(input.customerEmail, `Factura Nancy's Castalla / Invoice Nancy's Castalla - ${input.invoiceNumber}`, text, `${input.invoiceId}-invoice`, [
     { filename: `${input.invoiceNumber}.pdf`, content: Buffer.from(input.pdf).toString("base64") },
   ]);
 }

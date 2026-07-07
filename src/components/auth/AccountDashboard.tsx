@@ -8,6 +8,7 @@ import { getAuthCopy } from "@/i18n/auth";
 import { persistLocalePreference } from "@/i18n/locale-client";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { formatCustomerPhone } from "@/lib/phone";
+import { invoiceLabel } from "@/lib/invoice-format";
 
 type AccountOrder = {
   id: string;
@@ -22,7 +23,7 @@ type AccountOrder = {
   delivery_method: string;
   notes: string;
   order_items: Array<{ id: number; product_id?: string; product_name: string; package_label: string; unit: string; quantity: number; vat_rate: number; line_total_incl_vat: number }>;
-  invoices?: Array<{ id: string; invoice_number: number; status: string; issued_at: string }>;
+  invoices?: Array<{ id: string; invoice_number: number; status: string; issued_at: string; created_at?: string }>;
 };
 
 type Profile = {
@@ -144,7 +145,7 @@ export function AccountDashboard({ locale }: { locale: Locale }) {
     setDownloading("");
     if (!response.ok) { setMessage(ordersCopy.downloadFailed); return; }
     const url = URL.createObjectURL(await response.blob());
-    const link = document.createElement("a"); link.href = url; link.download = `INV-${String(invoice.invoice_number).padStart(6, "0")}.pdf`; link.click(); URL.revokeObjectURL(url);
+    const link = document.createElement("a"); link.href = url; link.download = `${invoiceLabel(invoice)}.pdf`; link.click(); URL.revokeObjectURL(url);
   }
 
   return (
@@ -209,7 +210,7 @@ export function AccountDashboard({ locale }: { locale: Locale }) {
                   <h4 className="mt-5 font-bold text-forest">{ordersCopy.products}</h4>
                   <div className="mt-2 grid gap-2">{(order.order_items ?? []).map((item) => <div className="rounded-md border border-forest/10 bg-white p-3 text-sm" key={item.id}><div className="flex justify-between gap-3"><strong>{item.product_name}</strong><strong>€{Number(item.line_total_incl_vat).toFixed(2)}</strong></div><p className="mt-1 text-xs text-forest/60">{item.product_id || "-"} · {ordersCopy.package}: {item.package_label || item.unit} · {ordersCopy.quantity}: {item.quantity} · {ordersCopy.vat}: {Number(item.vat_rate)}%</p></div>)}</div>
                   <div className="ml-auto mt-4 max-w-sm space-y-2 border-t border-forest/10 pt-3 text-sm"><div className="flex justify-between"><span>{ordersCopy.subtotal}</span><strong>€{Number(order.subtotal_ex_vat).toFixed(2)}</strong></div><div className="flex justify-between"><span>{ordersCopy.vat}</span><strong>€{Number(order.vat_total).toFixed(2)}</strong></div><div className="flex justify-between text-base"><span className="font-bold">{ordersCopy.total}</span><strong>€{Number(order.total).toFixed(2)}</strong></div></div>
-                  {order.invoices?.map((invoice) => <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md bg-cream p-3" key={invoice.id}><strong>{ordersCopy.invoice} INV-{String(invoice.invoice_number).padStart(6, "0")}</strong><button className="inline-flex min-h-10 items-center gap-2 rounded-md bg-forest px-3 py-2 text-sm font-bold text-cream disabled:opacity-50" disabled={downloading === invoice.id} onClick={() => void downloadInvoice(invoice)} type="button"><Download size={16}/>{downloading === invoice.id ? ordersCopy.downloading : ordersCopy.download}</button></div>)}
+                  {order.invoices?.map((invoice) => <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md bg-cream p-3" key={invoice.id}><strong>{ordersCopy.invoice} {invoiceLabel(invoice)}</strong><button className="inline-flex min-h-10 items-center gap-2 rounded-md bg-forest px-3 py-2 text-sm font-bold text-cream disabled:opacity-50" disabled={downloading === invoice.id} onClick={() => void downloadInvoice(invoice)} type="button"><Download size={16}/>{downloading === invoice.id ? ordersCopy.downloading : ordersCopy.download}</button></div>)}
                 </div> : null}
               </article>
             );

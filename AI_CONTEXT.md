@@ -203,6 +203,8 @@ Admin kan ordernotities afzonderlijk opslaan. Statuswijzigingen naar bevestigd, 
 
 Facturen worden intern uit een order aangemaakt via een transactionele databasefunctie. Alleen bevestigde, afhaalgerede, afgeleverde of betaalde orders zijn factureerbaar. Een unieke orderindex voorkomt dubbele facturen. Facturen bewaren eigen klant-, adres-, orderregel-, prijs- en btw-snapshots, krijgen een oplopend `INV-000001`-nummer en zijn als branded PDF downloadbaar. Admin kan de PDF via Resend mailen; een mailfout verwijdert de factuur niet. Klanten zien en downloaden uitsluitend facturen die via hun `customer_id` bij hun eigen order horen.
 
+Factuurnummers gebruiken de bestaande unieke globale identity en worden extern weergegeven als `NC-{jaar}-{zes cijfers}`, bijvoorbeeld `NC-2026-000002`. De PDF is Spaans/Engels, gebruikt Spaanse bedragnotatie, groepeert IVA per tarief en leest verkopergegevens uit `config/business.ts`. `NANCY'S CASTALLA` staat prominent als handelsnaam; `JIMMY BERGSMA` staat kleiner als titular/autónomo met NIF/NIE `Y8875740P` en het centrale adres. De titular staat ook in Terms/disclaimer. Laat inhoud en fiscale gegevens vóór officieel gebruik controleren door een gestor/boekhouder.
+
 Registratie gebruikt aparte wachtwoord- en bevestigingsvelden met `autocomplete="new-password"`, browserwachtwoordsuggesties, gelijkheidscontrole en toon/verbergbediening. Login gebruikt `autocomplete="current-password"`.
 
 Productbeheer ondersteunt onder meer:

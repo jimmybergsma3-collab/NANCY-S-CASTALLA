@@ -24,6 +24,10 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 - Bewerkbare admin-ordernotities met afzonderlijke beveiligde opslagactie.
 - Registratie met wachtwoordbevestiging, twee toon/verbergknoppen en browservriendelijke autocomplete.
 - Meertalige operationele e-mails voor order ontvangen, bevestigd, betaling ontvangen, klaar voor afhalen, onderweg en afgeleverd.
+- Spaans/Engelse factuur-PDF met fiscale verkopersectie, klantsectie, tweetalige productkolommen, IVA-overzicht en Spaanse bedragnotatie.
+- Jaargebonden externe factuurnummers in formaat `NC-2026-000001`, gebaseerd op de bestaande unieke globale teller.
+- Configureerbare `fiscalName`, `fiscalId`, `fiscalAddress` en `businessActivity` in de centrale bedrijfsconfiguratie.
+- Optionele klantvelden voor NIF/CIF/NIE, bedrijfsnaam en fiscaal adres via migratie `202607070002_spanish_invoice_customer_fields.sql`.
 
 ### Verbeterd
 
@@ -33,6 +37,9 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 - Resend kan een factuur als PDF-bijlage versturen; een verzendfout laat de opgeslagen factuur intact.
 - Resend-netwerk- en API-fouten worden server-side gelogd en als beheerfout teruggegeven zonder bedrijfsdata terug te draaien.
 - De orderbevestiging zegt expliciet dat beschikbaarheid eerst wordt gecontroleerd en betaalinstructies daarna via WhatsApp of e-mail volgen.
+- Factuurmail gebruikt een duidelijk Spaans/Engels onderwerp en begeleidende tekst met PDF-bijlage.
+- Admin waarschuwt wanneer fiscale naam of NIF/NIE van de verkoper nog ontbreekt.
+- Fiscale factuurconfiguratie ingesteld met handelsnaam `NANCY'S CASTALLA`, titular `JIMMY BERGSMA` en NIF/NIE `Y8875740P`; titular tevens toegevoegd aan Terms.
 
 ## [0.10.0] - 2026-07-06
 
