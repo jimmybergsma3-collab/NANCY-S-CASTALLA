@@ -1,149 +1,92 @@
 # Roadmap: Nancy's Castalla
 
-**Peildatum:** 6 juli 2026
+**Peildatum:** 8 juli 2026
 **Status:** levende roadmap
 
-Deze roadmap beschrijft de actuele prioriteiten. Gereed werk wordt uit de actieve lijsten verwijderd en vastgelegd in `CHANGELOG.md`. Belangrijke keuzes en motivaties staan in `DECISIONS.md` en `BUSINESS_LOG.md`.
+Deze roadmap bevat alleen toekomstig werk. Afgeronde functionaliteit staat in `CHANGELOG.md` en `PROJECT_STATUS.md`; technische details staan in `TECHNICAL_HANDOVER.md`.
 
 ## Nu bezig
 
-### Productiebetrouwbaarheid
+### Productiecontrole
 
-- [ ] Controleer alle productie-environmentvariabelen in Vercel zonder geheime waarden te documenteren.
-- [ ] Controleer of alle Supabase-migraties in productie zijn uitgevoerd.
-- [x] Voer `202607050001_customer_signup_language.sql` uit in productie zodat nieuwe registraties direct de gekozen locale krijgen.
-- [ ] Voer `202607060001_preorder_inventory_rules.sql` uit in productie zodat pre-orders bij bevestiging geen fysieke voorraad vereisen of afboeken.
-- [x] `202607060002_order_invoicing.sql` is in productie aanwezig.
-- [x] `202607070001_normalize_invoice_sequence.sql` is uitgevoerd; de actieve reeks bevat facturen 1 en 2.
-- [x] `202607070002_spanish_invoice_customer_fields.sql` is in productie aanwezig.
-- [ ] Leg Supabase Auth Site URL en redirect-URL's voor `https://www.nancys.es` vast in een operationele checklist.
-- [ ] Controleer Resend domeinverificatie, SPF, DKIM, DMARC en SMTP-instellingen.
-- [ ] Test registratie, bevestiging, login, wachtwoordherstel en logout end-to-end op productie.
-- [ ] Test ordercreatie, e-mails, klantkoppeling, bevestiging, voorraadafboeking en annulering end-to-end.
-- [ ] Bevestig het zakelijke Bizum-nummer en vul bankrekeninggegevens in.
+- [ ] Controleer Vercel-environmentvariabelen voor Production en Preview.
+- [ ] Bevestig dat alle Supabase-migraties tot en met `202607080001_payment_method_polish.sql` actief zijn.
+- [ ] Test op productie één volledige nieuwe-klantflow inclusief accountmail, ordermail, statusmail en factuurmail.
+- [ ] Controleer Resend-domein, SPF, DKIM, DMARC, API-key, Supabase SMTP en bounce-/complaintgedrag.
+- [ ] Bevestig het zakelijke Bizum-nummer en vervang de placeholder-bankrekening.
+- [ ] Laat Spaanse factuurgegevens en teksten door gestor/boekhouder valideren.
+- [ ] Leg een eenvoudige releasechecklist vast voor Vercel, Supabase, Resend, DNS, lint, build en smoke-test.
 
-### Documentatie en beheer
+### Livegangveiligheid
 
-- [x] Centrale documentatiemap met technisch rapport, business log, roadmap, beslissingen en changelog.
-- [ ] Voeg een korte documentatie-updatecheck toe aan de pull-request- of commitwerkwijze.
-- [x] Werk README bij zodat deze naar `/docs` verwijst en geen verouderde architectuur beschrijft.
+- [ ] Rate limiting op adminlogin, registratie, ordercreatie, profielmutaties en uploads.
+- [ ] Botbescherming op publieke mutaties waar misbruik waarschijnlijk is.
+- [ ] Individuele adminaccounts en MFA, of tijdelijk een gedocumenteerd credentialrotatiebeleid.
+- [ ] Security headers, CSP en framebeleid controleren en aanscherpen.
+- [ ] Geautomatiseerde regressietests en CI-gate voor lint/build toevoegen.
+- [ ] Dependency-auditmeldingen gericht onderzoeken en zonder geforceerde breaking upgrades oplossen.
 
-### Klantaccount
+### Orders, voorraad en bezorging
 
-- [ ] Toon volledig klantprofiel en maak adresgegevens duidelijk bewerkbaar.
-- [ ] Toon orderregels en statushistorie in orderhistorie.
-- [x] Zorg dat ingelogde klantgegevens op iedere bestelplek consequent vooraf worden ingevuld.
-- [ ] Voeg duidelijke feedback toe wanneer profiel- of orderdata niet kan worden geladen.
-
-### Winkelmand en checkout
-
-- [x] Persistente lokale winkelmand met badge, aantallen, verwijderen en locale-routes.
-- [x] Server-authoritatieve cartvalidatie voor prijzen, btw, verpakking en voorraadstatus.
-- [x] Pre-order altijd bestelbaar; coming-soon geblokkeerd; beschikbare tracked voorraad gecontroleerd.
-- [ ] Productie-orderflow met echte klantdata end-to-end uitvoeren na de nieuwe voorraadmigratie.
+- [ ] Server-side bezorgminimum, bezorgkosten en leveringsgebied berekenen en afdwingen.
+- [ ] Apart onveranderlijk afleveradres-snapshot op orders opslaan.
+- [ ] Formele order-state-machine en statushistorie toevoegen.
+- [ ] Beslissen over voorraadreservering voor open orders.
+- [ ] Duidelijke admin- en klantafhandeling toevoegen wanneer voorraad bij bevestiging onvoldoende blijkt.
 
 ## Daarna
 
-### Security en kwaliteit
+### Performance en catalogus
 
-- [ ] Rate limiting op adminlogin, registratie, ordercreatie, profielmutaties en uploads.
-- [ ] Botbescherming/CAPTCHA waar misbruik waarschijnlijk is.
-- [ ] Individuele adminaccounts met rollen en MFA.
-- [ ] Auditlog voor admin- en voorraadacties.
-- [ ] Security headers, waaronder CSP en framebeleid.
-- [ ] Uniforme requestvalidatie, bij voorkeur met een schema-validatiebibliotheek.
-- [ ] Geautomatiseerde lint-, build-, unit-, integratie- en smoke-tests in CI.
-- [ ] Dependency-audit uitvoeren en kwetsbaarheden gericht oplossen.
+- [ ] Productdetail rechtstreeks op productcode ophalen in plaats van via volledige catalogusload.
+- [ ] Categorie, zoekresultaten en admincatalogus server-side pagineren en filteren.
+- [ ] Indexen voor zichtbaarheid, categorieën en zoekgebruik meten en optimaliseren.
+- [ ] Productafbeeldingen voorzien van thumbnails en responsive formaten.
+- [ ] Monitoring voor errors, performance en externe integraties toevoegen.
 
-### Orders en voorraad
+### Klantbeleving en compliance
 
-- [x] Volledige responsieve admin-orderdetails met klant, regels, btw-totalen en contactacties.
-- [x] Interne orderfacturen met snapshots, PDF, klantdownload en Resend-verzending.
-- [ ] Formele order-state-machine met toegestane overgangen.
-- [ ] Voorraadreservering of expliciet per product instelbaar reserveringsbeleid.
-- [ ] Handmatige voorraadcorrectie in één database-transactie/RPC.
-- [ ] Orderstatushistorie en interne notities.
-- [ ] Creditnota's en formele factuurcorrecties.
-- [ ] Apart afleveradres-snapshot op de order.
-- [ ] WhatsApp-orders eenvoudig handmatig registreren of later via Business API importeren.
-- [ ] Duidelijke afhandeling van onvoldoende voorraad in klant- en adminscherm.
+- [ ] Volledige productinhoud en resterende interface/backoffice professioneel vertalen.
+- [ ] Allergenen- en voedselinformatie structureren en operationeel controleren.
+- [ ] Privacy-, cookie-, retentie-, verwijderings- en consumentenprocessen juridisch valideren.
+- [ ] Product- en categorie-URL's aan sitemap toevoegen en JSON-LD voor LocalBusiness/Product/Offer/BreadcrumbList bouwen.
+- [ ] Orderstatushistorie en herhaalbestelling in klantaccount toevoegen.
 
-### Bezorging
+### Backoffice verdiepen
 
-- [ ] Bezorgminimum en bezorgkosten server-side berekenen en afdwingen.
-- [ ] Bezorgzones/postcodes en afstandscontrole modelleren.
-- [ ] Besluit nemen over gratis bezorging in Castalla en eventuele orderdrempel.
-- [ ] Levermomenten en capaciteit toevoegen.
-
-### Performance en SEO
-
-- [ ] Productdetail rechtstreeks op productcode queryen, zonder volledige catalogusload.
-- [ ] Categorie- en zoekfilters server-side uitvoeren.
-- [ ] Publieke cataloguspaginering toevoegen.
-- [ ] Database-indexen voor zichtbaarheid, categorieën en zoeken toevoegen.
-- [ ] Productafbeeldingen optimaliseren met thumbnails en responsive formaten.
-- [ ] Product- en categorie-URL's aan sitemap toevoegen.
-- [ ] JSON-LD voor LocalBusiness, Product, Offer en BreadcrumbList.
-- [ ] Correcte HTML-taal per locale.
+- [ ] Volledig leveranciersbeheer en inkooporderregels.
+- [ ] Goederenontvangst die voorraad transactioneel verhoogt.
+- [ ] Lagevoorraadmeldingen en bestelvoorstellen.
+- [ ] Rapportages voor verkoop, marge, voorraad en IVA uitbreiden.
+- [ ] Auditlogging voor admin-, prijs-, voorraad- en orderacties.
 
 ## Later
 
-### Inkoop en leveranciers
+### Facturatie en betaling
 
-- [ ] Volledig leveranciersbeheer met contact- en leveringsvoorwaarden.
-- [ ] Inkooporderregels.
-- [ ] Goederenontvangst per product.
-- [ ] Automatische voorraadverhoging na ontvangst.
-- [ ] Lagevoorraadmeldingen en bestelvoorstellen.
-- [ ] Lots, houdbaarheidsdatum en opslaglocatie.
+- [ ] Creditnota's en formele factuurcorrecties.
+- [ ] Boekhoudexport en/of koppeling met Spaanse administratieprovider.
+- [ ] Automatische betalingsmatching en payment webhooks.
+- [ ] SumUp of andere kaartprovider selecteren; Stripe alleen activeren bij expliciete zakelijke keuze.
 
-### Facturatie en betalingen
+### Integraties
 
-- [ ] Factuurregels en fiscale snapshots.
-- [ ] Factuur-PDF, nummerreeksen en creditnota's.
-- [ ] Spaanse IVA-/factuureisen laten valideren.
-- [ ] Boekhoudexport of providerkoppeling.
-- [ ] SumUp of andere kaartbetaling selecteren.
-- [ ] Payment webhooks en automatische betaalstatus.
-- [ ] Stripe alleen activeren als dit zakelijk en operationeel gewenst is.
-
-### Communicatie en integraties
-
-- [ ] Transactionele e-mailoutbox, retries en eventhistorie.
-- [ ] Meertalige account- en ordermails.
-- [ ] Reply-To en bounce/complaint monitoring.
-- [ ] WhatsApp Business API.
-- [ ] POS/kassa en gedeelde voorraad.
+- [ ] Transactionele e-mailoutbox met retries en eventhistorie.
+- [ ] WhatsApp Business API en handmatige import van WhatsApp-orders.
+- [ ] POS/kassa met gedeelde voorraad.
 - [ ] Leveranciers-, verzend- en boekhoudintegraties.
 - [ ] Versioned externe API met partnerauthenticatie.
 
-### Internationalisatie en compliance
-
-- [ ] Volledige vertaling van publieke, juridische en accountteksten.
-- [ ] Productvertalingen in de database.
-- [ ] Besluit over aanvullende Scandinavische talen naast `sv`.
-- [ ] Allergenen- en foodinformatie juridisch controleren.
-- [ ] GDPR-proces voor export, correctie, verwijdering en bewaartermijnen.
-
 ## Ideeën
 
-- [ ] Herhaalbestelling vanuit klantaccount.
-- [ ] Verlanglijst en meldingen wanneer pre-orders openen.
-- [ ] Productlabels/barcodes printen vanuit admin.
-- [ ] Google Merchant-productfeed.
-- [ ] PWA of mobiele app.
-- [ ] Klantsegmentatie zonder marketingtoestemming te vermengen met transactionele mail.
-- [ ] Vraagvoorspelling en analyse van marge, omloopsnelheid en verspilling.
-- [ ] Afhaaltijdsloten en bezorgrouteplanning.
+- Meertalige nieuwsbrief na expliciete toestemming.
+- Loyalty en klantsegmentatie.
+- Mobiele app boven op dezelfde services.
+- Lots, houdbaarheidsdatum en opslaglocaties.
 
-## Definition of done voor belangrijke wijzigingen
+## Roadmapregels
 
-Een belangrijke wijziging is pas gereed wanneer:
-
-1. Functionaliteit en foutpaden zijn gecontroleerd.
-2. `npm run lint` slaagt.
-3. `npm run build` slaagt.
-4. Relevante tests zijn toegevoegd of uitgevoerd.
-5. Relevante bestanden in `/docs` zijn bijgewerkt.
-6. Nieuwe environmentvariabelen en externe dashboardstappen zijn gedocumenteerd zonder secrets op te nemen.
-7. De wijziging als kleine, duidelijke Git-commit is vastgelegd.
+1. Werk eerst productiebetrouwbaarheid en wettelijke randvoorwaarden af.
+2. Verplaats afgerond werk naar `CHANGELOG.md` en `PROJECT_STATUS.md`.
+3. Voeg geen externe provider toe zonder businessbesluit, securityreview en environmentplan.
+4. Breek de werkende mobiele productdetail-layout, productfotoverhouding en mobiele navigatie niet zonder aantoonbare noodzaak en regressietest.

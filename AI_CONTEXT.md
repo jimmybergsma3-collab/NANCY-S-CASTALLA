@@ -1,12 +1,13 @@
 # AI Context: Nancy's Castalla
 
 **Doel:** snelle, zelfstandige projectcontext voor ChatGPT, Codex en andere AI-assistenten.  
-**Laatst bijgewerkt:** 7 juli 2026
+**Laatst bijgewerkt:** 8 juli 2026
 **Productie:** `https://www.nancys.es`
 
 Lees dit bestand voordat je een wijziging plant of uitvoert. Gebruik voor diepere details de documenten in `/docs`:
 
 - `docs/TECHNICAL_HANDOVER.md`: actuele technische toestand.
+- `PROJECT_STATUS.md`: functionele go-live-status, afgeronde mijlpalen en uitsluitend echte livegang-TODO's.
 - `docs/BUSINESS_LOG.md`: zakelijke keuzes en motivatie.
 - `docs/ROADMAP.md`: actuele prioriteiten.
 - `docs/DECISIONS.md`: chronologische technische beslissingen.
@@ -26,7 +27,7 @@ De software bestaat uit:
 - Product-, prijs-, order- en voorraadbeheer.
 - Voorbereidingen voor inkoop, facturatie, betalingen en externe integraties.
 
-De huidige fase is een productie-MVP/pre-orderfase. De website is live, maar niet alle voorbereide backofficemodules zijn al volledig operationeel.
+De huidige fase is een productie-MVP/pre-orderfase. Catalogus, cart, server-gevalideerde orders, klantaccount, adminorderbeheer, voorraadtransities en normale PDF-facturen zijn gebouwd. Niet alle voorbereide backofficemodules zijn volledig transactioneel en productieconfiguratie moet voor onbeheerde livegang end-to-end worden bewezen.
 
 ## 2. Doelgroep
 
@@ -153,8 +154,8 @@ Er zijn twee orderkanalen:
 6. Server vertrouwt geen browserprijzen of totalen en voert dezelfde controle opnieuw uit.
 7. Een idempotency key voorkomt dubbele orders bij retries.
 8. Order en orderregels worden via een database-RPC opgeslagen en krijgen UUID plus oplopend ordernummer.
-9. Resend verstuurt admin- en klantmail als e-mailconfiguratie werkt.
-10. Nieuwe order start als `new` met betaalstatus `pending`.
+9. Resend verstuurt admin- en klantmail als e-mailconfiguratie werkt. Order- en factuurmails gebruiken branded responsive HTML met afzendernaam `Nancy's Castalla Orders`.
+10. Nieuwe order start als `new` met betaalstatus `pending`; de klant kan een betaalvoorkeur opslaan als `bizum`, `bank-transfer`, `cash`, `card` of `pending`.
 
 ### WhatsApp-order
 
@@ -195,15 +196,15 @@ Beschikbare modules:
 - Instellingen.
 - API-integraties.
 
-Producten, orders en voorraad zijn de meest functionele onderdelen. Klanten en leveranciers zijn grotendeels overzicht/read-only. Inkoop, facturatie, rapportages en integraties zijn voorbereid maar niet volledig operationeel.
+Producten, orders, voorraad en facturatie zijn de meest functionele onderdelen. Klanten en leveranciers zijn grotendeels overzicht/read-only. Categorieën en rapportages bieden bruikbare overzichten. Inkoop, BTW, instellingen en integraties zijn voorbereid of beperkt en niet volledig transactioneel.
 
 Het orderoverzicht is aanklikbaar en opent per order een responsieve detailweergave met klantprofiel, ordergegevens, alle orderregels, btw-totalen en directe bel-, WhatsApp- en e-mailacties. De server levert `order_items` samen met de order en verrijkt gekoppelde orders met het klantprofiel. Bij oudere orders wordt het afleveradres zo nodig uit de gelokaliseerde adresregel in `notes` gehaald; een afzonderlijk onveranderlijk adressnapshot op de order blijft gewenst.
 
 Admin kan ordernotities afzonderlijk opslaan. Statuswijzigingen naar bevestigd, klaar voor afhalen, onderweg en afgeleverd versturen een gerichte klantmail; `payment_status=paid` verstuurt een aparte betalingsbevestiging. Resend-fouten worden server-side gelogd en aan de beheerinterface teruggegeven zonder order of factuur te verwijderen.
 
-Facturen worden intern uit een order aangemaakt via een transactionele databasefunctie. Alleen bevestigde, afhaalgerede, afgeleverde of betaalde orders zijn factureerbaar. Een unieke orderindex voorkomt dubbele facturen. Facturen bewaren eigen klant-, adres-, orderregel-, prijs- en btw-snapshots, krijgen een oplopend `INV-000001`-nummer en zijn als branded PDF downloadbaar. Admin kan de PDF via Resend mailen; een mailfout verwijdert de factuur niet. Klanten zien en downloaden uitsluitend facturen die via hun `customer_id` bij hun eigen order horen.
+Facturen worden intern uit een order aangemaakt via een transactionele databasefunctie. Alleen bevestigde, afhaalgerede, afgeleverde of betaalde orders zijn factureerbaar. Een unieke orderindex voorkomt dubbele facturen. Facturen bewaren eigen klant-, adres-, orderregel-, prijs-, betaalmethode- en btw-snapshots, krijgen een oplopend `INV-000001`-nummer en zijn als branded PDF downloadbaar. Admin kan de PDF via Resend mailen; een mailfout verwijdert de factuur niet. Klanten zien en downloaden uitsluitend facturen die via hun `customer_id` bij hun eigen order horen.
 
-Factuurnummers gebruiken de bestaande unieke globale identity en worden extern weergegeven als `NC-{jaar}-{zes cijfers}`, bijvoorbeeld `NC-2026-000002`. De PDF is Spaans/Engels, gebruikt Spaanse bedragnotatie, groepeert IVA per tarief en leest verkopergegevens uit `config/business.ts`. `NANCY'S CASTALLA` staat prominent als handelsnaam; `JIMMY BERGSMA` staat kleiner als titular/autónomo met NIF/NIE `Y8875740P` en het centrale adres. De titular staat ook in Terms/disclaimer. Laat inhoud en fiscale gegevens vóór officieel gebruik controleren door een gestor/boekhouder.
+Factuurnummers gebruiken de bestaande unieke globale identity en worden extern weergegeven als `NC-{jaar}-{zes cijfers}`, bijvoorbeeld `NC-2026-000002`. De PDF is Spaans/Engels, gebruikt Spaanse bedragnotatie, groepeert IVA per tarief, toont de betaalmethode als menselijk label en leest verkopergegevens uit `config/business.ts`. `NANCY'S CASTALLA` staat prominent als handelsnaam; `JIMMY BERGSMA` staat kleiner als titular/autónomo met NIF/NIE `Y8875740P` en het centrale adres. De titular staat ook in Terms/disclaimer. Laat inhoud en fiscale gegevens vóór officieel gebruik controleren door een gestor/boekhouder.
 
 Registratie gebruikt aparte wachtwoord- en bevestigingsvelden met `autocomplete="new-password"`, browserwachtwoordsuggesties, gelijkheidscontrole en toon/verbergbediening. Login gebruikt `autocomplete="current-password"`.
 
@@ -222,12 +223,13 @@ Productbeheer ondersteunt onder meer:
 
 ## 9. Betaalmethodes
 
-Actief in V1:
+Actief/ondersteund in V1:
 
 - Bizum.
 - Bankoverschrijving.
-- Contant bij afhalen.
-- Contant bij bezorgen.
+- Contant.
+- Kaart als handmatige/toekomstige keuze.
+- Pending/nog te kiezen.
 
 Niet actief:
 
@@ -307,7 +309,7 @@ Verwijder geen bestaande functionaliteit, migratie of data-import omdat deze ver
 - Sommige productqueries laden te veel of de volledige catalogus.
 - Lokale productfallback kan een Supabase-storing maskeren.
 - Account/order e-mails hebben geen volwaardige queue en retryflow.
-- Publieke interface en juridische basiscontent zijn vertaald; backoffice, productinhoud en transactionele e-mails zijn nog niet volledig meertalig.
+- Publieke interface, juridische basiscontent en transactionele order-/factuurmails zijn vertaald in de basislocales. Bekende productnamen worden klantgericht vertaald via een veilige helper op productkaarten, productdetail, zoeken, cart, ordermails, klantaccount en facturen. Onbekende productnamen en leveranciersinhoud vallen terug op de catalogusnaam/broninhoud. Backoffice en volledige productinhoud zijn nog niet volledig meertalig.
 - Geen volledige product-/categoriesitemap of structured data.
 - Inkoop, facturatie en rapportages zijn nog gedeeltelijk.
 - Klantadres is nog geen apart onveranderlijk ordersnapshot.
@@ -325,11 +327,13 @@ Actuele prioriteit:
 5. Server-side bezorging en adressnapshots.
 6. Directe/gepagineerde productqueries en afbeeldingsoptimalisatie.
 7. Inkoopontvangst en volledig voorraadbeheer.
-8. Creditnota's, boekhoudexport en kaartbetaling boven op de interne factuurflow.
+8. Creditnota's, boekhoudexport en online kaartbetaling boven op de interne factuurflow.
 9. Volledige vertalingen, SEO en compliance.
 10. POS, WhatsApp Business en overige integraties.
 
 Gebruik `docs/ROADMAP.md` als gezaghebbende levende roadmap. Verplaats gereed werk naar `docs/CHANGELOG.md`.
+
+De kortste actuele go-livecheck staat in `PROJECT_STATUS.md`. Daarin horen alleen werkelijk openstaande punten; afgeronde mijlpalen mogen niet terugkeren als TODO.
 
 ## 15. Regels voor toekomstige AI-assistenten
 

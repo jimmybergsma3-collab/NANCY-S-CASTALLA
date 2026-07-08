@@ -243,6 +243,32 @@ Dit document legt belangrijke technische beslissingen en hun motivatie vast. Het
 
 **Waarom:** één generieke statuszin gaf onvoldoende betaal- en afhaalinstructie en paste niet bij de internationale doelgroep.
 
+## 2026-07-08
+
+### Eén actuele projectstatus naast diepgaande documentatie
+
+**Besluit:** `PROJECT_STATUS.md` wordt de korte operationele waarheid voor go-live-status, afgeronde mijlpalen en uitsluitend nog openstaande livegangpunten. `TECHNICAL_HANDOVER.md` blijft de volledige technische bron; `CHANGELOG.md` bewaart geschiedenis en `ROADMAP.md` bevat alleen toekomstig werk.
+
+**Waarom:** afgeronde functies stonden door snelle ontwikkeling soms nog als roadmapitem vermeld. Een expliciete scheiding tussen actuele status, technische uitleg, geschiedenis en toekomst voorkomt dat een nieuw team reeds gebouwde functionaliteit opnieuw plant of productiegebreken over het hoofd ziet.
+
+### Betaalmethode als aparte order- en factuurwaarde
+
+**Besluit:** checkout bewaart een betaalvoorkeur in `orders.payment_method` en facturen nemen deze waarde over als snapshot. Toegestane waarden zijn `bizum`, `bank-transfer`, `cash`, `card` en `pending`.
+
+**Waarom:** facturen en klantcommunicatie mogen niet langer `Payment: -` tonen. Een apart veld voorkomt dat betaalmethode uit vrije notities moet worden afgeleid en blijft geschikt voor latere betalingsintegraties.
+
+### Branded HTML-mails zonder aparte templateprovider
+
+**Besluit:** order-, status- en factuurmails krijgen responsive HTML direct in de bestaande Resend-mailservice, naast een tekstversie.
+
+**Waarom:** voor de go-livefase is een professionele eerste indruk nodig zonder een nieuwe template-infrastructuur of externe afhankelijkheid toe te voegen. Orders en facturen blijven eerst opgeslagen; mailfalen blijft operationeel en niet transactioneel.
+
+### Veilige productnaamvertaling als tussenstap
+
+**Besluit:** bekende klantgerichte productnamen worden via een centrale helper vertaald voor publieke productkaarten, productdetail, zoeken, cart, mails, klantaccount en factuur-PDF. Onbekende producten vallen terug op de catalogusnaam.
+
+**Waarom:** er is nog geen volledig producttranslation-model. Automatisch alles vertalen kan merknamen, voedselinformatie of allergenen vervormen; een gecontroleerde helper verbetert de klantbeleving zonder data-risico.
+
 ## Beslisregel voor toekomstige wijzigingen
 
 Leg een besluit hier vast wanneer het een architectuurgrens, datamodel, beveiligingsmodel, externe provider, kernworkflow of blijvende ontwikkelconventie verandert. Vermeld altijd datum, besluit, motivatie, gevolgen en eventueel het vervangen besluit.

@@ -1,10 +1,10 @@
 # Business Log: Nancy's Castalla
 
 **Doel:** actueel overzicht van zakelijke keuzes en hun motivatie.  
-**Peildatum:** 5 juli 2026  
+**Peildatum:** 8 juli 2026
 **Eigenaar:** Nancy's Castalla
 
-Dit document legt uit waarom het bedrijf bepaalde product-, verkoop- en operationele keuzes maakt. Het is geen technisch changelog. Wanneer een zakelijke keuze verandert, moet de oude keuze als vervangen worden gemarkeerd en moet de actuele keuze duidelijk bovenaan de betreffende sectie staan.
+Dit document legt uit waarom het bedrijf bepaalde product-, verkoop- en operationele keuzes maakt. Het is geen technisch changelog. De actuele functionele status staat in `../PROJECT_STATUS.md`. Wanneer een zakelijke keuze verandert, moet de oude keuze als vervangen worden gemarkeerd en moet de actuele keuze duidelijk bovenaan de betreffende sectie staan.
 
 ## Bedrijfsmodel
 
@@ -89,6 +89,18 @@ Dit document legt uit waarom het bedrijf bepaalde product-, verkoop- en operatio
 **Motivatie:** deze methoden zijn eenvoudig, lokaal herkenbaar en vereisen geen complete betaalcheckout. De klant ontvangt instructies nadat de order is gecontroleerd.
 
 **Open zakelijk besluit:** het Bizum-nummer en de bankrekening moeten definitief worden bevestigd. De bankrekening is nog een placeholder; het Bizum-nummer kan nog naar het eerdere telefoonnummer verwijzen.
+
+### Betaalvoorkeur vastleggen zonder online afrekening
+
+**Keuze:** de checkout mag `Bizum`, `Bank transfer`, `Cash`, `Card` of `Pending` als klantvoorkeur vastleggen. Dit is informatie voor orderafhandeling en factuur; het is geen bewijs van betaling en activeert geen externe checkout.
+
+**Motivatie:** de klant en beheerder zien direct hoe betaling waarschijnlijk wordt afgehandeld, terwijl Nancy's Castalla eerst beschikbaarheid kan controleren. `payment_status` blijft afzonderlijk de bron voor de vraag of daadwerkelijk is betaald.
+
+### Factuur uit bevestigde order
+
+**Keuze:** een normale factuur wordt vanuit een geschikte order gemaakt en gebruikt onveranderlijke klant-, product-, prijs-, IVA- en betaalmethodesnapshots. De factuur is Spaans/Engels en toont de fiscale gegevens uit de centrale bedrijfsconfiguratie.
+
+**Motivatie:** administratie moet de situatie op factuurdatum bewaren, ook wanneer klant- of productdata later wijzigt. Eén normale factuur per order voorkomt dubbele boeking; correcties en creditnota's worden pas in een volgende fase toegevoegd.
 
 ## Afhalen en bezorgen
 

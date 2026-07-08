@@ -2,11 +2,14 @@
 
 Meertalige Next.js-webwinkel en backoffice voor Nancy's Castalla, gericht op internationale foodproducten, pre-orders, afhalen in Castalla en lokale bezorging.
 
+**Huidige fase:** productie-MVP / pre-orderfase. De kernflow van catalogus naar winkelmand, server-gevalideerde bestelaanvraag, klantaccount, adminorderbeheer en PDF-factuur is gebouwd. De resterende livegangpunten zijn vooral productieconfiguratie, end-to-end verificatie, bezorgberekening en operationele beveiliging. Zie [`PROJECT_STATUS.md`](PROJECT_STATUS.md) voor de actuele go-live-status.
+
 ## Documentatie
 
 De actuele projectdocumentatie staat in [`docs`](docs):
 
 - [`AI_CONTEXT.md`](AI_CONTEXT.md): compacte projectbriefing en werkinstructies voor AI-assistenten.
+- [`PROJECT_STATUS.md`](PROJECT_STATUS.md): actuele functionele status, afgeronde mijlpalen en uitsluitend nog openstaande livegangpunten.
 - [`TECHNICAL_HANDOVER.md`](docs/TECHNICAL_HANDOVER.md): actuele technische architectuur en projectstatus.
 - [`BUSINESS_LOG.md`](docs/BUSINESS_LOG.md): zakelijke keuzes en motivatie.
 - [`ROADMAP.md`](docs/ROADMAP.md): actuele prioriteiten en toekomstig werk.
@@ -52,10 +55,25 @@ Databasewijzigingen staan chronologisch in `supabase/migrations`. Deze migraties
 
 - Publieke website: `/en`, `/nl`, `/de`, `/es`, `/sv`
 - Producten: `/{locale}/products`
+- Winkelmand en checkout: `/{locale}/cart`
 - Klantlogin: `/{locale}/login`
 - Klantaccount: `/{locale}/account`
 - Adminlogin: `/{locale}/admin/login`
 - Backoffice: `/{locale}/admin`
+- Adminorders: `/{locale}/admin/orders`
+- Facturen: `/{locale}/admin/invoicing`
+
+## Functionele kern
+
+- Meertalige catalogus voor `en`, `nl`, `de`, `es` en `sv`.
+- Producten zoeken, filteren, openen, delen en met verpakkingskeuze aan de winkelmand toevoegen.
+- Pre-orders blijven bestelbaar bij voorraad nul; `coming-soon` is geblokkeerd; beschikbare voorraadproducten worden server-side gecontroleerd.
+- De server herberekent prijzen, IVA en totalen en maakt orders idempotent aan in Supabase.
+- Klanten kunnen registreren, inloggen, hun profiel beheren, orders openen en eigen facturen downloaden.
+- Admin kan producten, voorraad, orders, orderregels, notities, statussen, betaalstatussen en facturen beheren.
+- Facturen worden transactioneel uit orders opgebouwd, als Spaans/Engelse PDF gegenereerd en via Resend verzonden.
+
+Niet iedere zichtbare backofficemodule is al volledig transactioneel. Zie `PROJECT_STATUS.md` voor het precieze onderscheid tussen operationeel, gedeeltelijk en voorbereid.
 
 ## Deployment
 

@@ -10,8 +10,19 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ## [Unreleased]
 
+### Documentatie
+
+- Volledige Git-geschiedenis en actuele codebase opnieuw vergeleken met alle projectdocumentatie.
+- Nieuw `PROJECT_STATUS.md` toegevoegd met een statusmatrix, afgeronde mijlpalen en uitsluitend werkelijke TODO's vóór livegang.
+- README, technische overdracht, roadmap, businesslog, beslislog en AI-context gesynchroniseerd met de huidige webshop-, admin-, order-, voorraad-, factuur- en e-mailfunctionaliteit.
+- Verouderde roadmapitems voor reeds opgeleverde klantorderdetails, factuursnapshots, PDF-facturen en meertalige transactionele mails verwijderd.
+
 ### Toegevoegd
 
+- Migratie `202607080001_payment_method_polish.sql` voor betaalmethode op orders en facturen.
+- Betaalvoorkeur in checkout met ondersteuning voor Bizum, bankoverschrijving, contant, kaart en pending.
+- Gedeelde betaalmethode-labels voor checkout, admin, klantaccount, e-mail en factuur-PDF.
+- Veilige productnaamvertalingshelper voor bekende klantgerichte productnamen in publieke productkaarten, productdetail, zoeken, ordermails, klantaccount en facturen.
 - Volledige responsieve admin-orderdetailweergave met klantgegevens, ordermetadata, orderregels, btw-totalen en directe contactacties.
 - Aanklikbaar orderoverzicht en een duidelijke waarschuwing voor historische orders zonder orderregels.
 - Interne factuurflow vanuit factureerbare orders, met oplopend factuurnummer en dubbele-factuurbeveiliging.
@@ -31,6 +42,11 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Verbeterd
 
+- Order-, status- en factuurmails gebruiken nu branded responsive HTML met logo, groene huisstijl, duidelijke koppen en vaste contactfooter.
+- Nieuwe orderbevestiging gebruikt warmere tekst en toont orderregels, ordernummer, totaal, fulfilment en betaalmethode.
+- Order- en factuurmail gebruiken afzendernaam `Nancy's Castalla Orders` in plaats van een generieke mailboxnaam.
+- Klantaccount toont klantvriendelijke orderstatussen zoals bestelling ontvangen, beschikbaarheid gecontroleerd, wacht op betaling, klaar om af te halen en onderweg.
+- Factuur-PDF heeft meer witruimte, prominenter logo, duidelijker factuurnummer, beter totalenblok en netter IVA-overzicht.
 - Adminorders worden server-side samen met `order_items` opgehaald en in een gebundelde query met gekoppelde klantprofielen verrijkt.
 - Status- en betaalstatuswijzigingen behouden de reeds geladen klant- en orderregelgegevens in de beheerinterface.
 - Afleveradressen van oudere orders worden waar nodig uit de gelokaliseerde adresregel in de bestelnotitie gelezen.
@@ -41,6 +57,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 - Factuurmail-idempotency is geversioneerd voor de nieuwe tweetalige template, zodat Resend geen gewijzigde body onder een oude sleutel weigert.
 - Admin waarschuwt wanneer fiscale naam of NIF/NIE van de verkoper nog ontbreekt.
 - Fiscale factuurconfiguratie ingesteld met handelsnaam `NANCY'S CASTALLA`, titular `JIMMY BERGSMA` en NIF/NIE `Y8875740P`; titular tevens toegevoegd aan Terms.
+- Publieke productkaarten en productdetailpagina's tonen bekende productnamen in de actieve taal en blijven voor onbekende producten veilig terugvallen op de catalogusnaam.
 
 ## [0.10.0] - 2026-07-06
 

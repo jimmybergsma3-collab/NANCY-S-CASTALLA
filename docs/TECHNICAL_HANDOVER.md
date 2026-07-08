@@ -1,12 +1,12 @@
 # Technisch overdrachtsrapport: Nancy's Castalla
 
 **Documentstatus:** actuele technische situatie  
-**Peildatum:** 7 juli 2026
+**Peildatum:** 8 juli 2026
 **Productiedomein:** `https://www.nancys.es`  
 **Repository:** `jimmybergsma3-collab/NANCY-S-CASTALLA`  
 **Doelgroep:** ontwikkelaars, beheerders en technische partners die het project zonder voorafgaande broncodekennis moeten kunnen overnemen.
 
-> Dit rapport beschrijft uitsluitend de aantoonbare actuele toestand van de repository. Wijzigingsgeschiedenis staat in `CHANGELOG.md`; de motivatie achter technische beslissingen staat in `DECISIONS.md`. Instellingen die alleen in Vercel, Supabase, Resend of DNS bestaan, kunnen vanuit de broncode niet volledig worden bewezen en zijn als extern te controleren gemarkeerd. De migraties in `supabase/migrations` gelden als de gezaghebbende databasespecificatie; `supabase-schema.sql` en oudere documentatie kunnen achterlopen.
+> Dit rapport beschrijft uitsluitend de aantoonbare actuele toestand van de repository. De korte operationele go-live-status staat in `../PROJECT_STATUS.md`; wijzigingsgeschiedenis staat in `CHANGELOG.md`; de motivatie achter technische beslissingen staat in `DECISIONS.md`. Instellingen die alleen in Vercel, Supabase, Resend of DNS bestaan, kunnen vanuit de broncode niet volledig worden bewezen en zijn als extern te controleren gemarkeerd. De migraties in `supabase/migrations` gelden als de gezaghebbende databasespecificatie; `supabase-schema.sql` en oudere documentatie kunnen achterlopen.
 
 ## Inhoud
 
@@ -52,13 +52,13 @@ De applicatie is online als productie-implementatie op Vercel, maar functioneel 
 | Publieke catalogus | Werkend | Categorieën, zoeken, productkaarten en detailpagina's |
 | Productbeheer | Werkend | Toevoegen, wijzigen, verwijderen, foto's uploaden en zichtbaarheid beheren |
 | Klantregistratie en login | Werkend | Supabase Auth, e-mailbevestiging en wachtwoordherstel |
-| Klantprofiel | Werkend, beperkt | Naam, e-mail, telefoon, adres en taal; account toont orderhistorie op hoofdniveau |
+| Klantprofiel | Werkend | Naam, e-mail, telefoon, adres en taal; account toont uitklapbare orderdetails en eigen factuurdownload |
 | Database-orders | Werkend | Server-side prijscontrole, idempotentie, orderopslag en volledige admin-detailweergave |
 | WhatsApp-bestellen | Werkend | CTA en samengesteld bericht; dit is een apart kanaal naast database-orders |
 | Voorraad | Werkend voor kernflow | Afboeken bij bevestiging, terugboeken bij annulering |
 | E-mail | Werkend mits extern correct ingesteld | Resend voor orders, Supabase Custom SMTP voor accounts |
 | Online betaling | Niet actief | Bizum, bankoverschrijving en contant worden handmatig afgehandeld |
-| Inkoop/rapportages | Voorbereid | Datamodel en/of read-only schermen, nog geen complete bedrijfsworkflow |
+| Inkoop/rapportages | Gedeeltelijk | Inkoop is overzicht/voorbereiding; rapportages tonen basistellingen en betaalde omzet |
 | Facturatie | Werkend na migratie | Orderfactuur, snapshots, PDF, klantdownload en Resend-verzending; nog geen creditnota of boekhoudexport |
 
 ## 1.3 Productie versus development
@@ -70,14 +70,14 @@ De applicatie is online als productie-implementatie op Vercel, maar functioneel 
 
 ## 1.4 Belangrijkste openstaande onderdelen
 
-1. Betrouwbare productiecontrole van alle Vercel-, Supabase-, Resend- en DNS-instellingen.
-2. Volledige orderworkflow in de backoffice, inclusief duidelijke overgangsregels en foutafhandeling.
-3. Voorraadreservering of een expliciete pre-orderstrategie om gelijktijdige overboeking te voorkomen.
-4. Server-side handhaving van bezorgminimum, bezorgkosten en bezorggebied.
-5. Volwaardige inkoop, facturatie, leveranciersbeheer en rapportages.
-6. Juridische en inhoudelijke vertalingen voor alle talen.
+1. Betrouwbare productiecontrole van alle Vercel-, Supabase-, Resend- en DNS-instellingen en een volledige productie-smoketest.
+2. Formele order-state-machine, statushistorie en voorraadreserveringsbesluit; de huidige kerntransities werken al transactioneel.
+3. Server-side handhaving van bezorgminimum, bezorgkosten en bezorggebied.
+4. Volwaardige inkoop, goederenontvangst, leveranciersmutaties en uitgebreide rapportages.
+5. Creditnota's, boekhoudexport en fiscale validatie; normale interne facturen en PDF's zijn al aanwezig.
+6. Resterende productinhoud, backoffice en compliance professioneel vertalen en controleren.
 7. Product- en categorie-SEO, structured data en volledige sitemap.
-8. Geautomatiseerde tests, CI, monitoring, audit logging en operationele runbooks.
+8. Rate limiting, individuele admins/MFA, geautomatiseerde tests, CI, monitoring, auditlogging en operationele runbooks.
 
 ---
 
@@ -302,6 +302,7 @@ Belangrijkste kolommen:
 - Klant: `customer_id`, `customer_name`, `customer_email`, `customer_phone`.
 - Fulfilment: `fulfillment`, `delivery_method`, `notes`.
 - Financieel: `subtotal_ex_vat`, `vat_total`, `total`, `payment_status`.
+- Betaalvoorkeur: `payment_method` met `bizum`, `bank-transfer`, `cash`, `card` of `pending`.
 - Proces: `status`, `inventory_committed`.
 - E-mailtracking: tijdstempels voor admin-, klant- en statusmail.
 - Audit: `created_at`, `updated_at`.
@@ -369,7 +370,7 @@ RLS: ingeschakeld.
 
 **Doel:** onveranderlijke verkoopfactuurkop gekoppeld aan een order en klant.
 
-Kolommen omvatten UUID, oplopend uniek factuurnummer, order/ordernummer, klant, klant-/adres-/taalsnapshot, optioneel klant-NIF/CIF/NIE, bedrijfsnaam en fiscaal adres, status, betaalmethode indien bekend, totalen excl. btw/btw/incl. btw, uitgiftedatum, e-mailtijdstip en timestamps. Een partiele unieke index op `order_id` staat maximaal één normale factuur per order toe.
+Kolommen omvatten UUID, oplopend uniek factuurnummer, order/ordernummer, klant, klant-/adres-/taalsnapshot, optioneel klant-NIF/CIF/NIE, bedrijfsnaam en fiscaal adres, status, betaalmethode, totalen excl. btw/btw/incl. btw, uitgiftedatum, e-mailtijdstip en timestamps. Een partiele unieke index op `order_id` staat maximaal één normale factuur per order toe.
 
 ## 4.10 `invoice_items`
 
@@ -560,7 +561,7 @@ Leveranciers worden uit de database getoond. Inkooporders hebben een voorbereid 
 
 De orderdetailweergave maakt een factuur wanneer de order `confirmed`, `ready_for_collection` of `delivered` is, of wanneer de betaling `paid` is. De database-RPC maakt kop en regels transactioneel en retourneert bij herhaling dezelfde bestaande factuur. De facturatielijst toont nummer, klant, order, datum, totaal, status en e-mailstatus, met download- en verzendacties.
 
-PDF's worden server-side met `pdf-lib` opgebouwd uit de factuursnapshot en centrale bedrijfsconfiguratie. Ze zijn Spaans/Engels, gebruiken Spaanse euro-notatie, tonen verkoper- en klantgegevens, productregels en een IVA-uitsplitsing per aanwezig tarief. Resend verstuurt de PDF als bijlage. Klantdownloads controleren eerst Supabase Auth en daarna dat `invoice.customer_id` bij de ingelogde gebruiker hoort. Admin waarschuwt wanneer `businessConfig.fiscalName` of `fiscalId` ontbreekt.
+PDF's worden server-side met `pdf-lib` opgebouwd uit de factuursnapshot en centrale bedrijfsconfiguratie. Ze zijn Spaans/Engels, gebruiken Spaanse euro-notatie, tonen verkoper- en klantgegevens, productregels, betaalmethode en een IVA-uitsplitsing per aanwezig tarief. De PDF-presentatie heeft een prominenter logo, duidelijk factuurnummer, meer witruimte en een sterker totalenblok. Resend verstuurt de PDF als bijlage. Klantdownloads controleren eerst Supabase Auth en daarna dat `invoice.customer_id` bij de ingelogde gebruiker hoort. Admin waarschuwt wanneer `businessConfig.fiscalName` of `fiscalId` ontbreekt.
 
 Nog niet aanwezig: creditnota's, formele btw-aangifte, boekhoudexport en betalingsmatching. De factuur toont `NANCY'S CASTALLA` prominent als handelsnaam en `JIMMY BERGSMA` kleiner als titular/autónomo, met NIF/NIE `Y8875740P` en Calle Murcia 111. Dezelfde titular staat in Terms. Laat deze keuze en de fiscale inhoud vóór officieel gebruik controleren door een gestor/boekhouder.
 
@@ -590,7 +591,7 @@ Ondersteunde localecodes:
 | `es` | Spaans, belangrijk voor Spaanse en Zuid-Amerikaanse klanten |
 | `sv` | Zweeds als huidige Scandinavische representatie |
 
-Header, homepage, catalogus, productgerichte bediening, orderpaneel en klantaccount gebruiken centrale woordenboeken. Productnamen en leveranciersinhoud blijven onvertaald zolang daarvoor geen databasevelden bestaan. Juridische teksten, backoffice en delen van de overige informatieve content zijn nog niet volledig vertaald. `sv` is Zweeds en fungeert tevens als fallback voor Noors, Deens, Fins en IJslands; dit is geen volledige taaldekking voor iedere Scandinavische taal.
+Header, homepage, catalogus, productgerichte bediening, orderpaneel en klantaccount gebruiken centrale woordenboeken. Bekende productnamen worden via een veilige helper vertaald op publieke productkaarten, productdetail, zoeken, cart, ordermails, klantaccount en facturen; onbekende productnamen en leveranciersinhoud vallen terug op de catalogusnaam/broninhoud. Juridische teksten, backoffice en delen van de overige informatieve content zijn nog niet volledig vertaald. `sv` is Zweeds en fungeert tevens als fallback voor Noors, Deens, Fins en IJslands; dit is geen volledige taaldekking voor iedere Scandinavische taal.
 
 ## 7.2 Paginaoverzicht
 
@@ -677,7 +678,7 @@ Er is geen klassiek contactformulier. Contact loopt via `info@nancys.es`, WhatsA
 
 ## 8.2 Gedeeltelijk werkend
 
-- **Vertalingen:** publieke winkel, cart, checkout, klantaccount en juridische basiscontent zijn vertaald; backoffice, productinhoud en transactionele e-mails nog niet volledig.
+- **Vertalingen:** publieke winkel, cart, checkout, klantaccount, juridische basiscontent en bekende productnamen zijn vertaald; backoffice en volledige productinhoud nog niet volledig.
 - **Orderhistorie:** zichtbaar, maar beperkt detail en geen herhaalbestelling/download.
 - **Voorraad:** correct bij statuswijziging, maar geen reservering tijdens `new`.
 - **E-mail:** geen queue/retrydashboard; externe configuratie is essentieel.
@@ -845,7 +846,7 @@ Nog nodig:
 
 `supabase/templates/confirmation.html` en `recovery.html` bevatten merkgebonden accounttemplates. Deze moeten in het Supabase-dashboard bij Auth e-mailtemplates worden toegepast; bestanden in Git alleen veranderen de productie-template niet automatisch.
 
-Ordermails worden in applicatiecode als transactionele tekstinhoud opgebouwd. Er zijn teksten voor ontvangen, bevestigd, betaling ontvangen, klaar voor afhalen, onderweg, afgeleverd en geannuleerd in `en`, `nl`, `de`, `es` en `sv`. De eerste mail vermeldt dat beschikbaarheid eerst wordt gecontroleerd en dat betaalinstructies voor Bizum of bankoverschrijving daarna volgen. Er is nog geen componentgebaseerde HTML-templatebibliotheek.
+Ordermails worden in applicatiecode als transactionele tekst- en HTML-inhoud opgebouwd. Er zijn teksten voor ontvangen, bevestigd, betaling ontvangen, klaar voor afhalen, onderweg, afgeleverd en geannuleerd in `en`, `nl`, `de`, `es` en `sv`. De eerste mail is warmer geformuleerd, toont orderregels, ordernummer, totaal, fulfilment en betaalmethode, en vermeldt dat beschikbaarheid eerst wordt gecontroleerd en betaalinstructies daarna volgen. Er is nog geen componentgebaseerde HTML-templatebibliotheek of queue.
 
 ## 10.3 Environmentvariabelen
 
@@ -1291,13 +1292,15 @@ Klantnaam, e-mail, telefoon, adres en orderhistorie zijn persoonsgegevens. Bij v
 
 # 20. Roadmap
 
+De operationele samenvatting met **Afgeronde mijlpalen** en **TODO vóór livegang** staat in `../PROJECT_STATUS.md`. Onderstaande roadmap bevat alleen vervolgwerk en mag geen reeds opgeleverde orderdetail- of normale factuurfunctionaliteit opnieuw als open werk noemen.
+
 ## 20.1 Korte termijn: productiebetrouwbaarheid
 
 1. Maak een gecontroleerde productiechecklist voor Vercel, Supabase, Resend en DNS.
 2. Voeg smoke- en integratietests toe voor login, registratie, productpagina, order en voorraadtransitie.
 3. Voeg rate limiting toe aan auth, admin en orderendpoints.
 4. Maak bezorgminimum, fee en orderadres server-authoritatief.
-5. Voeg strikte orderstatusovergangen en duidelijke backofficefouten toe.
+5. Voeg een formele order-state-machine en volledige statushistorie toe; bestaande status- en betaalstatusacties blijven behouden.
 6. Controleer/actualiseer Bizum en bankrekening.
 7. Voeg logging, request-ID's, foutmonitoring en e-mailalerts toe.
 8. Maak productqueries databasegericht en gepagineerd.
@@ -1305,10 +1308,10 @@ Klantnaam, e-mail, telefoon, adres en orderhistorie zijn persoonsgegevens. Bij v
 ## 20.2 Middellange termijn: operationele volwassenheid
 
 1. Individuele adminaccounts, rollen, MFA en auditlog.
-2. Orderdetail, statusgeschiedenis, notities en klantcommunicatie in backoffice.
+2. Statusgeschiedenis, uitgebreidere interne notities en communicatie-eventhistorie in backoffice.
 3. Inkoopregels, goederenontvangst en automatische voorraadverhoging.
 4. Voorraadreserveringen, lots en THT.
-5. Factuurregels, PDF's en boekhoudexport.
+5. Creditnota's, formele correcties en boekhoudexport boven op de bestaande factuurregels en PDF's.
 6. Adresboek, postcodezones en bezorgplanning.
 7. Transactional outbox en mailretry.
 8. Volledige vertalingen en producttranslation model.
@@ -1336,8 +1339,8 @@ Mijn aanbevolen volgorde is:
 2. **Misbruikbeperking:** rate limits, CAPTCHA waar passend, individuele adminauth en auditlogging.
 3. **Correcte logistiek:** server-side bezorging en voorraadreservering.
 4. **Performance:** directe productqueries en serverpaginering.
-5. **Operationele tooling:** orderdetail, inkoopontvangst, voorraadcorrectie-RPC en rapportage.
-6. **Facturatie/betaling:** pas koppelen nadat order- en geldmodellen stabiel zijn.
+5. **Operationele tooling:** inkoopontvangst, voorraadcorrectie-RPC, auditlogging en uitgebreidere rapportage.
+6. **Facturatie/betaling:** laat de huidige factuur juridisch controleren en voeg daarna creditnota's, export en eventueel een betaalprovider toe.
 
 ## 21.2 Aanbevolen refactors
 
@@ -1367,7 +1370,7 @@ Nancy's Castalla is een Next.js 16/React 19 webwinkel op Vercel met Supabase als
 
 Producten worden primair uit Supabase geladen. De catalogus bevat rijke commerciële en operationele velden: identificatie, meerdere categorieën, herkomst, afbeelding, zichtbaarheid, voorraadstatus, kostprijs, btw, verkoopprijs, leverancier, verpakkingen, voorraad, ingrediënten en bewaar-/bereidingsinformatie. Een lokale TypeScriptdataset fungeert als fallback, maar kan bij storingen verouderde data tonen. Grote leverancierslijsten zijn via SQL-imports ingebracht en standaard verborgen, waarna de beheerder producten handmatig kan verrijken en publiceren.
 
-De backoffice is bereikbaar via een verborgen adminlogin. Adminauth gebruikt een gedeelde e-mail en wachtwoord uit Vercel-environmentvariabelen en een beveiligde HttpOnly-cookie. Productbeheer is het meest volwassen onderdeel: toevoegen, wijzigen, verwijderen, foto's uploaden, meerdere categorieën, prijzen, btw, klantverpakkingen en online zichtbaarheid. Orders en voorraad zijn operationeel bruikbaar. Klanten, leveranciers en eenvoudige rapportages zijn zichtbaar. Inkoop, facturatie, btw en integraties zijn vooral voorbereid en nog niet volledig uitvoerbaar.
+De backoffice is bereikbaar via een verborgen adminlogin. Adminauth gebruikt een gedeelde e-mail en wachtwoord uit Vercel-environmentvariabelen en een beveiligde HttpOnly-cookie. Productbeheer is het meest volwassen onderdeel: toevoegen, wijzigen, verwijderen, foto's uploaden, meerdere categorieën, prijzen, btw, klantverpakkingen en online zichtbaarheid. Orders, voorraad en normale facturatie zijn operationeel bruikbaar. Klanten, leveranciers en eenvoudige rapportages zijn zichtbaar. Inkoop, creditnota's, boekhoudexport, uitgebreide btw-rapportage en externe integraties zijn vooral voorbereid en nog niet volledig uitvoerbaar.
 
 Klantaccounts gebruiken Supabase Auth. Registratie verstuurt via Supabase en Resend SMTP een branded bevestigingsmail van `account@nancys.es`. Na bevestiging kan de klant inloggen, het profiel met naam, telefoon, adres en taal beheren, het wachtwoord herstellen en orderhistorie bekijken. Een database-trigger koppelt de Auth-user aan de `customers`-tabel. De Supabase-sessie leeft in browserstorage; account-API's verifiëren ieder bearer-token opnieuw en gebruiken daarna server-side service-role toegang.
 
@@ -1377,7 +1380,7 @@ Bij bestellen verstuurt de browser alleen productcodes, aantallen en verpakkings
 
 Nieuwe orders boeken nog geen voorraad af. Wanneer een beheerder een order bevestigt, gebruikt PostgreSQL een transactionele RPC met row locks. Tracked voorraad wordt gecontroleerd en afgeboekt en er wordt een movement geschreven. `inventory_committed` voorkomt dubbel afboeken. Annuleren zet eerder geboekte voorraad terug. Dit is veilig bij gelijktijdige bevestigingen, maar open orders reserveren nog niets. Daardoor kan de tweede van twee concurrerende orders pas bij bevestiging onvoldoende voorraad blijken te hebben.
 
-Ordermail loopt via de Resend API met `orders@nancys.es`; accountmail loopt via Supabase Custom SMTP met `account@nancys.es`. De order wordt opgeslagen voordat mail wordt verstuurd, zodat een mailstoring geen orderverlies of duplicatie veroorzaakt. Idempotency headers verminderen dubbele mails. Er is nog geen queue, automatische retry of uitgebreid eventlog. DNS-verificatie, SMTP-credentials, redirect-URL's en templates worden buiten Git in Resend/Supabase beheerd en moeten via een deploymentchecklist worden bewaakt.
+Ordermail loopt via de Resend API met `orders@nancys.es` en afzendernaam `Nancy's Castalla Orders`; accountmail loopt via Supabase Custom SMTP met `account@nancys.es`. Order-, status- en factuurmails hebben responsive HTML in de merkstijl met logo, groene huisstijl, duidelijke koppen en vaste contactfooter. De order wordt opgeslagen voordat mail wordt verstuurd, zodat een mailstoring geen orderverlies of duplicatie veroorzaakt. Idempotency headers verminderen dubbele mails. Er is nog geen queue, automatische retry of uitgebreid eventlog. DNS-verificatie, SMTP-credentials, redirect-URL's en templates worden buiten Git in Resend/Supabase beheerd en moeten via een deploymentchecklist worden bewaakt.
 
 WhatsApp blijft een belangrijk apart kanaal. De site bouwt een bericht naar `+34 644 05 97 69`, maar zo'n WhatsApp-bericht wordt niet vanzelf een databaseorder. Betaling gebeurt handmatig via Bizum, overschrijving of contant; Stripe en kaartbetaling zijn niet actief. Een providerstructuur maakt latere koppeling mogelijk. De bankrekening is nog een placeholder en het Bizum-nummer moet worden gecontroleerd op het nieuwe zakelijke nummer.
 
