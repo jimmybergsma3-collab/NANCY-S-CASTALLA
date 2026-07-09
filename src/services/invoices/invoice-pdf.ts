@@ -1,8 +1,11 @@
-import { readFile } from "node:fs/promises";
+﻿import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import { businessConfig } from "@/config/business";
 import { formatInvoiceMoney, invoiceLabel } from "@/lib/invoice-format";
+import { isLocale } from "@/i18n/config";
+import { paymentMethodLabel } from "@/lib/payment";
+import { translateProductName } from "@/lib/product-translations";
 import type { BackofficeInvoice } from "@/types/backoffice";
 
 const forest = rgb(0.051, 0.184, 0.133);
@@ -18,6 +21,7 @@ function drawText(page: PDFPage, value: string, x: number, y: number, font: PDFF
 function clip(value: string, max: number) { return value.length > max ? `${value.slice(0, max - 1)}.` : value; }
 
 export async function createInvoicePdf(invoice: BackofficeInvoice) {
+  const locale = isLocale(invoice.customer_language) ? invoice.customer_language : "en";
   const pdf = await PDFDocument.create();
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
@@ -26,22 +30,23 @@ export async function createInvoicePdf(invoice: BackofficeInvoice) {
 
   try {
     const logo = await pdf.embedJpg(await readFile(path.join(process.cwd(), "public", "nancys-castalla-logo.jpg")));
-    page.drawImage(logo, { x: 46, y: 744, width: 62, height: 62 });
+    page.drawImage(logo, { x: 46, y: 736, width: 76, height: 76 });
   } catch { /* A missing logo must not block an invoice. */ }
 
-  drawText(page, businessConfig.businessName, 122, y, bold, 20);
-  drawText(page, businessConfig.businessActivity, 122, y - 18, regular, 7.5, muted);
-  drawText(page, `Titular / Fiscal name: ${safe(businessConfig.fiscalName)}`, 122, y - 34, regular, 8, muted);
-  drawText(page, `NIF/NIE: ${safe(businessConfig.fiscalId)}`, 122, y - 48, regular, 8, muted);
-  drawText(page, `Dirección fiscal / Fiscal address: ${safe(businessConfig.fiscalAddress)}`, 122, y - 62, regular, 8, muted);
-  drawText(page, `${businessConfig.emails.info}  |  ${businessConfig.displayWhatsappNumber}`, 122, y - 76, regular, 8, muted);
+  drawText(page, businessConfig.businessName, 136, y, bold, 21);
+  drawText(page, businessConfig.businessActivity, 136, y - 19, regular, 7.5, muted);
+  drawText(page, `Titular / Fiscal name: ${safe(businessConfig.fiscalName)}`, 136, y - 36, regular, 8, muted);
+  drawText(page, `NIF/NIE: ${safe(businessConfig.fiscalId)}`, 136, y - 50, regular, 8, muted);
+  drawText(page, `Dirección fiscal / Fiscal address: ${safe(businessConfig.fiscalAddress)}`, 136, y - 64, regular, 8, muted);
+  drawText(page, `${businessConfig.emails.info}  |  ${businessConfig.displayWhatsappNumber}`, 136, y - 78, regular, 8, muted);
 
+  page.drawRectangle({ x: 386, y: y - 91, width: 163, height: 105, color: rgb(0.969, 0.937, 0.851) });
   drawText(page, "FACTURA / INVOICE", 397, y, bold, 17, coffee);
-  drawText(page, invoiceLabel(invoice), 397, y - 24, bold, 10);
+  drawText(page, invoiceLabel(invoice), 397, y - 25, bold, 13, forest);
   drawText(page, `Fecha / Date: ${date(invoice.issued_at || invoice.created_at)}`, 397, y - 42, regular, 7.5, muted);
   drawText(page, `Pedido / Order: ${orderLabel(invoice.order_number)}`, 397, y - 56, regular, 7.5, muted);
   drawText(page, `Estado / Status: ${safe(invoice.status)}`, 397, y - 70, regular, 7.5, muted);
-  drawText(page, `Pago / Payment: ${safe(invoice.payment_method)}`, 397, y - 84, regular, 7.5, muted);
+  drawText(page, `Pago / Payment: ${paymentMethodLabel(invoice.payment_method, locale)}`, 397, y - 84, regular, 7.5, muted);
 
   y = 675;
   page.drawLine({ start: { x: 46, y: y + 16 }, end: { x: 549, y: y + 16 }, color: rule, thickness: 1 });
@@ -70,7 +75,7 @@ export async function createInvoicePdf(invoice: BackofficeInvoice) {
   for (const item of invoice.invoice_items) {
     if (y < 190) { page = pdf.addPage([595.28, 841.89]); y = 790; tableHeader(); }
     drawText(page, clip(item.product_id || "-", 11), 52, y, regular, 7);
-    drawText(page, clip(item.product_name, 32), 105, y, regular, 7);
+    drawText(page, clip(translateProductName(item.product_name, locale), 32), 105, y, regular, 7);
     drawText(page, clip(safe(item.package_label), 16), 268, y, regular, 7);
     drawText(page, String(item.quantity), 350, y, regular, 7);
     drawText(page, formatInvoiceMoney(item.unit_price_incl_vat), 384, y, regular, 7);
@@ -85,16 +90,18 @@ export async function createInvoicePdf(invoice: BackofficeInvoice) {
     const rate = Number(item.vat_rate); const values = vatGroups.get(rate) ?? { base: 0, vat: 0 };
     values.base += Number(item.line_total_ex_vat); values.vat += Number(item.line_vat); vatGroups.set(rate, values);
   }
-  y -= 14;
+  y -= 18;
+  page.drawRectangle({ x: 292, y: y - 110, width: 257, height: 132, color: rgb(0.984, 0.969, 0.929) });
   drawText(page, "RESUMEN IVA / VAT SUMMARY", 300, y, bold, 8, coffee); y -= 18;
   drawText(page, "Base imponible", 300, y, bold, 7, muted); drawText(page, "Tipo IVA", 402, y, bold, 7, muted); drawText(page, "Cuota IVA", 462, y, bold, 7, muted); y -= 16;
   for (const [rate, values] of [...vatGroups].sort(([a], [b]) => a - b)) {
     drawText(page, formatInvoiceMoney(values.base), 300, y, regular, 8); drawText(page, `${rate}%`, 402, y, regular, 8); drawText(page, formatInvoiceMoney(values.vat), 462, y, regular, 8); y -= 16;
   }
-  page.drawLine({ start: { x: 300, y: y + 7 }, end: { x: 549, y: y + 7 }, color: forest, thickness: 1 });
+  page.drawLine({ start: { x: 300, y: y + 7 }, end: { x: 535, y: y + 7 }, color: forest, thickness: 1 });
   drawText(page, "Subtotal sin IVA / Subtotal excl. VAT", 300, y - 8, regular, 8); drawText(page, formatInvoiceMoney(invoice.total_ex_vat), 480, y - 8, bold, 8); y -= 23;
   drawText(page, "IVA total / Total VAT", 300, y - 8, regular, 8); drawText(page, formatInvoiceMoney(invoice.total_vat), 480, y - 8, bold, 8); y -= 23;
-  drawText(page, "TOTAL FACTURA / INVOICE TOTAL", 300, y - 8, bold, 10); drawText(page, formatInvoiceMoney(invoice.total_incl_vat), 480, y - 8, bold, 10, coffee);
+  page.drawRectangle({ x: 296, y: y - 14, width: 245, height: 25, color: forest });
+  drawText(page, "TOTAL FACTURA / INVOICE TOTAL", 304, y - 5, bold, 9, white); drawText(page, formatInvoiceMoney(invoice.total_incl_vat), 466, y - 5, bold, 10, white);
 
   pdf.getPages().forEach((pdfPage, index, pages) => {
     pdfPage.drawLine({ start: { x: 46, y: 58 }, end: { x: 549, y: 58 }, color: rule, thickness: 0.7 });

@@ -1,6 +1,6 @@
 # Projectstatus: Nancy's Castalla
 
-**Peildatum:** 8 juli 2026
+**Peildatum:** 9 juli 2026
 **Fase:** productie-MVP / pre-orderfase
 **Productiedomein:** `https://www.nancys.es`
 **Bronnen voor deze status:** volledige Git-geschiedenis vanaf de eerste webshopcommit, actuele routes, services, migraties en documentatie.
@@ -13,8 +13,8 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 |---|---|---|
 | Publieke webshop | Operationeel | Home, categorieën, zoeken, productdetail, winkelmand en checkout bestaan in vijf locales. |
 | Pre-orders | Operationeel | Pre-order is bestelbaar bij voorraad nul; coming-soon is geblokkeerd. |
-| Klantaccount | Operationeel | Registratie, login, herstel, profiel, orderhistorie, orderdetails en eigen factuurdownload. |
-| Orders | Operationeel | Serverprijzen, IVA, idempotency, orderregels, ordernummer, klantkoppeling en adminbeheer. |
+| Klantaccount | Operationeel | Registratie loopt via de centrale serverroute, toont een duidelijke bevestigings- en spammapmelding, ondersteunt resend na 60 seconden, en bevat login, herstel, profiel, orderhistorie, orderdetails en eigen factuurdownload. Accountbevestigingsmail blijft afhankelijk van Supabase SMTP/Resend/DNS-configuratie. |
+| Orders | Operationeel | Serverprijzen, IVA, idempotency, orderregels, ordernummer, klantkoppeling en adminbeheer. E-mail is secundair en blokkeert orderopslag niet. De order-API logt een diagnose-id per stap en heeft een service-role REST-fallback wanneer de Supabase RPC in productie achterloopt of faalt. |
 | Voorraad | Operationeel met beperking | Afboeken bij bevestiging en terugboeken bij annulering; geen reservering tijdens status `new`. |
 | Facturatie | Operationeel voor normale facturen | Unieke factuur per order, snapshots, Spaans/Engelse PDF, admin- en klantdownload, e-mail. |
 | E-mail | Operationeel mits extern geconfigureerd | Resend voor order/factuur; Supabase SMTP voor accountmail; geen queue of automatische retry. |
@@ -33,14 +33,15 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 - Persistente winkelmand met badge, aantallen wijzigen, regels verwijderen, subtotalen, IVA en totaal.
 - Checkout met klantgegevens, fulfilment en betaalvoorkeur.
 - Gedeelde beschikbaarheidsregels: `preorder` bestelbaar zonder voorraad, `coming-soon` niet bestelbaar en `available` met inventorytracking gecontroleerd.
-- Veilige vertaling van bekende productnamen in publieke kaarten, productdetail, zoeken, cart, account, e-mail en factuur; onbekende namen vallen terug op catalogusdata.
+- Veilige vertaling van bekende productnamen en klantgerichte productbeschrijvingen in publieke kaarten, productdetail, zoeken, cart, account, e-mail en factuur; onbekende niet-vertaalde beschrijvingen vallen per locale terug op een korte vertaling-volgt-melding in plaats van willekeurige leveranciersspraak.
 
 ## Bestellingen en klantaccount
 
-- Supabase Auth-registratie, e-mailverificatie, login, logout en wachtwoordherstel.
+- Supabase Auth-registratie via `POST /api/auth/register`, e-mailverificatie, resend van bevestigingsmail met 60 seconden wachttijd, login, logout en wachtwoordherstel.
 - Klantprofiel met naam, e-mail, telefoon, adres en leidende taalvoorkeur.
 - Server-side prijs-, verpakking-, beschikbaarheids-, voorraad- en IVA-validatie.
 - Idempotente ordercreatie met UUID, oplopend nummer `NC-000001`, klantkoppeling en orderregelsnapshot.
+- Orderopslag blijft werken wanneer e-mail faalt; de checkout toont specifieke foutmeldingen voor onder meer verouderde verpakkingen, ontbrekende gegevens en tijdelijke serviceproblemen. De API geeft bij fouten een diagnose-id en backendmelding terug en kan bij herstelbare RPC-problemen direct via de service-role REST API opslaan.
 - Klantorderhistorie met uitklapbare orderdetails, producten, aantallen, status, betaalstatus, totalen en factuurdownload.
 - Transactionele voorraadafboeking bij bevestiging, terugboeking bij annulering en movement-audittrail.
 
@@ -99,4 +100,4 @@ Uitsluitend punten die nog daadwerkelijk openstaan voor betrouwbare eerste klant
 
 ## Laatste technische verificatie
 
-Op 8 juli 2026 zijn `npm run lint` en `npm run build` succesvol uitgevoerd op de actuele codebase. Een lokale regressietest bevestigde catalogus, cartvalidatie, orderopslag en adminweergave. De lokale klantmail kon niet opnieuw worden bewezen omdat `RESEND_API_KEY` lokaal ontbrak; externe productiewerking moet daarom expliciet in Vercel/Resend worden gecontroleerd.
+Op 9 juli 2026 is de registratieflow aangepast om Supabase-signup via de centrale serverroute te laten lopen, zodat de bevestigingslink de productiebase-URL en locale gebruikt. De productdetail-bestelkaart rendert geen tweede productfoto meer, om Android/Chrome overlap bij onder andere Potato Scones te voorkomen. De checkout is getest met actuele Potato Scones-verpakking: Collection is opgeslagen als `NC-000008`, Local delivery als `NC-000009`, en een verouderde verpakking geeft nu `package_unavailable` met een duidelijke boodschap. Daarna is extra testerfeedback verwerkt: registratie wist velden na succes, toont expliciet inbox/spammap, biedt resend na 60 seconden, het accountdashboard heeft een sessie-fallback wanneer profieldata traag of afwezig is, en Nederlandse productkaarten/details tonen geen Engelse of Spaanse leveranciersomschrijvingen meer maar Nederlandse bekende teksten of `Vertaling volgt binnenkort`. Een mobiele productlijstcontrole op 390px breed gaf geen horizontale overflow en geen browserconsole-errors. Een live-productietest liet zien dat `POST /api/cart/validate` werkte maar `POST /api/orders` op de live deployment 500 terugstuurde met alleen `order_failed`; de repository is daarop uitgebreid met staplogging, diagnose-id, echte foutmelding in de API-response en een REST-fallback wanneer de order-RPC in productie faalt of achterloopt. Lokaal is na deze patch een testorder opgeslagen als `NC-000012`. `npm run lint` en `npm run build` zijn succesvol uitgevoerd.

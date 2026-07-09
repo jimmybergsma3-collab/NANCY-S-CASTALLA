@@ -8,6 +8,7 @@ export type OrderStatus =
   | "cancelled";
 
 export type PaymentStatus = "pending" | "paid" | "failed" | "refunded" | "cancelled";
+export type PaymentMethod = "bizum" | "bank-transfer" | "cash" | "card" | "pending";
 
 export type InvoiceSummary = {
   id: string;
@@ -57,6 +58,7 @@ export type OrderInput = {
   customerEmail: string;
   customerPhone?: string;
   fulfillment?: string;
+  paymentMethod?: PaymentMethod;
   notes?: string;
   total?: number;
   lines: OrderLineInput[];
@@ -80,6 +82,7 @@ export type BackofficeOrder = {
   total: number;
   status: OrderStatus;
   payment_status: PaymentStatus;
+  payment_method?: PaymentMethod;
   delivery_method: string;
   created_at: string;
   updated_at?: string;

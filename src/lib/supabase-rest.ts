@@ -10,6 +10,13 @@ type RequestOptions = {
   };
 };
 
+export class SupabaseRestError extends Error {
+  constructor(message: string, public status: number, public path: string) {
+    super(message);
+    this.name = "SupabaseRestError";
+  }
+}
+
 export async function supabaseAdminFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
   if (!hasSupabaseAdmin()) {
     throw new Error("Supabase admin environment variables are not configured.");
@@ -30,7 +37,7 @@ export async function supabaseAdminFetch<T>(path: string, options: RequestOption
 
   if (!response.ok) {
     const message = await response.text();
-    throw new Error(message || `Supabase request failed with ${response.status}`);
+    throw new SupabaseRestError(message || `Supabase request failed with ${response.status}`, response.status, path);
   }
 
   if (response.status === 204) {
@@ -40,7 +47,7 @@ export async function supabaseAdminFetch<T>(path: string, options: RequestOption
   return (await response.json()) as T;
 }
 
-export async function supabaseAuthSignup(input: { email: string; password: string; name: string; redirectTo: string }) {
+export async function supabaseAuthSignup(input: { email: string; password: string; name: string; locale: string; redirectTo: string }) {
   if (!env.supabaseUrl || !env.supabasePublishableKey) {
     throw new Error("Supabase public environment variables are not configured.");
   }
@@ -54,13 +61,21 @@ export async function supabaseAuthSignup(input: { email: string; password: strin
     body: JSON.stringify({
       email: input.email,
       password: input.password,
-      data: { name: input.name },
+      data: { name: input.name, language: input.locale },
     }),
   });
 
   if (!response.ok) {
     const message = await response.text();
-    throw new Error(message || `Supabase signup failed with ${response.status}`);
+    let parsed: { error_code?: string; code?: string; msg?: string; message?: string } | undefined;
+    try {
+      parsed = JSON.parse(message) as typeof parsed;
+    } catch {
+      parsed = undefined;
+    }
+    const error = new Error(parsed?.msg || parsed?.message || message || `Supabase signup failed with ${response.status}`);
+    error.name = parsed?.error_code || parsed?.code || `SUPABASE_SIGNUP_${response.status}`;
+    throw error;
   }
 
   return response.json();

@@ -421,12 +421,12 @@ export const dictionaries = {
         "Ett fokuserat första sortiment för en liten internationell butik: nederländska snacks, brittiska och irländska favoriter, sydamerikanska skafferivaror, bageriförbeställningar, frukostprodukter, kaffe, drycker och tillbehör.",
     },
     bread: {
-      eyebrow: "Bread on pre-order",
-      title: "Bread & bakery",
+      eyebrow: "Brod pa forbestallning",
+      title: "Brod & bageri",
       intro:
-        "Bread is available by pre-order when minimum demand is reached. Order interest is collected via WhatsApp first, then Nancy's Castalla confirms availability, delivery moments and payment instructions.",
-      how: "How it works:",
-      howText: "choose bread, send the WhatsApp order, and wait for confirmation before payment.",
+        "Brod kan forbestallas nar minsta efterfragan har uppnatts. Nancy's Castalla bekraftar tillganglighet, leveranstillfallen och betalningsinformation innan betalning.",
+      how: "Sa fungerar det:",
+      howText: "valj brod, skicka din bestallning och vanta pa bekraftelse innan betalning.",
     },
     delivery: {
       eyebrow: "Collection & delivery",

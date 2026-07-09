@@ -42,6 +42,24 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Verbeterd
 
+- `POST /api/orders` logt nu de volledige veilige orderflow met diagnose-id: ontvangst, authcheck, cartvalidatie, totaalberekening, RPC-poging, eventuele fallback, orderopslag en e-mailstap.
+- Orderfouten sturen nu een `message` en `diagnosticId` terug naar de browser, zodat testers en beheer exactere feedback zien dan alleen `The order could not be sent`.
+- Orderopslag heeft een service-role REST-fallback wanneer de Supabase RPC `create_validated_order` faalt door schema-cache, ontbrekende functie, permissie of `payment_method`-mismatch; customer, order en orderregels worden dan alsnog opgeslagen.
+- De checkout toont backendfoutmeldingen rechtstreeks aan de klant/tester in plaats van relevante serverdetails weg te filteren.
+- Registratie toont na succesvolle aanmaak nu een duidelijke bevestigingsmelding met spammap-instructie in `en`, `nl`, `de`, `es` en `sv`.
+- Het registratieformulier wist naam, e-mail en wachtwoorden na succesvolle aanmaak, zodat gevoelige gegevens niet zichtbaar blijven.
+- Klanten kunnen na registratie de bevestigingsmail opnieuw aanvragen met een zichtbare 60-seconden wachttijd en duidelijke rate-limitmelding.
+- Het accountdashboard valt terug op de actieve Supabase-sessie wanneer het customerprofiel of de orderhistorie tijdelijk niet geladen kan worden, zodat naam, e-mail, telefoon, adres en taal altijd zichtbaar of invulbaar blijven.
+- Nederlandse productkaarten en productdetails tonen voor bekende producten Nederlandse teksten; onbekende niet-vertaalde leveranciersbeschrijvingen vallen terug op `Vertaling volgt binnenkort` in plaats van willekeurig Engels of Spaans.
+- Productbeschrijvingen hebben nu locale-fallbacks voor `en`, `nl`, `de`, `es` en `sv`, inclusief categoriegerichte fallbackteksten.
+- Het Nederlandse preorderlabel is klantvriendelijker gemaakt als `Voorbestelling`.
+- Mobiele productkaarten hebben extra overflowbescherming om brede categorie- of productlabels binnen de kaart te houden.
+- `POST /api/orders` slaat orders op voordat e-mail wordt geprobeerd; een Resend- of netwerkfout kan de ordercreatie niet meer terugdraaien of blokkeren.
+- Ordercreatie is backwards-compatible gemaakt met Supabase-omgevingen waar de `payment_method`-RPC-parameter nog niet beschikbaar is of de schema-cache achterloopt.
+- Checkout toont duidelijkere foutmeldingen voor ontbrekende velden, tijdelijke serviceproblemen, verouderde verpakkingen, niet-beschikbare producten en voorraadproblemen.
+- Local delivery vraagt client-side expliciet om een bezorgadres voordat de order wordt verstuurd.
+- Registratie gebruikt nu de centrale serverroute `POST /api/auth/register`, zodat de Supabase-bevestigingsmail altijd met de productiebase-URL uit `NEXT_PUBLIC_SITE_URL` en de gekozen locale wordt aangevraagd.
+- Signup-fouten van Supabase Auth geven nu een stabiele foutcode terug aan het formulier, zodat rate limits en SMTP/Auth-problemen voorspelbaarder worden afgehandeld.
 - Order-, status- en factuurmails gebruiken nu branded responsive HTML met logo, groene huisstijl, duidelijke koppen en vaste contactfooter.
 - Nieuwe orderbevestiging gebruikt warmere tekst en toont orderregels, ordernummer, totaal, fulfilment en betaalmethode.
 - Order- en factuurmail gebruiken afzendernaam `Nancy's Castalla Orders` in plaats van een generieke mailboxnaam.
@@ -58,6 +76,10 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 - Admin waarschuwt wanneer fiscale naam of NIF/NIE van de verkoper nog ontbreekt.
 - Fiscale factuurconfiguratie ingesteld met handelsnaam `NANCY'S CASTALLA`, titular `JIMMY BERGSMA` en NIF/NIE `Y8875740P`; titular tevens toegevoegd aan Terms.
 - Publieke productkaarten en productdetailpagina's tonen bekende productnamen in de actieve taal en blijven voor onbekende producten veilig terugvallen op de catalogusnaam.
+
+### Opgelost
+
+- Productdetailpagina's tonen in de add-to-cart sectie niet langer opnieuw dezelfde productfoto; dit voorkomt dat Android/Chrome bij producten zoals Potato Scones meerdere afbeeldingen gestapeld of overlappend lijkt te tonen.
 
 ## [0.10.0] - 2026-07-06
 

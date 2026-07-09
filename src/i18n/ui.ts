@@ -140,7 +140,7 @@ const copies: Record<Locale, UiCopy> = {
       "Breakfast products": "Ontbijtproducten", "Coffee & drinks": "Koffie & dranken", "Sauces & condiments": "Sauzen & smaakmakers",
       "Non-food & packaging": "Non-food & verpakkingen",
     },
-    statuses: { available: "Beschikbaar", preorder: "Pre-order", "coming-soon": "Binnenkort" },
+    statuses: { available: "Beschikbaar", preorder: "Voorbestelling", "coming-soon": "Binnenkort" },
     whatsappMessage: { address: "Bezorgadres, indien nodig:", availability: "Ik wil graag informeren naar de actuele beschikbaarheid.", collection: "Afhalen", greeting: "Hallo", localDelivery: "Lokale bezorging", name: "Naam:", payment: "Betaalvoorkeur: Bizum / bankoverschrijving / contant", preOrder: "Ik wil graag een pre-order plaatsen:", preferredOption: "Gewenste optie", preferredTime: "Gewenst afhaal- of bezorgmoment:", total: "Geschat producttotaal" },
   },
   de: {

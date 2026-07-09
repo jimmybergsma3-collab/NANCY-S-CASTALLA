@@ -14,10 +14,11 @@ import { evaluateProductAvailability } from "@/lib/product-availability";
 import { getUiCopy } from "@/i18n/ui";
 import { getCartCopy } from "@/i18n/cart";
 import { useCart } from "@/components/cart/CartProvider";
+import { translateProductName } from "@/lib/product-translations";
 
-type Props = { products: Product[]; initialCategory?: ProductCategory | "All"; locale?: Locale; compactCardImages?: boolean };
+type Props = { products: Product[]; initialCategory?: ProductCategory | "All"; locale?: Locale; compactCardImages?: boolean; hideCardImages?: boolean };
 
-export function ProductOrder({ products, initialCategory = "All", locale = defaultLocale, compactCardImages = false }: Props) {
+export function ProductOrder({ products, initialCategory = "All", locale = defaultLocale, compactCardImages = false, hideCardImages = false }: Props) {
   const dictionary = getDictionary(locale);
   const ui = getUiCopy(locale);
   const cartCopy = getCartCopy(locale);
@@ -30,7 +31,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
   const categories = useMemo(() => ["All", ...Array.from(new Set(products.flatMap(getProductCategories)))] as const, [products]);
   const visibleProducts = (category === "All" ? products : products.filter((product) => productMatchesCategory(product, category))).filter((product) => {
     const query = search.trim().toLowerCase();
-    return !query || [product.id, product.name, product.description, getProductCategories(product).join(" "), product.origin, product.supplierCode].join(" ").toLowerCase().includes(query);
+    return !query || [product.id, product.name, translateProductName(product.name, locale), product.description, getProductCategories(product).join(" "), product.origin, product.supplierCode].join(" ").toLowerCase().includes(query);
   });
 
   return (
@@ -49,6 +50,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
       <div className="grid gap-4 md:grid-cols-2">
         {visibleProducts.length === 0 ? <div className="rounded-lg border border-forest/10 bg-white p-6 text-sm text-forest/70 shadow-soft md:col-span-2">{ui.products.noProducts}</div> : null}
         {visibleProducts.map((product) => {
+          const productName = translateProductName(product.name, locale);
           const productHref = `/${locale}/products/${encodeURIComponent(product.id)}`;
           const packageOptions = getEffectivePackageOptions(product);
           const optionIndex = selectedOptions[product.id] ?? 0;
@@ -62,19 +64,19 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
           const feedback = product.stockStatus === "preorder" ? cartCopy.preorderNote : availability === "coming_soon" ? cartCopy.comingSoon : availability === "insufficient_stock" ? cartCopy.insufficientStock : "";
 
           return (
-            <article key={product.id} className="group rounded-lg border border-forest/10 bg-white p-5 shadow-soft transition hover:-translate-y-0.5 hover:border-brass/50">
-              {product.imageUrl ? <Link className={`mb-4 block aspect-[4/3] overflow-hidden rounded-md bg-cream ${compactCardImages ? "mx-auto w-full max-w-[320px]" : ""}`} href={productHref}><img alt={product.name} className="h-full w-full object-cover" src={product.imageUrl} /></Link> : null}
+            <article key={product.id} className="group min-w-0 overflow-hidden rounded-lg border border-forest/10 bg-white p-5 shadow-soft transition hover:-translate-y-0.5 hover:border-brass/50">
+              {!hideCardImages && product.imageUrl ? <Link className={`mb-4 block aspect-[4/3] overflow-hidden rounded-md bg-cream ${compactCardImages ? "mx-auto w-full max-w-[320px]" : ""}`} href={productHref}><img alt={productName} className="block h-full w-full object-cover" loading="lazy" src={product.imageUrl} /></Link> : null}
               <div className="flex items-start justify-between gap-4">
-                <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-coffee">{getProductCategories(product).map((item) => ui.categories[item]).join(" · ")}</p><Link href={productHref}><h3 className="mt-2 font-serif text-2xl font-bold text-forest transition group-hover:text-coffee">{product.name}</h3></Link></div>
+                <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-coffee">{getProductCategories(product).map((item) => ui.categories[item]).join(" · ")}</p><Link href={productHref}><h3 className="mt-2 font-serif text-2xl font-bold text-forest transition group-hover:text-coffee">{productName}</h3></Link></div>
                 <span className="rounded-full bg-cream px-3 py-1 text-xs font-bold text-forest">{ui.statuses[product.stockStatus]}</span>
               </div>
-              <p className="mt-3 min-h-12 text-sm leading-6 text-forest/75">{getPublicProductDescription(product)}</p>
+              <p className="mt-3 min-h-12 text-sm leading-6 text-forest/75">{getPublicProductDescription(product, locale)}</p>
               <Link className="mt-3 inline-flex text-sm font-bold text-coffee underline-offset-4 hover:underline" href={productHref}>{ui.products.viewDetails}</Link>
               {packageOptions.length > 1 ? <label className="mt-4 block text-sm font-bold text-forest">{ui.products.package}<select className="mt-1 w-full rounded-lg border border-forest/15 bg-linen px-3 py-2 text-sm font-normal text-forest" onChange={(event) => setSelectedOptions((current) => ({ ...current, [product.id]: Number(event.target.value) }))} value={optionIndex}>{packageOptions.map((option, index) => <option key={`${option.label}-${index}`} value={index}>{option.label} - {formatEuro(option.salePriceInclVat)}</option>)}</select></label> : null}
               {feedback ? <p className={`mt-3 text-xs leading-5 ${canOrder ? "text-forest/65" : "font-bold text-red-700"}`}>{feedback}</p> : null}
               <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
                 <div><div className="text-xl font-bold text-forest">{displayPrice > 0 ? formatEuro(displayPrice) : dictionary.common.soon}</div><div className="text-xs text-forest/60">{displayUnit}</div></div>
-                <button className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-forest px-4 py-2 text-sm font-bold text-cream disabled:cursor-not-allowed disabled:bg-forest/30" disabled={!canOrder} type="button" onClick={() => { addItem({ productId: product.id, name: product.name, packageLabel: displayUnit, packageQuantity }); setAddedKey(key); window.setTimeout(() => setAddedKey((current) => current === key ? "" : current), 1800); }}>{addedKey === key ? <Check size={17} /> : <ShoppingCart size={17} />}{addedKey === key ? cartCopy.added : cartCopy.add}</button>
+                <button className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-forest px-4 py-2 text-sm font-bold text-cream disabled:cursor-not-allowed disabled:bg-forest/30" disabled={!canOrder} type="button" onClick={() => { addItem({ productId: product.id, name: productName, packageLabel: displayUnit, packageQuantity }); setAddedKey(key); window.setTimeout(() => setAddedKey((current) => current === key ? "" : current), 1800); }}>{addedKey === key ? <Check size={17} /> : <ShoppingCart size={17} />}{addedKey === key ? cartCopy.added : cartCopy.add}</button>
               </div>
             </article>
           );

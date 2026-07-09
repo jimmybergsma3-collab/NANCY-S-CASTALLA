@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Download } from "lucide-react";
@@ -9,6 +9,9 @@ import { persistLocalePreference } from "@/i18n/locale-client";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { formatCustomerPhone } from "@/lib/phone";
 import { invoiceLabel } from "@/lib/invoice-format";
+import { paymentMethodLabel } from "@/lib/payment";
+import { translateProductName } from "@/lib/product-translations";
+import type { Session } from "@supabase/supabase-js";
 
 type AccountOrder = {
   id: string;
@@ -16,6 +19,7 @@ type AccountOrder = {
   created_at: string;
   status: string;
   payment_status: string;
+  payment_method?: string;
   total: number;
   subtotal_ex_vat: number;
   vat_total: number;
@@ -42,16 +46,29 @@ const dateLocales: Record<Locale, string> = {
   sv: "sv-SE",
 };
 
-const orderCopy: Record<Locale, { details: string; products: string; package: string; quantity: string; vat: string; subtotal: string; total: string; fulfilment: string; notes: string; invoice: string; download: string; downloading: string; downloadFailed: string }> = {
-  en: { details: "Order details", products: "Products", package: "Package", quantity: "Quantity", vat: "VAT", subtotal: "Subtotal excl. VAT", total: "Total incl. VAT", fulfilment: "Collection / delivery", notes: "Notes", invoice: "Invoice", download: "Download PDF", downloading: "Downloading...", downloadFailed: "The invoice could not be downloaded." },
-  nl: { details: "Besteldetails", products: "Producten", package: "Verpakking", quantity: "Aantal", vat: "Btw", subtotal: "Subtotaal excl. btw", total: "Totaal incl. btw", fulfilment: "Afhalen / bezorgen", notes: "Opmerkingen", invoice: "Factuur", download: "PDF downloaden", downloading: "Downloaden...", downloadFailed: "De factuur kon niet worden gedownload." },
-  de: { details: "Bestelldetails", products: "Produkte", package: "Verpackung", quantity: "Menge", vat: "MwSt.", subtotal: "Zwischensumme ohne MwSt.", total: "Gesamt inkl. MwSt.", fulfilment: "Abholung / Lieferung", notes: "Anmerkungen", invoice: "Rechnung", download: "PDF herunterladen", downloading: "Wird geladen...", downloadFailed: "Die Rechnung konnte nicht heruntergeladen werden." },
-  es: { details: "Detalles del pedido", products: "Productos", package: "Formato", quantity: "Cantidad", vat: "IVA", subtotal: "Subtotal sin IVA", total: "Total con IVA", fulfilment: "Recogida / entrega", notes: "Notas", invoice: "Factura", download: "Descargar PDF", downloading: "Descargando...", downloadFailed: "No se pudo descargar la factura." },
-  sv: { details: "Orderdetaljer", products: "Produkter", package: "Förpackning", quantity: "Antal", vat: "Moms", subtotal: "Delsumma exkl. moms", total: "Totalt inkl. moms", fulfilment: "Avhämtning / leverans", notes: "Anteckningar", invoice: "Faktura", download: "Ladda ner PDF", downloading: "Laddar ner...", downloadFailed: "Fakturan kunde inte laddas ner." },
+const orderCopy: Record<Locale, { details: string; products: string; package: string; quantity: string; vat: string; subtotal: string; total: string; fulfilment: string; paymentMethod: string; notes: string; invoice: string; download: string; downloading: string; downloadFailed: string }> = {
+  en: { details: "Order details", products: "Products", package: "Package", quantity: "Quantity", vat: "VAT", subtotal: "Subtotal excl. VAT", total: "Total incl. VAT", fulfilment: "Collection / delivery", paymentMethod: "Payment method", notes: "Notes", invoice: "Invoice", download: "Download PDF", downloading: "Downloading...", downloadFailed: "The invoice could not be downloaded." },
+  nl: { details: "Besteldetails", products: "Producten", package: "Verpakking", quantity: "Aantal", vat: "Btw", subtotal: "Subtotaal excl. btw", total: "Totaal incl. btw", fulfilment: "Afhalen / bezorgen", paymentMethod: "Betaalmethode", notes: "Opmerkingen", invoice: "Factuur", download: "PDF downloaden", downloading: "Downloaden...", downloadFailed: "De factuur kon niet worden gedownload." },
+  de: { details: "Bestelldetails", products: "Produkte", package: "Verpackung", quantity: "Menge", vat: "MwSt.", subtotal: "Zwischensumme ohne MwSt.", total: "Gesamt inkl. MwSt.", fulfilment: "Abholung / Lieferung", paymentMethod: "Zahlungsart", notes: "Anmerkungen", invoice: "Rechnung", download: "PDF herunterladen", downloading: "Wird geladen...", downloadFailed: "Die Rechnung konnte nicht heruntergeladen werden." },
+  es: { details: "Detalles del pedido", products: "Productos", package: "Formato", quantity: "Cantidad", vat: "IVA", subtotal: "Subtotal sin IVA", total: "Total con IVA", fulfilment: "Recogida / entrega", paymentMethod: "Método de pago", notes: "Notas", invoice: "Factura", download: "Descargar PDF", downloading: "Descargando...", downloadFailed: "No se pudo descargar la factura." },
+  sv: { details: "Orderdetaljer", products: "Produkter", package: "Förpackning", quantity: "Antal", vat: "Moms", subtotal: "Delsumma exkl. moms", total: "Totalt inkl. moms", fulfilment: "Avhämtning / leverans", paymentMethod: "Betalningsmetod", notes: "Anteckningar", invoice: "Faktura", download: "Ladda ner PDF", downloading: "Laddar ner...", downloadFailed: "Fakturan kunde inte laddas ner." },
 };
 
 function emptyProfile(locale: Locale): Profile {
   return { name: "", email: "", phone: "", address: "", language: locale };
+}
+
+function profileFromSession(session: Session, locale: Locale, resultProfile?: Partial<Profile>): Profile {
+  const metadata = session.user.user_metadata as Record<string, unknown>;
+  const metadataLanguage = typeof metadata.language === "string" && isLocale(metadata.language) ? metadata.language : locale;
+  const metadataName = typeof metadata.name === "string" ? metadata.name : "";
+  return {
+    name: resultProfile?.name ?? metadataName,
+    email: resultProfile?.email ?? session.user.email ?? "",
+    phone: formatCustomerPhone(resultProfile?.phone ?? ""),
+    address: resultProfile?.address ?? "",
+    language: isLocale(resultProfile?.language) ? resultProfile.language : metadataLanguage,
+  };
 }
 
 export function AccountDashboard({ locale }: { locale: Locale }) {
@@ -78,22 +95,36 @@ export function AccountDashboard({ locale }: { locale: Locale }) {
         return;
       }
       const headers = { Authorization: `Bearer ${data.session.access_token}` };
-      const [profileResponse, ordersResponse] = await Promise.all([
+      const [profileSettled, ordersSettled] = await Promise.allSettled([
         fetch("/api/account/profile", { headers }),
         fetch("/api/account/orders", { headers }),
       ]);
-      const [profileResult, ordersResult] = await Promise.all([profileResponse.json(), ordersResponse.json()]);
+      let resultProfile: Partial<Profile> | undefined;
+      let nextOrders: AccountOrder[] = [];
+      let loadError = "";
+
+      if (profileSettled.status === "fulfilled") {
+        const profileResult = await profileSettled.value.json().catch(() => null) as { profile?: Partial<Profile>; message?: string } | null;
+        resultProfile = profileResult?.profile;
+        if (!profileSettled.value.ok) loadError = profileResult?.message ?? copy.accountLoadError;
+      } else {
+        loadError = copy.accountLoadError;
+        console.warn("Account profile fetch failed; showing session fallback.");
+      }
+
+      if (ordersSettled.status === "fulfilled") {
+        const ordersResult = await ordersSettled.value.json().catch(() => null) as { orders?: AccountOrder[]; message?: string } | null;
+        nextOrders = ordersResult?.orders ?? [];
+        if (!ordersSettled.value.ok && !loadError) loadError = ordersResult?.message ?? copy.accountLoadError;
+      } else {
+        if (!loadError) loadError = copy.accountLoadError;
+        console.warn("Account orders fetch failed; showing empty order history.");
+      }
+
       if (!active) return;
-      const resultProfile = profileResult.profile as Partial<Profile> | undefined;
-      setProfile({
-        name: resultProfile?.name ?? "",
-        email: resultProfile?.email ?? data.session.user.email ?? "",
-        phone: formatCustomerPhone(resultProfile?.phone ?? ""),
-        address: resultProfile?.address ?? "",
-        language: isLocale(resultProfile?.language) ? resultProfile.language : locale,
-      });
-      setOrders(ordersResult.orders ?? []);
-      setMessage(profileResponse.ok && ordersResponse.ok ? "" : profileResult.message ?? ordersResult.message ?? copy.accountLoadError);
+      setProfile(profileFromSession(data.session, locale, resultProfile));
+      setOrders(nextOrders);
+      setMessage(loadError);
     })();
     return () => { active = false; };
   }, [copy.accountLoadError, locale, router]);
@@ -206,9 +237,9 @@ export function AccountDashboard({ locale }: { locale: Locale }) {
                 </button>
                 {openOrderId === order.id ? <div className="border-t border-forest/10 bg-linen/50 p-4">
                   <h3 className="font-serif text-xl font-bold text-forest">{ordersCopy.details}</h3>
-                  <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2"><div><dt className="font-bold text-forest/60">{ordersCopy.fulfilment}</dt><dd>{order.delivery_method || order.fulfillment || "-"}</dd></div><div><dt className="font-bold text-forest/60">{ordersCopy.notes}</dt><dd>{order.notes || "-"}</dd></div></dl>
+                  <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2"><div><dt className="font-bold text-forest/60">{ordersCopy.fulfilment}</dt><dd>{order.delivery_method || order.fulfillment || "-"}</dd></div><div><dt className="font-bold text-forest/60">{ordersCopy.paymentMethod}</dt><dd>{paymentMethodLabel(order.payment_method, locale)}</dd></div><div><dt className="font-bold text-forest/60">{ordersCopy.notes}</dt><dd>{order.notes || "-"}</dd></div></dl>
                   <h4 className="mt-5 font-bold text-forest">{ordersCopy.products}</h4>
-                  <div className="mt-2 grid gap-2">{(order.order_items ?? []).map((item) => <div className="rounded-md border border-forest/10 bg-white p-3 text-sm" key={item.id}><div className="flex justify-between gap-3"><strong>{item.product_name}</strong><strong>€{Number(item.line_total_incl_vat).toFixed(2)}</strong></div><p className="mt-1 text-xs text-forest/60">{item.product_id || "-"} · {ordersCopy.package}: {item.package_label || item.unit} · {ordersCopy.quantity}: {item.quantity} · {ordersCopy.vat}: {Number(item.vat_rate)}%</p></div>)}</div>
+                  <div className="mt-2 grid gap-2">{(order.order_items ?? []).map((item) => <div className="rounded-md border border-forest/10 bg-white p-3 text-sm" key={item.id}><div className="flex justify-between gap-3"><strong>{translateProductName(item.product_name, locale)}</strong><strong>€{Number(item.line_total_incl_vat).toFixed(2)}</strong></div><p className="mt-1 text-xs text-forest/60">{item.product_id || "-"} · {ordersCopy.package}: {item.package_label || item.unit} · {ordersCopy.quantity}: {item.quantity} · {ordersCopy.vat}: {Number(item.vat_rate)}%</p></div>)}</div>
                   <div className="ml-auto mt-4 max-w-sm space-y-2 border-t border-forest/10 pt-3 text-sm"><div className="flex justify-between"><span>{ordersCopy.subtotal}</span><strong>€{Number(order.subtotal_ex_vat).toFixed(2)}</strong></div><div className="flex justify-between"><span>{ordersCopy.vat}</span><strong>€{Number(order.vat_total).toFixed(2)}</strong></div><div className="flex justify-between text-base"><span className="font-bold">{ordersCopy.total}</span><strong>€{Number(order.total).toFixed(2)}</strong></div></div>
                   {order.invoices?.map((invoice) => <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md bg-cream p-3" key={invoice.id}><strong>{ordersCopy.invoice} {invoiceLabel(invoice)}</strong><button className="inline-flex min-h-10 items-center gap-2 rounded-md bg-forest px-3 py-2 text-sm font-bold text-cream disabled:opacity-50" disabled={downloading === invoice.id} onClick={() => void downloadInvoice(invoice)} type="button"><Download size={16}/>{downloading === invoice.id ? ordersCopy.downloading : ordersCopy.download}</button></div>)}
                 </div> : null}

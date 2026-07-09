@@ -1,7 +1,7 @@
 # AI Context: Nancy's Castalla
 
 **Doel:** snelle, zelfstandige projectcontext voor ChatGPT, Codex en andere AI-assistenten.  
-**Laatst bijgewerkt:** 8 juli 2026
+**Laatst bijgewerkt:** 9 juli 2026
 **Productie:** `https://www.nancys.es`
 
 Lees dit bestand voordat je een wijziging plant of uitvoert. Gebruik voor diepere details de documenten in `/docs`:
@@ -40,7 +40,7 @@ De primaire doelgroep bestaat uit internationale inwoners en expats rond Castall
 - Spaans en Zuid-Amerikaans.
 - Aziatisch/Indonesisch geinteresseerde klanten.
 
-Engels is de hoofdtaal. Ondersteunde localecodes zijn `en`, `nl`, `de`, `es` en `sv`. Spaans is essentieel voor Spaanse en Zuid-Amerikaanse klanten. Vertalingen zijn nog niet overal volledig.
+Engels is de hoofdtaal. Ondersteunde localecodes zijn `en`, `nl`, `de`, `es` en `sv`. Spaans is essentieel voor Spaanse en Zuid-Amerikaanse klanten. Bekende productnamen en een groeiende set klantgerichte productbeschrijvingen worden vertaald. Ontbreekt een niet-Engelse productbeschrijving, toon dan liever een korte locale-fallback zoals `Vertaling volgt binnenkort` dan willekeurig Engelse of Spaanse leveranciersinhoud.
 
 Localevoorkeur volgt deze regels:
 
@@ -154,8 +154,9 @@ Er zijn twee orderkanalen:
 6. Server vertrouwt geen browserprijzen of totalen en voert dezelfde controle opnieuw uit.
 7. Een idempotency key voorkomt dubbele orders bij retries.
 8. Order en orderregels worden via een database-RPC opgeslagen en krijgen UUID plus oplopend ordernummer.
-9. Resend verstuurt admin- en klantmail als e-mailconfiguratie werkt. Order- en factuurmails gebruiken branded responsive HTML met afzendernaam `Nancy's Castalla Orders`.
-10. Nieuwe order start als `new` met betaalstatus `pending`; de klant kan een betaalvoorkeur opslaan als `bizum`, `bank-transfer`, `cash`, `card` of `pending`.
+9. Als de order-RPC in productie faalt door schema-cache, ontbrekende functie, permissie of `payment_method`-mismatch, gebruikt de server een service-role REST-fallback om customer, order en orderregels alsnog op te slaan. Iedere orderpoging logt een veilige diagnose-id per stap.
+10. Resend verstuurt admin- en klantmail als e-mailconfiguratie werkt. Order- en factuurmails gebruiken branded responsive HTML met afzendernaam `Nancy's Castalla Orders`.
+11. Nieuwe order start als `new` met betaalstatus `pending`; de klant kan een betaalvoorkeur opslaan als `bizum`, `bank-transfer`, `cash`, `card` of `pending`.
 
 ### WhatsApp-order
 
@@ -206,7 +207,7 @@ Facturen worden intern uit een order aangemaakt via een transactionele databasef
 
 Factuurnummers gebruiken de bestaande unieke globale identity en worden extern weergegeven als `NC-{jaar}-{zes cijfers}`, bijvoorbeeld `NC-2026-000002`. De PDF is Spaans/Engels, gebruikt Spaanse bedragnotatie, groepeert IVA per tarief, toont de betaalmethode als menselijk label en leest verkopergegevens uit `config/business.ts`. `NANCY'S CASTALLA` staat prominent als handelsnaam; `JIMMY BERGSMA` staat kleiner als titular/autónomo met NIF/NIE `Y8875740P` en het centrale adres. De titular staat ook in Terms/disclaimer. Laat inhoud en fiscale gegevens vóór officieel gebruik controleren door een gestor/boekhouder.
 
-Registratie gebruikt aparte wachtwoord- en bevestigingsvelden met `autocomplete="new-password"`, browserwachtwoordsuggesties, gelijkheidscontrole en toon/verbergbediening. Login gebruikt `autocomplete="current-password"`.
+Registratie gebruikt aparte wachtwoord- en bevestigingsvelden met `autocomplete="new-password"`, browserwachtwoordsuggesties, gelijkheidscontrole en toon/verbergbediening. Login gebruikt `autocomplete="current-password"`. Na succesvolle registratie toont de site een duidelijke inbox/spammapmelding, wist het formulier en kan de klant na 60 seconden opnieuw een bevestigingsmail aanvragen. Het accountdashboard moet altijd invulbare velden voor naam, e-mail, telefoon, adres en taal tonen; als het customerrecord ontbreekt of tijdelijk niet geladen kan worden, valt de UI terug op de actieve Supabase-sessie.
 
 Productbeheer ondersteunt onder meer:
 

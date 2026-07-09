@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Locale } from "@/i18n/config";
-import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { getAuthCopy } from "@/i18n/auth";
+import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { Eye, EyeOff } from "lucide-react";
 
 const passwordCopy: Record<Locale, { confirm: string; mismatch: string; show: string; hide: string }> = {
@@ -25,27 +25,69 @@ export function RegisterForm({ locale }: { locale: Locale }) {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [resendBusy, setResendBusy] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
+  const [resendAvailableAt, setResendAvailableAt] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+  const resendSecondsLeft = Math.max(0, Math.ceil((resendAvailableAt - now) / 1000));
+
+  useEffect(() => {
+    if (!resendAvailableAt) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [resendAvailableAt]);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setMessage("");
     if (password !== confirmPassword) { setMessage(passwordCopy[locale].mismatch); setBusy(false); return; }
-    const emailRedirectTo = `${window.location.origin}/${locale}/login?confirmed=1`;
-    const { error } = await getSupabaseBrowserClient().auth.signUp({
-      email: email.trim(),
-      password,
-      options: { data: { name: name.trim(), language: locale }, emailRedirectTo },
+    const submittedEmail = email.trim();
+    const response = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name.trim(), email: submittedEmail, password, locale }),
     });
-    if (error) {
-      setMessage(error.code === "over_email_send_rate_limit"
-        ? copy.registrationRateLimit
-        : copy.registrationFailed);
+    const result = (await response.json().catch(() => null)) as { ok?: boolean; code?: string; message?: string } | null;
+    if (!response.ok || !result?.ok) {
+      setMessage(result?.code === "over_email_send_rate_limit" ? copy.registrationRateLimit : copy.registrationFailed);
       setBusy(false);
       return;
     }
+    setRegisteredEmail(submittedEmail);
+    setResendAvailableAt(Date.now() + 60_000);
+    setName("");
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setShowPassword(false);
+    setShowConfirmation(false);
     setMessage(copy.registrationComplete);
     setBusy(false);
+  }
+
+  async function resendConfirmation() {
+    if (!registeredEmail) return;
+    if (resendSecondsLeft > 0) {
+      setMessage(copy.resendConfirmationWait);
+      return;
+    }
+    setResendBusy(true);
+    setMessage("");
+    const redirectTo = `${window.location.origin}/${locale}/login?confirmed=1`;
+    const { error } = await getSupabaseBrowserClient().auth.resend({
+      type: "signup",
+      email: registeredEmail,
+      options: { emailRedirectTo: redirectTo },
+    });
+    setResendBusy(false);
+    if (error) {
+      setMessage(error.code === "over_email_send_rate_limit" ? copy.registrationRateLimit : copy.registrationFailed);
+      setResendAvailableAt(Date.now() + 60_000);
+      return;
+    }
+    setResendAvailableAt(Date.now() + 60_000);
+    setMessage(copy.resendConfirmationSent);
   }
 
   return (
@@ -56,6 +98,11 @@ export function RegisterForm({ locale }: { locale: Locale }) {
       <PasswordField label={passwordCopy[locale].confirm} name="password-confirmation" onChange={setConfirmPassword} show={showConfirmation} toggle={() => setShowConfirmation((current) => !current)} toggleLabel={showConfirmation ? passwordCopy[locale].hide : passwordCopy[locale].show} value={confirmPassword} />
       <button className="mt-4 rounded-full bg-forest px-5 py-3 font-bold text-cream disabled:opacity-50" disabled={busy} type="submit">{busy ? copy.creatingAccount : copy.createAccount}</button>
       {message ? <p className="mt-3 text-sm text-forest/75">{message}</p> : null}
+      {registeredEmail ? (
+        <button className="mt-3 rounded-full border border-forest/20 px-4 py-2 text-sm font-bold text-forest disabled:opacity-50" disabled={resendBusy || resendSecondsLeft > 0} onClick={resendConfirmation} type="button">
+          {resendBusy ? copy.creatingAccount : resendSecondsLeft > 0 ? `${copy.resendConfirmation} (${resendSecondsLeft}s)` : copy.resendConfirmation}
+        </button>
+      ) : null}
       <p className="mt-5 text-sm text-forest/65">{copy.alreadyRegistered} <Link className="font-bold text-coffee" href={`/${locale}/login`}>{copy.signIn}</Link></p>
     </form>
   );

@@ -6,6 +6,7 @@ import { formatEuro } from "@/lib/pricing";
 import type { BackofficeOrder, BackofficeOrderItem, OrderStatus, PaymentStatus } from "@/types/backoffice";
 import { businessConfig } from "@/config/business";
 import { invoiceLabel } from "@/lib/invoice-format";
+import { paymentMethodLabel } from "@/lib/payment";
 
 const statuses: OrderStatus[] = ["new", "confirmed", "processing", "ready_for_collection", "shipped", "delivered", "cancelled"];
 const paymentStatuses: PaymentStatus[] = ["pending", "paid", "failed", "refunded", "cancelled"];
@@ -140,7 +141,7 @@ function OrderDetail({ invoiceBusy, notesDraft, onInvoiceAction, onNotesChange, 
 
       <div className="grid gap-5 p-5 lg:grid-cols-2">
         <div className="rounded-md bg-linen p-4"><h3 className="flex items-center gap-2 font-serif text-xl font-bold text-forest"><UserRound size={19} />Customer</h3><dl className="mt-4 grid gap-3 text-sm"><DetailRow label="Name" value={order.customer_name || order.customer?.name} /><DetailRow label="Email" value={email} /><DetailRow label="Phone / WhatsApp" value={phone || "Not provided"} /><DetailRow label="Address" value={orderAddress(order)} /><DetailRow label="Language" value={(order.customer?.language || "Unknown").toUpperCase()} /></dl></div>
-        <div className="rounded-md bg-linen p-4"><h3 className="flex items-center gap-2 font-serif text-xl font-bold text-forest"><ShoppingBag size={19} />Order</h3><dl className="mt-4 grid gap-3 text-sm"><DetailRow label="Order number" value={orderLabel(order)} /><DetailRow label="Fulfilment" value={order.delivery_method || order.fulfillment || "Not provided"} /><DetailRow label="Status" value={statusLabel(order.status)} /><DetailRow label="Payment" value={statusLabel(order.payment_status)} /><DetailRow label="Notes / preferred time" value={visibleNotes(order)} /></dl></div>
+        <div className="rounded-md bg-linen p-4"><h3 className="flex items-center gap-2 font-serif text-xl font-bold text-forest"><ShoppingBag size={19} />Order</h3><dl className="mt-4 grid gap-3 text-sm"><DetailRow label="Order number" value={orderLabel(order)} /><DetailRow label="Fulfilment" value={order.delivery_method || order.fulfillment || "Not provided"} /><DetailRow label="Status" value={statusLabel(order.status)} /><DetailRow label="Payment status" value={statusLabel(order.payment_status)} /><DetailRow label="Payment method" value={paymentMethodLabel(order.payment_method, "en")} /><DetailRow label="Notes / preferred time" value={visibleNotes(order)} /></dl></div>
       </div>
 
       <div className="grid gap-4 border-y border-forest/10 p-5 sm:grid-cols-2">
