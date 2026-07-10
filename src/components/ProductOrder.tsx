@@ -31,14 +31,25 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
   const categories = useMemo(() => ["All", ...Array.from(new Set(products.flatMap(getProductCategories)))] as const, [products]);
   const visibleProducts = (category === "All" ? products : products.filter((product) => productMatchesCategory(product, category))).filter((product) => {
     const query = search.trim().toLowerCase();
-    return !query || [product.id, product.name, translateProductName(product.name, locale), product.description, getProductCategories(product).join(" "), product.origin, product.supplierCode].join(" ").toLowerCase().includes(query);
+    const productCategories = getProductCategories(product);
+    return !query || [
+      product.id,
+      product.name,
+      translateProductName(product.name, locale),
+      product.description,
+      getPublicProductDescription(product, locale),
+      productCategories.join(" "),
+      productCategories.map((item) => ui.categories[item]).join(" "),
+      product.origin,
+      product.supplierCode,
+    ].join(" ").toLowerCase().includes(query);
   });
 
   return (
     <div className="min-w-0">
       <label className="mb-4 flex items-center gap-3 rounded-full border border-forest/15 bg-white px-4 py-3 text-forest shadow-soft">
         <Search size={18} />
-        <input className="w-full bg-transparent text-sm outline-none placeholder:text-forest/45" onChange={(event) => setSearch(event.target.value)} placeholder={ui.products.searchPlaceholder} type="search" value={search} />
+        <input aria-label={ui.products.searchPlaceholder} className="w-full bg-transparent text-sm outline-none placeholder:text-forest/45" onChange={(event) => setSearch(event.target.value)} placeholder={ui.products.searchPlaceholder} type="search" value={search} />
       </label>
       <div className="mb-5 flex min-w-0 gap-2 overflow-x-auto pb-2 lg:flex-wrap lg:overflow-visible">
         {categories.map((item) => (
@@ -71,6 +82,9 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
                 <span className="rounded-full bg-cream px-3 py-1 text-xs font-bold text-forest">{ui.statuses[product.stockStatus]}</span>
               </div>
               <p className="mt-3 min-h-12 text-sm leading-6 text-forest/75">{getPublicProductDescription(product, locale)}</p>
+              <p className="mt-3 rounded-md bg-linen px-3 py-2 text-xs font-bold text-forest">
+                {ui.products.soldAs}: {displayUnit}
+              </p>
               <Link className="mt-3 inline-flex text-sm font-bold text-coffee underline-offset-4 hover:underline" href={productHref}>{ui.products.viewDetails}</Link>
               {packageOptions.length > 1 ? <label className="mt-4 block text-sm font-bold text-forest">{ui.products.package}<select className="mt-1 w-full rounded-lg border border-forest/15 bg-linen px-3 py-2 text-sm font-normal text-forest" onChange={(event) => setSelectedOptions((current) => ({ ...current, [product.id]: Number(event.target.value) }))} value={optionIndex}>{packageOptions.map((option, index) => <option key={`${option.label}-${index}`} value={index}>{option.label} - {formatEuro(option.salePriceInclVat)}</option>)}</select></label> : null}
               {feedback ? <p className={`mt-3 text-xs leading-5 ${canOrder ? "text-forest/65" : "font-bold text-red-700"}`}>{feedback}</p> : null}

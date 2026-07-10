@@ -89,7 +89,7 @@ const copies: Record<Locale, UiCopy> = {
       categoryDescription: "Open this category and search by name or product code.", conservation: "Conservation", directions: "Directions for use",
       ingredients: "Ingredients", noProducts: "No products found. Try another product name, category or product code.", openCategory: "Open category",
       origin: "Origin", package: "Package", photoSoon: "Photo coming soon", pieces: "pieces", productCode: "Product code", products: "products",
-      searchPlaceholder: "Search by product name or product code", soldAs: "Sold as", status: "Status", unit: "Unit", viewDetails: "View product details",
+      searchPlaceholder: "Search by name, category, description or product code", soldAs: "Sold as", status: "Status", unit: "Unit", viewDetails: "View product details",
       youMayAlsoLike: "You may also like",
     },
     order: {
@@ -121,7 +121,7 @@ const copies: Record<Locale, UiCopy> = {
       categoryDescription: "Open deze categorie en zoek op naam of productcode.", conservation: "Bewaren", directions: "Gebruiksaanwijzing",
       ingredients: "Ingrediënten", noProducts: "Geen producten gevonden. Probeer een andere naam, categorie of productcode.", openCategory: "Categorie openen",
       origin: "Herkomst", package: "Verpakking", photoSoon: "Foto volgt binnenkort", pieces: "stuks", productCode: "Productcode", products: "producten",
-      searchPlaceholder: "Zoek op productnaam of productcode", soldAs: "Verkocht als", status: "Status", unit: "Eenheid", viewDetails: "Bekijk productdetails",
+      searchPlaceholder: "Zoek op naam, categorie, omschrijving of productcode", soldAs: "Verkocht als", status: "Status", unit: "Eenheid", viewDetails: "Bekijk productdetails",
       youMayAlsoLike: "Misschien vind je dit ook interessant",
     },
     order: {
@@ -153,7 +153,7 @@ const copies: Record<Locale, UiCopy> = {
       categoryDescription: "Kategorie öffnen und nach Name oder Produktcode suchen.", conservation: "Aufbewahrung", directions: "Zubereitung und Verwendung",
       ingredients: "Zutaten", noProducts: "Keine Produkte gefunden. Versuchen Sie einen anderen Namen, eine Kategorie oder einen Produktcode.", openCategory: "Kategorie öffnen",
       origin: "Herkunft", package: "Packung", photoSoon: "Foto folgt in Kürze", pieces: "Stück", productCode: "Produktcode", products: "Produkte",
-      searchPlaceholder: "Nach Produktname oder Produktcode suchen", soldAs: "Verkauft als", status: "Status", unit: "Einheit", viewDetails: "Produktdetails ansehen",
+      searchPlaceholder: "Nach Name, Kategorie, Beschreibung oder Produktcode suchen", soldAs: "Verkauft als", status: "Status", unit: "Einheit", viewDetails: "Produktdetails ansehen",
       youMayAlsoLike: "Das könnte Ihnen auch gefallen",
     },
     order: {
@@ -185,7 +185,7 @@ const copies: Record<Locale, UiCopy> = {
       categoryDescription: "Abre esta categoría y busca por nombre o código de producto.", conservation: "Conservación", directions: "Modo de uso",
       ingredients: "Ingredientes", noProducts: "No se encontraron productos. Prueba otro nombre, categoría o código.", openCategory: "Abrir categoría",
       origin: "Origen", package: "Formato", photoSoon: "Foto próximamente", pieces: "unidades", productCode: "Código de producto", products: "productos",
-      searchPlaceholder: "Buscar por nombre o código de producto", soldAs: "Se vende como", status: "Estado", unit: "Unidad", viewDetails: "Ver detalles del producto",
+      searchPlaceholder: "Buscar por nombre, categoría, descripción o código", soldAs: "Se vende como", status: "Estado", unit: "Unidad", viewDetails: "Ver detalles del producto",
       youMayAlsoLike: "También te puede gustar",
     },
     order: {
@@ -217,7 +217,7 @@ const copies: Record<Locale, UiCopy> = {
       categoryDescription: "Öppna kategorin och sök efter namn eller produktkod.", conservation: "Förvaring", directions: "Användning",
       ingredients: "Ingredienser", noProducts: "Inga produkter hittades. Prova ett annat namn, en kategori eller produktkod.", openCategory: "Öppna kategori",
       origin: "Ursprung", package: "Förpackning", photoSoon: "Foto kommer snart", pieces: "stycken", productCode: "Produktkod", products: "produkter",
-      searchPlaceholder: "Sök efter produktnamn eller produktkod", soldAs: "Säljs som", status: "Status", unit: "Enhet", viewDetails: "Visa produktdetaljer",
+      searchPlaceholder: "Sök på namn, kategori, beskrivning eller produktkod", soldAs: "Säljs som", status: "Status", unit: "Enhet", viewDetails: "Visa produktdetaljer",
       youMayAlsoLike: "Du kanske också gillar",
     },
     order: {

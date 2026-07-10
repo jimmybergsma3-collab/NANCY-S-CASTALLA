@@ -1,6 +1,6 @@
 # Projectstatus: Nancy's Castalla
 
-**Peildatum:** 9 juli 2026
+**Peildatum:** 10 juli 2026
 **Fase:** productie-MVP / pre-orderfase
 **Productiedomein:** `https://www.nancys.es`
 **Bronnen voor deze status:** volledige Git-geschiedenis vanaf de eerste webshopcommit, actuele routes, services, migraties en documentatie.
@@ -29,9 +29,10 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 
 - Next.js App Router-webshop met responsive merkstijl en locales `en`, `nl`, `de`, `es`, `sv`.
 - Homepage, categorieoverzicht, categoriepagina, zoeken, filters en productdetail op stabiele `NC-xxxxx`-productcode.
+- Productzoekvelden filteren live en doorzoeken productnaam, vertaalde categorienamen, zichtbare productomschrijving en productcode.
 - Productfoto-upload via Supabase Storage, meerdere categorieën, verpakkingsopties, uitgebreide productinformatie en sociale deelactie.
-- Persistente winkelmand met badge, aantallen wijzigen, regels verwijderen, subtotalen, IVA en totaal.
-- Checkout met klantgegevens, fulfilment en betaalvoorkeur.
+- Persistente winkelmand met badge, aantallen wijzigen, regels verwijderen, duidelijke verpakkingslabels, subtotalen, IVA en totaal.
+- Checkout met klantgegevens, fulfilment en betaalvoorkeur; bij afhalen wordt geen bezorgadres getoond, bij lokale bezorging wel.
 - Gedeelde beschikbaarheidsregels: `preorder` bestelbaar zonder voorraad, `coming-soon` niet bestelbaar en `available` met inventorytracking gecontroleerd.
 - Veilige vertaling van bekende productnamen en klantgerichte productbeschrijvingen in publieke kaarten, productdetail, zoeken, cart, account, e-mail en factuur; onbekende niet-vertaalde beschrijvingen vallen per locale terug op een korte vertaling-volgt-melding in plaats van willekeurige leveranciersspraak.
 
@@ -42,7 +43,7 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 - Server-side prijs-, verpakking-, beschikbaarheids-, voorraad- en IVA-validatie.
 - Idempotente ordercreatie met UUID, oplopend nummer `NC-000001`, klantkoppeling en orderregelsnapshot.
 - Orderopslag blijft werken wanneer e-mail faalt; de checkout toont specifieke foutmeldingen voor onder meer verouderde verpakkingen, ontbrekende gegevens en tijdelijke serviceproblemen. De API geeft bij fouten een diagnose-id en backendmelding terug en kan bij herstelbare RPC-problemen direct via de service-role REST API opslaan.
-- Klantorderhistorie met uitklapbare orderdetails, producten, aantallen, status, betaalstatus, totalen en factuurdownload.
+- Klantorderhistorie met uitklapbare orderdetails, producten, verpakkingen, aantallen, status, betaalstatus, totalen en factuurdownload.
 - Transactionele voorraadafboeking bij bevestiging, terugboeking bij annulering en movement-audittrail.
 
 ## Admin en backoffice
@@ -100,4 +101,4 @@ Uitsluitend punten die nog daadwerkelijk openstaan voor betrouwbare eerste klant
 
 ## Laatste technische verificatie
 
-Op 9 juli 2026 is de registratieflow aangepast om Supabase-signup via de centrale serverroute te laten lopen, zodat de bevestigingslink de productiebase-URL en locale gebruikt. De productdetail-bestelkaart rendert geen tweede productfoto meer, om Android/Chrome overlap bij onder andere Potato Scones te voorkomen. De checkout is getest met actuele Potato Scones-verpakking: Collection is opgeslagen als `NC-000008`, Local delivery als `NC-000009`, en een verouderde verpakking geeft nu `package_unavailable` met een duidelijke boodschap. Daarna is extra testerfeedback verwerkt: registratie wist velden na succes, toont expliciet inbox/spammap, biedt resend na 60 seconden, het accountdashboard heeft een sessie-fallback wanneer profieldata traag of afwezig is, en Nederlandse productkaarten/details tonen geen Engelse of Spaanse leveranciersomschrijvingen meer maar Nederlandse bekende teksten of `Vertaling volgt binnenkort`. Een mobiele productlijstcontrole op 390px breed gaf geen horizontale overflow en geen browserconsole-errors. Een live-productietest liet zien dat `POST /api/cart/validate` werkte maar `POST /api/orders` op de live deployment 500 terugstuurde met alleen `order_failed`; de repository is daarop uitgebreid met staplogging, diagnose-id, echte foutmelding in de API-response en een REST-fallback wanneer de order-RPC in productie faalt of achterloopt. Lokaal is na deze patch een testorder opgeslagen als `NC-000012`. `npm run lint` en `npm run build` zijn succesvol uitgevoerd.
+Op 9 juli 2026 is de registratieflow aangepast om Supabase-signup via de centrale serverroute te laten lopen, zodat de bevestigingslink de productiebase-URL en locale gebruikt. De productdetail-bestelkaart rendert geen tweede productfoto meer, om Android/Chrome overlap bij onder andere Potato Scones te voorkomen. De checkout is getest met actuele Potato Scones-verpakking: Collection is opgeslagen als `NC-000008`, Local delivery als `NC-000009`, en een verouderde verpakking geeft nu `package_unavailable` met een duidelijke boodschap. Daarna is extra testerfeedback verwerkt: registratie wist velden na succes, toont expliciet inbox/spammap, biedt resend na 60 seconden, het accountdashboard heeft een sessie-fallback wanneer profieldata traag of afwezig is, en Nederlandse productkaarten/details tonen geen Engelse of Spaanse leveranciersomschrijvingen meer maar Nederlandse bekende teksten of `Vertaling volgt binnenkort`. Een mobiele productlijstcontrole op 390px breed gaf geen horizontale overflow en geen browserconsole-errors. Een live-productietest liet zien dat `POST /api/cart/validate` werkte maar `POST /api/orders` op de live deployment 500 terugstuurde met alleen `order_failed`; de repository is daarop uitgebreid met staplogging, diagnose-id, echte foutmelding in de API-response en een REST-fallback wanneer de order-RPC in productie faalt of achterloopt. Lokaal is na deze patch een testorder opgeslagen als `NC-000012`. Op 10 juli 2026 zijn uitsluitend frontend-UX-verbeteringen toegevoegd: zoeken doorzoekt nu ook locale-categorieën en zichtbare omschrijvingen, verpakkingsinformatie staat duidelijker op productkaarten, productdetail, winkelmand en klantorderdetails, en het checkoutformulier verbergt het bezorgadres bij afhalen. `npm run lint` en `npm run build` zijn succesvol uitgevoerd.

@@ -16,6 +16,14 @@ import { useCart } from "./CartProvider";
 
 type ValidationResult = { ok: boolean; lines: ValidatedCartLine[]; subtotalExVat: number; vatTotal: number; total: number };
 
+const pickupNotesPlaceholder: Record<Locale, string> = {
+  en: "Preferred collection time or note",
+  nl: "Gewenste afhaaltijd of opmerking",
+  de: "Gewünschte Abholzeit oder Anmerkung",
+  es: "Hora preferida de recogida o nota",
+  sv: "Önskad upphämtningstid eller anteckning",
+};
+
 export function CartView({ locale }: { locale: Locale }) {
   const copy = getCartCopy(locale);
   const ui = getUiCopy(locale);
@@ -98,7 +106,7 @@ export function CartView({ locale }: { locale: Locale }) {
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {}) },
-        body: JSON.stringify({ customerName, customerEmail, customerPhone, fulfillment, paymentMethod, locale, notes: [customerAddress ? `${ui.order.address}: ${customerAddress}` : "", notes].filter(Boolean).join("\n\n"), idempotencyKey: idempotencyKey.current, lines: items.map((item) => ({ ...item, unit: item.packageLabel, salePriceInclVat: 0 })) }),
+        body: JSON.stringify({ customerName, customerEmail, customerPhone, fulfillment, paymentMethod, locale, notes: [fulfillment === "Local delivery" && customerAddress ? `${ui.order.address}: ${customerAddress}` : "", notes].filter(Boolean).join("\n\n"), idempotencyKey: idempotencyKey.current, lines: items.map((item) => ({ ...item, unit: item.packageLabel, salePriceInclVat: 0 })) }),
       });
       const result = await response.json() as { ok: boolean; errorCode?: CartValidationCode | "missing_fields" | "service_unavailable" | "invalid_order" | "order_failed"; message?: string; orderId?: string; emailed?: boolean; diagnosticId?: string };
       if (!response.ok || !result.ok) throw new Error(orderErrorMessage(result.errorCode, result.message));
@@ -123,7 +131,7 @@ export function CartView({ locale }: { locale: Locale }) {
           <article className={`grid gap-4 rounded-lg border bg-white p-4 shadow-soft sm:grid-cols-[120px_minmax(0,1fr)] ${line.available ? "border-forest/10" : "border-red-300"}`} key={`${line.productId}:${line.packageLabel}`}>
             {line.imageUrl ? <img alt={line.name} className="aspect-[4/3] w-full rounded-md object-cover" src={line.imageUrl} /> : <div className="aspect-[4/3] rounded-md bg-cream" />}
             <div className="min-w-0">
-              <div className="flex items-start justify-between gap-3"><div><h2 className="font-serif text-xl font-bold text-forest">{line.name}</h2><p className="mt-1 text-xs text-forest/60">{line.packageLabel}</p></div><strong className="whitespace-nowrap text-forest">{formatEuro(line.lineTotalInclVat)}</strong></div>
+              <div className="flex items-start justify-between gap-3"><div><h2 className="font-serif text-xl font-bold text-forest">{line.name}</h2><p className="mt-2 inline-flex rounded-md bg-linen px-2 py-1 text-xs font-bold text-forest">{ui.products.package}: {line.packageLabel}</p></div><strong className="whitespace-nowrap text-forest">{formatEuro(line.lineTotalInclVat)}</strong></div>
               {line.stockStatus === "preorder" ? <p className="mt-2 text-xs text-forest/65">{copy.preorderNote}</p> : null}
               {!line.available ? <p className="mt-2 flex items-center gap-2 text-sm font-bold text-red-700"><AlertTriangle size={16} />{availabilityMessage(line.code)}</p> : null}
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
@@ -139,7 +147,20 @@ export function CartView({ locale }: { locale: Locale }) {
         <h2 className="font-serif text-2xl font-bold text-forest">{copy.checkout}</h2><p className="mt-2 text-sm leading-6 text-forest/70">{copy.checkoutIntro}</p>
         <div className="mt-4 space-y-2 border-y border-forest/15 py-4 text-sm text-forest"><div className="flex justify-between"><span>{copy.subtotal}</span><strong>{formatEuro(validation?.subtotalExVat ?? 0)}</strong></div><div className="flex justify-between"><span>{copy.vat}</span><strong>{formatEuro(validation?.vatTotal ?? 0)}</strong></div><div className="flex justify-between text-lg"><span className="font-bold">{copy.total}</span><strong>{formatEuro(validation?.total ?? 0)}</strong></div></div>
         <div className="mt-4 grid grid-cols-2 gap-1 rounded-full bg-white p-1">{(["Collection", "Local delivery"] as const).map((option) => <button className={`rounded-full px-3 py-2 text-sm font-bold ${fulfillment === option ? "bg-forest text-cream" : "text-forest"}`} key={option} type="button" onClick={() => setFulfillment(option)}>{option === "Collection" ? copy.collection : copy.delivery}</button>)}</div>
-        <form className="mt-5 space-y-3" onSubmit={submitOrder}><input className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm" onChange={(event) => setCustomerName(event.target.value)} placeholder={copy.name} required value={customerName} /><input className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm" onChange={(event) => setCustomerEmail(event.target.value)} placeholder={copy.email} required type="email" value={customerEmail} /><input autoComplete="tel" className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm" inputMode="tel" onBlur={() => setCustomerPhone(formatCustomerPhone(customerPhone))} onChange={(event) => setCustomerPhone(event.target.value)} placeholder={copy.phone} type="tel" value={customerPhone} /><textarea className="min-h-20 w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm" onChange={(event) => setCustomerAddress(event.target.value)} placeholder={copy.address} value={customerAddress} /><select aria-label={copy.paymentMethod} className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm" onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)} value={paymentMethod}><option value="pending">{copy.paymentMethod}</option>{paymentMethods.filter((method) => method !== "pending").map((method) => <option key={method} value={method}>{paymentMethodLabel(method, locale)}</option>)}</select><textarea className="min-h-20 w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm" onChange={(event) => setNotes(event.target.value)} placeholder={copy.notes} value={notes} /><button className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-forest px-5 py-3 text-sm font-bold text-cream disabled:opacity-40" disabled={!canCheckout || status === "sending"} type="submit"><Send size={17} />{status === "sending" ? copy.sending : copy.send}</button></form>
+        <form className="mt-5 space-y-3" onSubmit={submitOrder}>
+          <input className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm" onChange={(event) => setCustomerName(event.target.value)} placeholder={copy.name} required value={customerName} />
+          <input className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm" onChange={(event) => setCustomerEmail(event.target.value)} placeholder={copy.email} required type="email" value={customerEmail} />
+          <input autoComplete="tel" className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm" inputMode="tel" onBlur={() => setCustomerPhone(formatCustomerPhone(customerPhone))} onChange={(event) => setCustomerPhone(event.target.value)} placeholder={copy.phone} type="tel" value={customerPhone} />
+          {fulfillment === "Local delivery" ? (
+            <textarea className="min-h-20 w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm" onChange={(event) => setCustomerAddress(event.target.value)} placeholder={copy.address} value={customerAddress} />
+          ) : null}
+          <select aria-label={copy.paymentMethod} className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm" onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)} value={paymentMethod}>
+            <option value="pending">{copy.paymentMethod}</option>
+            {paymentMethods.filter((method) => method !== "pending").map((method) => <option key={method} value={method}>{paymentMethodLabel(method, locale)}</option>)}
+          </select>
+          <textarea className="min-h-20 w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm" onChange={(event) => setNotes(event.target.value)} placeholder={fulfillment === "Collection" ? pickupNotesPlaceholder[locale] : copy.notes} value={notes} />
+          <button className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-forest px-5 py-3 text-sm font-bold text-cream disabled:opacity-40" disabled={!canCheckout || status === "sending"} type="submit"><Send size={17} />{status === "sending" ? copy.sending : copy.send}</button>
+        </form>
         {message ? <p className={`mt-4 flex items-start gap-2 text-sm ${status === "error" ? "text-red-700" : "text-forest"}`}>{status === "sent" ? <CheckCircle2 className="shrink-0" size={18} /> : null}{message}</p> : null}
       </aside>
     </div>

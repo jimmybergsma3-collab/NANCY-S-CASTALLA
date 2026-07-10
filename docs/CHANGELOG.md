@@ -42,6 +42,12 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Verbeterd
 
+- Productzoekvelden zijn verduidelijkt en zoeken nu ook op zichtbare locale-productomschrijving en vertaalde categorienamen, naast productnaam, interne categorie, code en leveranciercode.
+- Productkaarten tonen de gekozen verkoopeenheid/verpakking prominenter als eigen `Sold as`/`Verkocht als`-regel, zodat aantallen zoals `4 stuks`, `40 x 85 g`, `1 kg` en `500 ml` direct zichtbaar zijn.
+- Productdetailpagina's labelen de verkoopeenheid nu als `Sold as`/`Verkocht als` in plaats van als algemene eenheid.
+- De winkelmand toont gekozen verpakkingen als duidelijke labels per orderregel.
+- Het checkoutformulier toont bij afhalen alleen naam, e-mail, telefoon en gewenste afhaaltijd/opmerking; het bezorgadres verschijnt alleen bij lokale bezorging.
+- Klantorderdetails tonen verpakkingen, productcode, aantal en btw als losse badges, waardoor eerdere bestellingen beter scanbaar zijn.
 - `POST /api/orders` logt nu de volledige veilige orderflow met diagnose-id: ontvangst, authcheck, cartvalidatie, totaalberekening, RPC-poging, eventuele fallback, orderopslag en e-mailstap.
 - Orderfouten sturen nu een `message` en `diagnosticId` terug naar de browser, zodat testers en beheer exactere feedback zien dan alleen `The order could not be sent`.
 - Orderopslag heeft een service-role REST-fallback wanneer de Supabase RPC `create_validated_order` faalt door schema-cache, ontbrekende functie, permissie of `payment_method`-mismatch; customer, order en orderregels worden dan alsnog opgeslagen.

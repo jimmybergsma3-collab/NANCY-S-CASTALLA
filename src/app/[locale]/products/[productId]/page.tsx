@@ -141,7 +141,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
               <strong>{product.id}</strong>
             </div>
             <div className="flex justify-between gap-4">
-              <span>{ui.products.unit}</span>
+              <span>{ui.products.soldAs}</span>
               <strong>{getCustomerDisplayUnit(product)}</strong>
             </div>
             <div className="flex justify-between gap-4">
