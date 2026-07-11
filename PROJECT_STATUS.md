@@ -1,6 +1,6 @@
 # Projectstatus: Nancy's Castalla
 
-**Peildatum:** 10 juli 2026
+**Peildatum:** 11 juli 2026
 **Fase:** productie-MVP / pre-orderfase
 **Productiedomein:** `https://www.nancys.es`
 **Bronnen voor deze status:** volledige Git-geschiedenis vanaf de eerste webshopcommit, actuele routes, services, migraties en documentatie.
@@ -17,7 +17,7 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 | Orders | Operationeel | Serverprijzen, IVA, idempotency, orderregels, ordernummer, klantkoppeling en adminbeheer. E-mail is secundair en blokkeert orderopslag niet. De order-API logt een diagnose-id per stap en heeft een service-role REST-fallback wanneer de Supabase RPC in productie achterloopt of faalt. |
 | Voorraad | Operationeel met beperking | Afboeken bij bevestiging en terugboeken bij annulering; geen reservering tijdens status `new`. |
 | Facturatie | Operationeel voor normale facturen | Unieke factuur per order, snapshots, Spaans/Engelse PDF, admin- en klantdownload, e-mail. |
-| E-mail | Operationeel mits extern geconfigureerd | Resend voor order/factuur; Supabase SMTP voor accountmail; geen queue of automatische retry. |
+| E-mail | Operationeel mits extern geconfigureerd | Resend voor order/factuur met professionele responsive HTML, plain-text fallback en correcte Reply-To; Supabase SMTP voor accountmail; geen queue of automatische retry. |
 | Admin | Gemengd | Producten, orders, voorraad en facturen functioneel; overige modules variëren van overzicht tot voorbereiding. |
 | Betaling | Handmatig | Bizum, bankoverschrijving en contant; kaart slechts als vastgelegde keuze, geen online provider. |
 | Bezorging | Gedeeltelijk | Beleid wordt getoond, maar minimum, radius en fee zijn niet volledig server-authoritatief. |
@@ -29,6 +29,7 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 
 - Next.js App Router-webshop met responsive merkstijl en locales `en`, `nl`, `de`, `es`, `sv`.
 - Homepage, categorieoverzicht, categoriepagina, zoeken, filters en productdetail op stabiele `NC-xxxxx`-productcode.
+- Publieke catalogus toont uitsluitend producten met lifecycle-status `active` en `is_visible=true`; gearchiveerde, disabled en draftproducten blijven uit de shop.
 - Productzoekvelden filteren live en doorzoeken productnaam, vertaalde categorienamen, zichtbare productomschrijving en productcode.
 - Productfoto-upload via Supabase Storage, meerdere categorieën, verpakkingsopties, uitgebreide productinformatie en sociale deelactie.
 - Persistente winkelmand met badge, aantallen wijzigen, regels verwijderen, duidelijke verpakkingslabels, subtotalen, IVA en totaal.
@@ -51,9 +52,15 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 - Verborgen adminlogin met environmentcredentials en HttpOnly-sessiecookie.
 - Dashboard met product-, online-, verborgen- en lagevoorraadtellingen.
 - Volledig productbeheer: toevoegen, wijzigen, verwijderen, publiceren, zoeken, filteren, prijzen, IVA, verpakking, voorraad en afbeeldingen.
+- Productarchivering voor livegang: oude catalogus kan in bulk naar `archived` onder batch `IMPORT_2026_PRELAUNCH`, zonder producten, afbeeldingen, categorieën, codes, relaties of voorraadhistorie te verwijderen.
+- Vervolg-migratie `202607110003_product_catalogue_conflict_protection.sql` bereidt bescherming voor tegen gewone database-updates op archived producten; oude importbestanden of toekomstige importtools mogen ze niet stil overschrijven of heractiveren. Supplier code en EAN zijn duplicaatsignalen, geen unieke productsleutels.
+- Productbeheer toont standaard alleen actieve producten en heeft filters voor Active, Archived, Disabled, Draft en All; individuele archived producten kunnen veilig worden hersteld.
 - Categorieoverzicht, klantoverzicht, leveranciersoverzicht, inkooporderoverzicht, IVA-samenvatting, rapportagekaarten, instellingen en integratieregister.
 - Orderoverzicht en responsieve orderdetails met klantgegevens, adres, opmerkingen, regels, verpakking, aantallen, prijzen, IVA en totalen.
 - Status, betaalstatus en interne notities wijzigen; bellen, WhatsApp en e-mail openen.
+- Compact orderbeheer met zoeken, statusfilter, betaalfilter, datumfilter en onderscheid tussen echte, test- en gearchiveerde orders.
+- Klantenbeheer met detailweergave, zoeken, filters voor actief/gearchiveerd/test/met account/zonder account, archiveren, testmarkering en veilige deleteblokkades.
+- Facturenbeheer met filters voor productie, test, gearchiveerd en geannuleerd; facturen kunnen worden gemarkeerd als test of gearchiveerd zonder nummering te wijzigen.
 - Voorraadoverzicht en handmatige correcties.
 
 ## Facturatie
@@ -64,10 +71,12 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 - Professionele Spaans/Engelse PDF met logo, handelsnaam, titular/autónomo, NIF/NIE, factuur- en ordernummer, productregels, IVA per tarief en totalen.
 - Beveiligde admin- en klantspecifieke PDF-download.
 - Facturenlijst, e-mailstatus en opnieuw verzenden via Resend.
+- Nieuwe factuurseries voorbereid: `TEST-{jaar}-{zes cijfers}` voor prelaunch/test en `NC-{jaar}-{zes cijfers}` voor live productie. Bestaande factuurnummers blijven intact en worden nooit automatisch hergebruikt of hernummerd.
+- Admin-auditlog voorbereid voor cleanupacties zoals archiveren, testmarkeren en veilige testorderverwijdering.
 
 ## E-mail en platform
 
-- Branded responsive order-, status- en factuurmails met tekstfallback.
+- Branded responsive order-, status- en factuurmails met logo, ordertabellen, betaalinformatie, contactknoppen, WhatsApp, website, Facebook, correcte Reply-To en tekstfallback.
 - Adminmelding en klantbevestiging na ordercreatie.
 - Statusmails voor bevestigd, betaald, klaar voor afhalen, onderweg, afgeleverd en geannuleerd.
 - Mailfalen verwijdert geen order of factuur en wordt aan admin teruggekoppeld.
@@ -79,7 +88,7 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 Uitsluitend punten die nog daadwerkelijk openstaan voor betrouwbare eerste klantorders:
 
 1. Controleer in Vercel alle vereiste environmentvariabelen voor Production én Preview, zonder waarden in Git te zetten.
-2. Bevestig dat alle migraties tot en met `202607080001_payment_method_polish.sql` in productie zijn uitgevoerd.
+2. Bevestig dat alle migraties tot en met `202607110002_product_catalogue_archiving.sql` in productie zijn uitgevoerd; voer `202607110003_product_catalogue_conflict_protection.sql` pas uit na bewuste productiecontrole.
 3. Voer één volledige productieflow uit met een nieuw klantaccount: verificatie, login, checkout, adminbevestiging, voorraadmutatie, factuur, PDF, e-mail, klantdownload en annulering/terugboeking.
 4. Controleer Resend-domein, SPF, DKIM, DMARC, API-key en Supabase Custom SMTP; verifieer ontvangst van account-, order-, status- en factuurmails.
 5. Vervang de placeholder-bankrekening en bevestig het zakelijke Bizum-nummer in de centrale bedrijfsconfiguratie.

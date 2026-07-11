@@ -14,6 +14,9 @@ type ProductRow = {
   images?: string[];
   is_visible?: boolean;
   is_new?: boolean;
+  product_status?: Product["lifecycleStatus"];
+  import_batch?: string;
+  archived_at?: string;
   category: Product["category"];
   categories?: Product["categories"];
   description: string;
@@ -54,6 +57,9 @@ export function rowToProduct(row: ProductRow): Product {
     images: row.images ?? (row.image_url ? [row.image_url] : []),
     isVisible: row.is_visible ?? true,
     isNew: row.is_new ?? false,
+    lifecycleStatus: row.product_status ?? "active",
+    importBatch: row.import_batch ?? "",
+    archivedAt: row.archived_at ?? "",
     category: row.category,
     categories: row.categories?.length ? row.categories : [row.category],
     description: row.description,
@@ -95,6 +101,9 @@ export function productToRow(product: Product): ProductRow {
     images: product.images ?? (product.imageUrl ? [product.imageUrl] : []),
     is_visible: product.isVisible ?? false,
     is_new: product.isNew ?? false,
+    product_status: product.lifecycleStatus ?? "active",
+    import_batch: product.importBatch ?? "",
+    archived_at: product.archivedAt || undefined,
     category: product.category,
     categories: getProductCategories(product),
     description: product.description,
@@ -146,17 +155,22 @@ async function getAllProductRows() {
   return rows;
 }
 
-export async function getProducts({ includeHidden = false }: { includeHidden?: boolean } = {}) {
+function isActivePublicProduct(product: Product) {
+  return product.isVisible === true && (product.lifecycleStatus ?? "active") === "active";
+}
+
+export async function getProducts({ includeHidden = false, includeArchived = false }: { includeHidden?: boolean; includeArchived?: boolean } = {}) {
   if (!hasSupabaseAdmin()) {
-    return includeHidden ? localProducts : localProducts.filter((product) => product.isVisible !== false);
+    return includeHidden ? localProducts : localProducts.filter(isActivePublicProduct);
   }
 
   try {
     const rows = await getAllProductRows();
     const products = rows.map(rowToProduct);
-    return includeHidden ? products : products.filter((product) => product.isVisible);
+    if (includeArchived) return products;
+    return includeHidden ? products.filter((product) => (product.lifecycleStatus ?? "active") === "active") : products.filter(isActivePublicProduct);
   } catch {
-    return includeHidden ? localProducts : localProducts.filter((product) => product.isVisible !== false);
+    return includeHidden ? localProducts : localProducts.filter(isActivePublicProduct);
   }
 }
 
@@ -167,13 +181,13 @@ export async function getHomepageProducts(limit = 8) {
 
   try {
     const featuredRows = await supabaseAdminFetch<ProductRow[]>(
-      `products?select=*&is_visible=eq.true&featured=eq.true&image_url=neq.&order=id.asc&limit=${limit * 3}`,
+      `products?select=*&is_visible=eq.true&product_status=eq.active&featured=eq.true&image_url=neq.&order=id.asc&limit=${limit * 3}`,
     );
     const featured = featuredRows.map(rowToProduct).filter((product) => product.imageUrl?.trim());
     if (featured.length >= limit) return featured.slice(0, limit);
 
     const fallbackRows = await supabaseAdminFetch<ProductRow[]>(
-      `products?select=*&is_visible=eq.true&image_url=neq.&order=id.asc&limit=${limit * 4}`,
+      `products?select=*&is_visible=eq.true&product_status=eq.active&image_url=neq.&order=id.asc&limit=${limit * 4}`,
     );
     const fallback = fallbackRows
       .map(rowToProduct)
@@ -193,11 +207,15 @@ export async function getProductsByIds(ids: string[]) {
   if (!ids.length) return [];
   if (!hasSupabaseAdmin()) return localProducts.filter((product) => ids.includes(product.id));
   const escaped = ids.map((id) => `"${id.replaceAll('"', '')}"`).join(",");
-  const rows = await supabaseAdminFetch<ProductRow[]>(`products?select=*&id=in.(${encodeURIComponent(escaped)})`);
-  return rows.map(rowToProduct);
+  const rows = await supabaseAdminFetch<ProductRow[]>(`products?select=*&id=in.(${encodeURIComponent(escaped)})&product_status=eq.active`);
+  return rows.map(rowToProduct).filter((product) => (product.lifecycleStatus ?? "active") === "active");
 }
 
 export async function createProduct(product: Product) {
+  const existing = await supabaseAdminFetch<ProductRow[]>(`products?select=id,product_status&id=eq.${encodeURIComponent(product.id)}&limit=1`);
+  if (existing[0]?.product_status === "archived") {
+    throw new Error("Archived products are protected. Restore the product first or use a new product code for a new import.");
+  }
   const rows = await supabaseAdminFetch<ProductRow[]>("products?on_conflict=id", {
     method: "POST",
     body: productToRow(product),
@@ -207,8 +225,18 @@ export async function createProduct(product: Product) {
 }
 
 export async function deleteProduct(id: string) {
-  await supabaseAdminFetch<void>(`products?id=eq.${encodeURIComponent(id)}`, {
-    method: "DELETE",
-    prefer: "return=minimal",
+  const rows = await supabaseAdminFetch<ProductRow[]>(`products?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: { product_status: "archived", is_visible: false, featured: false, archived_at: new Date().toISOString() },
   });
+  return rows[0] ? rowToProduct(rows[0]) : undefined;
+}
+
+export async function archiveCurrentCatalogue(importBatch = "IMPORT_2026_PRELAUNCH") {
+  return supabaseAdminFetch<number>("rpc/archive_current_catalogue", { method: "POST", body: { p_import_batch: importBatch } });
+}
+
+export async function restoreArchivedProduct(id: string) {
+  const rows = await supabaseAdminFetch<ProductRow[]>("rpc/restore_archived_product", { method: "POST", body: { p_product_id: id } });
+  return rows[0] ? rowToProduct(rows[0]) : undefined;
 }

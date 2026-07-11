@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Eye, EyeOff, ExternalLink, Pencil, Trash2 } from "lucide-react";
+import { Archive, Eye, EyeOff, ExternalLink, Pencil, RotateCcw } from "lucide-react";
 import type { Product } from "@/types/product";
 import { calculatePricing, calculateUnitCost, formatEuro, getSupplierPackQuantity } from "@/lib/pricing";
 import { getProductCategories, productCategories as availableProductCategories, productMatchesCategory } from "@/lib/product-categories";
@@ -17,6 +17,9 @@ const defaultProduct: Product = {
   images: [],
   isVisible: false,
   isNew: false,
+  lifecycleStatus: "active",
+  importBatch: "",
+  archivedAt: "",
   category: "British & Irish products",
   categories: ["British & Irish products"],
   description: "",
@@ -107,6 +110,7 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
   const [productSearch, setProductSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [visibilityFilter, setVisibilityFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState<Product["lifecycleStatus"] | "All">("active");
   const [duplicateFilter, setDuplicateFilter] = useState("All");
   const [uploading, setUploading] = useState(false);
   const [packageOptionsText, setPackageOptionsText] = useState("");
@@ -125,7 +129,9 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
     }
     return new Set(Array.from(counts.entries()).filter(([, count]) => count > 1).map(([key]) => key));
   }, [products]);
-  const onlineCount = products.filter((item) => item.isVisible !== false).length;
+  const activeCount = products.filter((item) => (item.lifecycleStatus ?? "active") === "active").length;
+  const archivedCount = products.filter((item) => item.lifecycleStatus === "archived").length;
+  const onlineCount = products.filter((item) => item.isVisible !== false && (item.lifecycleStatus ?? "active") === "active").length;
   const duplicateCount = products.filter((item) => duplicateKeys.has(`${item.supplier.trim().toLowerCase()}|${item.supplierCode.trim().toLowerCase()}`)).length;
   const filteredProducts = useMemo(() => {
     const query = productSearch.trim().toLowerCase();
@@ -138,14 +144,15 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
             .includes(query)
         : true;
       const matchesCategory = categoryFilter === "All" || productMatchesCategory(item, categoryFilter as Product["category"]);
+      const matchesStatus = statusFilter === "All" || (item.lifecycleStatus ?? "active") === statusFilter;
       const matchesVisibility = visibilityFilter === "All" ||
         (visibilityFilter === "Online" ? item.isVisible !== false : item.isVisible === false);
       const duplicateKey = `${item.supplier.trim().toLowerCase()}|${item.supplierCode.trim().toLowerCase()}`;
       const matchesDuplicate = duplicateFilter === "All" || duplicateKeys.has(duplicateKey);
 
-      return matchesQuery && matchesCategory && matchesVisibility && matchesDuplicate;
+      return matchesQuery && matchesCategory && matchesStatus && matchesVisibility && matchesDuplicate;
     });
-  }, [categoryFilter, duplicateFilter, duplicateKeys, productSearch, products, visibilityFilter]);
+  }, [categoryFilter, duplicateFilter, duplicateKeys, productSearch, products, statusFilter, visibilityFilter]);
 
   function setActiveProduct(nextProduct: Product) {
     setProduct(nextProduct);
@@ -195,7 +202,7 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
   }
 
   async function deleteProduct(item: Product) {
-    const confirmed = window.confirm(`Delete ${item.name || item.id} (${item.id})? This cannot be undone.`);
+    const confirmed = window.confirm(`Archive ${item.name || item.id} (${item.id})? No data, image or relation will be deleted.`);
     if (!confirmed) {
       return;
     }
@@ -210,14 +217,54 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
       return;
     }
 
-    setMessage("Product deleted.");
+    setMessage("Product archived. No data was deleted.");
     const refreshedProducts = await loadProductsAndReturn();
     if (product.id === item.id) {
-      setActiveProduct(createBlankProduct(refreshedProducts));
+      setActiveProduct({ ...defaultProduct, ...refreshedProducts.find((next) => next.id === item.id) } as Product);
     }
   }
 
+  async function archiveCurrentCatalogue() {
+    const confirmation = window.prompt("Type ARCHIVE CURRENT CATALOGUE to archive all current products under IMPORT_2026_PRELAUNCH.");
+    if (confirmation !== "ARCHIVE CURRENT CATALOGUE") return;
+    setMessage("Archiving current catalogue...");
+    const response = await fetch("/api/admin/products", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "archive-current-catalogue", importBatch: "IMPORT_2026_PRELAUNCH", confirmation }),
+    });
+    const result = (await response.json()) as { ok: boolean; archivedCount?: number; message?: string };
+    if (!response.ok || !result.ok) {
+      setMessage(result.message || "Catalogue could not be archived.");
+      return;
+    }
+    const refreshedProducts = await loadProductsAndReturn();
+    setStatusFilter("archived");
+    setActiveProduct(createBlankProduct(refreshedProducts));
+    setMessage(`${result.archivedCount ?? 0} products archived under IMPORT_2026_PRELAUNCH. Nothing was deleted.`);
+  }
+
+  async function restoreProduct(item: Product) {
+    const response = await fetch("/api/admin/products", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "restore-archived-product", id: item.id }),
+    });
+    const result = (await response.json()) as { ok: boolean; product?: Product; message?: string };
+    if (!response.ok || !result.ok || !result.product) {
+      setMessage(result.message || "Product could not be restored.");
+      return;
+    }
+    setMessage("Product restored as active.");
+    await loadProductsAndReturn();
+    setActiveProduct({ ...defaultProduct, ...result.product });
+  }
+
   async function toggleProductVisibility(item: Product) {
+    if ((item.lifecycleStatus ?? "active") !== "active") {
+      setMessage("Only active products can be put online. Restore or change the status first.");
+      return;
+    }
     const nextVisible = item.isVisible === false;
     const result = await saveProductPayload({ ...item, isVisible: nextVisible });
 
@@ -439,9 +486,20 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
               New
             </label>
           </Field>
+          <Field help="Active products can appear in the shop. Archived, disabled and draft products are hidden from the public webshop." label="Product admin status">
+            <select className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("lifecycleStatus", event.target.value as Product["lifecycleStatus"])} value={product.lifecycleStatus ?? "active"}>
+              <option value="active">Active</option>
+              <option value="archived">Archived</option>
+              <option value="disabled">Disabled</option>
+              <option value="draft">Draft</option>
+            </select>
+          </Field>
+          <Field help="Tracks the import this product belongs to, for example IMPORT_2026_PRELAUNCH or IMPORT_2026_LIVE_JULY." label="Import batch">
+            <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("importBatch", event.target.value)} placeholder="IMPORT_2026_PRELAUNCH" value={product.importBatch ?? ""} />
+          </Field>
           <Field help="Turn this on only when the product may appear on the public website." label="Show on website">
             <label className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
-              <input checked={product.isVisible ?? false} onChange={(event) => update("isVisible", event.target.checked)} type="checkbox" />
+              <input checked={product.isVisible ?? false} disabled={(product.lifecycleStatus ?? "active") !== "active"} onChange={(event) => update("isVisible", event.target.checked)} type="checkbox" />
               Visible online
             </label>
           </Field>
@@ -525,7 +583,7 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
             onClick={deleteCurrentProduct}
             type="button"
           >
-            Delete product
+            Archive product
           </button>
         ) : null}
         {message ? <p className="mt-3 text-sm text-forest/75">{message}</p> : null}
@@ -538,23 +596,35 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
               {filteredProducts.length} of {products.length} products shown.
             </p>
           </div>
-          <button
-            className="rounded-full bg-forest px-4 py-2 text-sm font-bold text-cream"
-            onClick={() => setActiveProduct(createBlankProduct(products))}
-            type="button"
-          >
-            New product
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="rounded-full border border-red-200 bg-white px-4 py-2 text-sm font-bold text-red-700"
+              onClick={() => void archiveCurrentCatalogue()}
+              type="button"
+            >
+              Archive current catalogue
+            </button>
+            <button
+              className="rounded-full bg-forest px-4 py-2 text-sm font-bold text-cream"
+              onClick={() => setActiveProduct(createBlankProduct(products))}
+              type="button"
+            >
+              New product
+            </button>
+          </div>
         </div>
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs font-bold">
-          <button className="rounded-lg border border-forest/10 bg-white px-2 py-3 text-forest" onClick={() => setVisibilityFilter("All")} type="button">
-            <span className="block text-lg">{products.length}</span>All
+        <div className="mt-4 grid grid-cols-4 gap-2 text-center text-xs font-bold">
+          <button className="rounded-lg border border-forest/10 bg-white px-2 py-3 text-forest" onClick={() => setStatusFilter("active")} type="button">
+            <span className="block text-lg">{activeCount}</span>Active
           </button>
           <button className="rounded-lg border border-leaf/20 bg-white px-2 py-3 text-leaf" onClick={() => setVisibilityFilter("Online")} type="button">
             <span className="block text-lg">{onlineCount}</span>Online
           </button>
           <button className="rounded-lg border border-coffee/20 bg-white px-2 py-3 text-coffee" onClick={() => setVisibilityFilter("Offline")} type="button">
             <span className="block text-lg">{products.length - onlineCount}</span>Offline
+          </button>
+          <button className="rounded-lg border border-brass/20 bg-white px-2 py-3 text-coffee" onClick={() => setStatusFilter("archived")} type="button">
+            <span className="block text-lg">{archivedCount}</span>Archived
           </button>
         </div>
         <div className="mt-5 grid gap-3">
@@ -565,7 +635,7 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
             type="search"
             value={productSearch}
           />
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <select
               className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm"
               onChange={(event) => setCategoryFilter(event.target.value)}
@@ -583,6 +653,17 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
               <option>All</option>
               <option>Online</option>
               <option>Offline</option>
+            </select>
+            <select
+              className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm"
+              onChange={(event) => setStatusFilter(event.target.value as Product["lifecycleStatus"] | "All")}
+              value={statusFilter}
+            >
+              <option value="active">Active products</option>
+              <option value="archived">Archived products</option>
+              <option value="disabled">Disabled products</option>
+              <option value="draft">Draft products</option>
+              <option value="All">All products</option>
             </select>
             <select
               className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm"
@@ -632,13 +713,21 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
                     }`}>
                       {item.isVisible !== false ? "Online" : "Offline"}
                     </span>
+                    <span className="ml-1 rounded-full bg-linen px-2 py-1 text-xs font-bold text-forest">
+                      {item.lifecycleStatus ?? "active"}
+                    </span>
+                    {item.importBatch ? <div className="mt-1 text-[11px] text-forest/55">{item.importBatch}</div> : null}
                   </td>
                   <td className="px-3 py-3">
                     <div className="flex justify-end gap-1">
                       <button className="grid h-9 w-9 place-items-center rounded-md border border-forest/15 text-forest hover:bg-linen" onClick={(event) => { event.stopPropagation(); setActiveProduct({ ...defaultProduct, ...item }); }} title="Edit product" type="button"><Pencil size={16} /></button>
                       <Link className="grid h-9 w-9 place-items-center rounded-md border border-forest/15 text-forest hover:bg-linen" href={`/en/products/${encodeURIComponent(item.id)}`} onClick={(event) => event.stopPropagation()} target="_blank" title="Open product page"><ExternalLink size={16} /></Link>
                       <button className="grid h-9 w-9 place-items-center rounded-md border border-forest/15 text-forest hover:bg-linen" onClick={(event) => { event.stopPropagation(); void toggleProductVisibility(item); }} title={item.isVisible !== false ? "Take offline" : "Put online"} type="button">{item.isVisible !== false ? <EyeOff size={16} /> : <Eye size={16} />}</button>
-                      <button className="grid h-9 w-9 place-items-center rounded-md border border-red-200 text-red-700 hover:bg-red-50" onClick={(event) => { event.stopPropagation(); void deleteProduct(item); }} title="Delete product" type="button"><Trash2 size={16} /></button>
+                      {item.lifecycleStatus === "archived" ? (
+                        <button className="grid h-9 w-9 place-items-center rounded-md border border-leaf/20 text-leaf hover:bg-leaf/10" onClick={(event) => { event.stopPropagation(); void restoreProduct(item); }} title="Restore archived product" type="button"><RotateCcw size={16} /></button>
+                      ) : (
+                        <button className="grid h-9 w-9 place-items-center rounded-md border border-red-200 text-red-700 hover:bg-red-50" onClick={(event) => { event.stopPropagation(); void deleteProduct(item); }} title="Archive product" type="button"><Archive size={16} /></button>
+                      )}
                     </div>
                   </td>
                 </tr>

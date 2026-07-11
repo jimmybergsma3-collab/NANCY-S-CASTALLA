@@ -205,7 +205,7 @@ De publieke frontend en serverbackend staan in dezelfde Next.js-repository, maar
 
 | Map/bestand | Verantwoordelijkheid |
 |---|---|
-| `config/business.ts` | Centrale bedrijfsgegevens: naam, adres, WhatsApp, e-mails, bezorgregels, Bizum, banktekst en faseberichten |
+| `config/business.ts` | Centrale bedrijfsgegevens: naam, adres, WhatsApp, e-mails, bezorgregels, Bizum, banktekst, faseberichten, business mode en factuurseries |
 | `public` | Statische merkassets, in het bijzonder het Nancy's Castalla-logo |
 | `src/app/[locale]` | Alle meertalige pagina's met taalprefix `en`, `nl`, `de`, `es` of `sv` |
 | `src/app/api` | Server-side HTTP-endpoints voor orders, accounts en beheer |
@@ -254,6 +254,7 @@ Belangrijkste kolommen:
 | Identiteit | `id` tekstuele code, `uuid`, `sku`, optioneel `ean` |
 | Presentatie | `name`, `description`, `image_url`, `images`, `is_visible`, `featured`, `is_new` |
 | Indeling | `category`, `categories`, `origin`, `type`, `stock_status` |
+| Lifecycle/import | `product_status`, `import_batch`, `archived_at` |
 | Verkoop | `sale_price_incl_vat`, `unit`, `package_options`, `weight` |
 | Inkoop | `cost_price_ex_vat`, `vat_rate`, `supplier`, `supplier_code`, `pack_size`, `unit_cost` |
 | Marge | `margin_percent`, `profit_per_unit` |
@@ -266,9 +267,10 @@ Constraints en indexes:
 - `id` is de primaire sleutel en volgt in de beheerinterface het formaat `NC-00001`.
 - `uuid` heeft een unieke index.
 - `sku` is uniek.
-- `ean` heeft een partiele index wanneer een waarde aanwezig is.
+- `ean` heeft een partiele index wanneer een waarde aanwezig is, maar is niet uniek.
+- `supplier_code` is niet uniek; vanaf vervolg-migratie `202607110003_product_catalogue_conflict_protection.sql` is er wel een lookup-index op leverancier plus leveranciercode.
 - Er is een index voor lage voorraad/tracked inventory.
-- Categorie-, zichtbaarheid- en zoekvelden missen nog gerichte productie-indexen voor een zeer grote catalogus.
+- Lifecycle-, importbatch-, categorie-, zichtbaarheid- en zoekvelden missen deels nog gerichte productie-indexen voor een zeer grote catalogus; `product_status/is_visible` en `import_batch` zijn vanaf migratie `202607110002_product_catalogue_archiving.sql` wel geindexeerd.
 
 Relaties:
 
@@ -276,6 +278,10 @@ Relaties:
 - `inventory_movements.product_id` verwijst wel naar `products` en wordt bij verwijderen op `NULL` gezet.
 
 RLS: ingeschakeld, geen expliciete tabelpolicies in de repository.
+
+Vanaf migratie `202607110002_product_catalogue_archiving.sql` heeft elk product een lifecycle-status: `active`, `archived`, `disabled` of `draft`. Alleen `active` plus `is_visible=true` mag publiek worden getoond of besteld. `archived` producten blijven inclusief productcode, afbeeldingen, categorieën, voorraadvelden en relaties in de database staan. `import_batch` bewaart de herkomstbatch, zoals `IMPORT_2026_PRELAUNCH` voor de oude prijslijstcatalogus en later bijvoorbeeld `IMPORT_2026_LIVE_JULY`.
+
+Importveiligheid: `products.id` is de unieke Nancy-productcode en de publieke URL-sleutel. `sku` is eveneens uniek en wordt standaard gelijk aan `id` gezet. `supplier_code` en `ean` zijn bewust niet uniek; ze signaleren mogelijke dubbelen, maar mogen nooit stilzwijgend een archived record overschrijven. Vervolg-migratie `202607110003_product_catalogue_conflict_protection.sql` bevat daarom een trigger die gewone updates op `product_status='archived'` blokkeert. Alleen `restore_archived_product` zet tijdelijk de interne allow-flag. Mogelijke importconflicten kunnen worden vastgelegd in `product_import_conflicts` met een handmatige keuze: nieuw importeren, overslaan, of bewust herstellen/koppelen.
 
 ## 4.3 `customers`
 
@@ -378,7 +384,7 @@ Kolommen omvatten UUID, oplopend uniek factuurnummer, order/ordernummer, klant, 
 
 Iedere regel bewaart productcode, naam, verpakking, aantal, prijs incl. btw, btw-tarief, grondslag, btw-bedrag en regeltotaal. De foreign key naar `invoices` gebruikt cascade delete. RLS staat aan; toegang loopt via server-side service-role en beveiligde API's.
 
-Relaties: optionele foreign keys naar `orders` en `customers`, beide `ON DELETE SET NULL`. De externe nummerweergave combineert het UTC-jaar van `issued_at` met de bestaande globale identity: `NC-{jaar}-{invoice_number}`. De globale teller blijft oplopend en wordt niet per jaar gereset of hergebruikt.
+Relaties: optionele foreign keys naar `orders` en `customers`, beide `ON DELETE SET NULL`. Historische facturen zonder serie blijven zichtbaar via de legacy-weergave `NC-{jaar}-{invoice_number}`. Nieuwe facturen gebruiken vanaf migratie `202607110001_admin_cleanup_and_invoice_series.sql` expliciete serievelden: `invoice_series`, `invoice_series_year` en `invoice_series_number`. De prelaunch/testserie is `TEST-{jaar}-{zes cijfers}`; de productieserie is `NC-{jaar}-{zes cijfers}`. Bestaande facturen worden niet automatisch hernummerd en nummers worden niet hergebruikt.
 
 RLS: ingeschakeld.
 
@@ -399,6 +405,10 @@ RLS: ingeschakeld.
 | Auth-customer trigger | Maakt of actualiseert `customers` na insert/update van een Supabase Auth-user |
 | `create_validated_order` | Maakt idempotent een server-gevalideerde order en orderregels |
 | `transition_order_status` | Wijzigt status/betaalstatus atomair en verwerkt voorraad bij bevestiging of annulering |
+| `next_invoice_series_number` | Geeft atomair het volgende nummer binnen een factuurserie en jaar |
+| `safe_delete_test_order` | Verwijdert uitsluitend expliciete testorders zonder voorraadmutatie en zonder officiele livefactuur |
+| `archive_current_catalogue` | Archiveert de actieve prelaunch-catalogus onder een importbatch zonder producten te verwijderen |
+| `restore_archived_product` | Herstelt één archived product naar active en zichtbaar |
 | `create_order_with_inventory` | Oudere functie; niet meer de primaire applicatieroute en kandidaat voor deprecatie |
 
 `transition_order_status` gebruikt row locks op order en producten. Daardoor kunnen twee bevestigingen niet tegelijk dezelfde voorraad overschrijven.
@@ -504,19 +514,24 @@ De `AdminShell` biedt modules voor Dashboard, Producten, Categorieën, Klanten, 
 Aanwezige functies:
 
 - Automatisch volgend productnummer in formaat `NC-00001`.
-- Product toevoegen, selecteren, wijzigen en verwijderen.
+- Product toevoegen, selecteren, wijzigen en veilig archiveren. De admin delete-actie voert geen fysieke database-delete meer uit.
 - Zoeken, filteren, statusoverzicht en paginering voor grote catalogi.
+- Standaardfilter op actieve producten, plus filters voor `active`, `archived`, `disabled`, `draft` en `all`.
 - Meerdere categorieën per product.
 - SKU/leverancierscode, EAN, leverancier en herkomst.
 - Kostprijs excl. btw, btw-percentage, eenheidskosten en verkoopprijs incl. btw.
 - Leveranciersverpakking en klantverpakkingen op meerdere regels.
 - Voorraad, minimumvoorraad en voorraadtracking.
 - `available`, `preorder` en `coming-soon`.
+- Lifecycle-status `active`, `archived`, `disabled`, `draft`; alleen active kan publiek zichtbaar zijn.
+- Importbatchtracking, met bulkarchivering van de oude catalogus onder `IMPORT_2026_PRELAUNCH`.
 - Actief/verborgen, featured en nieuw.
 - Afbeeldings-URL of bestand uploaden naar Supabase Storage.
 - Ingrediënten, gebruiksaanwijzing, bewaring en extra informatie.
 
 De prijshelper kan btw, winst en marge tonen. De oude automatische 50%-regel is geen verplichte verkoopprijs meer; de beheerder bepaalt de verkoopprijs.
+
+De bulkactie `Archive current catalogue` zet de huidige catalogus op `archived`, maakt producten onzichtbaar, schakelt featured uit en bewaart de batchnaam. Dit verwijdert geen producten, afbeeldingen, categorieën, productcodes, relaties of voorraadhistorie. Individuele archived producten kunnen via `restore_archived_product` worden hersteld.
 
 ## 6.3 Orders
 
@@ -524,7 +539,7 @@ Het orderpaneel toont een aanklikbare, responsieve orderlijst. De detailweergave
 
 Ordernotities zijn in het detailpaneel bewerkbaar en worden via een afzonderlijke adminactie opgeslagen met een limiet van 5000 tekens. Dit voorkomt dat een notitiewijziging onbedoeld een status- of voorraadtransitie start.
 
-De orderservice haalt orderregels genest op en verrijkt de resultaten in een gebundelde tweede query met de profielen uit `customers`. Omdat oudere orders nog geen afzonderlijk adressnapshot hebben, gebruikt de weergave eerst het klantprofiel en kan zij daarnaast een gelokaliseerde `Address`/`Adres`/`Adresse`/`Dirección`/`Adress`-regel uit de ordernotitie herkennen.
+De orderservice haalt orderregels genest op en verrijkt de resultaten in een gebundelde tweede query met de profielen uit `customers`. Omdat oudere orders nog geen afzonderlijk adressnapshot hebben, gebruikt de weergave eerst het klantprofiel en kan zij daarnaast een gelokaliseerde `Address`/`Adres`/`Adresse`/`Dirección`/`Adress`-regel uit de ordernotitie herkennen. Het orderpaneel is compact gemaakt met zoeken op ordernummer/klant/e-mail, filters voor status, betaalstatus, datum en real/test/archived, bulkselectie voor testorders, archiveren, testmarkering en een streng geblokkeerde deleteactie voor testorders.
 
 Belangrijke statussen zijn:
 
@@ -551,7 +566,7 @@ Een handmatige correctie bestaat uit een productupdate en een movementregistrati
 
 ## 6.5 Klanten
 
-Het klantenscherm is hoofdzakelijk read-only en toont klantgegevens uit `customers`. Volwaardige bewerking, segmentatie, GDPR-acties, adresbeheer en klantnotities ontbreken nog.
+Het klantenscherm toont klantgegevens uit `customers` met detailpaneel, zoekfunctie en filters voor actief, gearchiveerd, test/diagnostic, zonder account en met account. Beheer kan klanten archiveren/herstellen en als test markeren. Definitief verwijderen is server-side geblokkeerd wanneer `auth_user_id`, orders of facturen bestaan; in die gevallen is archiveren de veilige actie. Alleen records zonder account, orders en facturen kunnen na exacte naam/e-mailbevestiging worden verwijderd. Volwaardige profielbewerking, segmentatie, GDPR-export, adresbeheer en klantnotities ontbreken nog.
 
 ## 6.6 Leveranciers en inkoop
 
@@ -571,7 +586,7 @@ Beschikbare rapportage is beperkt tot eenvoudige tellingen en omzetaggregaties, 
 
 ## 6.9 Instellingen en integraties
 
-Het instellingenscherm toont centrale bedrijfs-/e-mailgegevens. De feitelijke bron is deels `config/business.ts` en deels environmentvariabelen; er is nog geen veilige admineditor.
+Het instellingenscherm toont centrale bedrijfs-/e-mailgegevens plus de actuele `businessMode`, `invoiceSeries` en `invoiceTestSeries`. De feitelijke bron is deels `config/business.ts` en deels environmentvariabelen; er is nog geen veilige admineditor. Omschakelen van `prelaunch` naar `live` verandert alleen toekomstige facturen.
 
 Het integratieregister noemt toekomstige providers voor POS/kassa, SumUp, kaartterminals, facturatie, boekhouding, leveranciers, verzending, WhatsApp Business, e-mail, mobiele app en eigen API. Dit is architectuurvoorbereiding, geen actieve koppeling.
 
@@ -683,7 +698,7 @@ Er is geen klassiek contactformulier. Contact loopt via `info@nancys.es`, WhatsA
 - **Voorraad:** correct bij statuswijziging, maar geen reservering tijdens `new`.
 - **E-mail:** geen queue/retrydashboard; externe configuratie is essentieel.
 - **Inkoop:** tabellen en overzicht, geen complete regel-/ontvangstflow.
-- **Facturatie:** datamodelvoorbereiding, geen operationele facturen.
+- **Facturatie:** normale orderfacturen zijn operationeel; creditnota's, boekhoudexport en formele correctieworkflow ontbreken nog.
 - **Rapportages:** basisaggregaties, geen diepgaande analyse.
 - **Settings:** vooral weergave, niet volledig beheerbaar in de backoffice.
 - **SEO:** globale metadata aanwezig, productcatalogus niet volledig in sitemap/structured data.
@@ -778,7 +793,7 @@ Verwijdert de admincookie.
 
 ### `/api/admin/products`
 
-Ondersteunt productcreatie/upsert, wijziging en verwijdering. Input omvat de productvelden uit hoofdstuk 4. Server controleert de adminsessie en voert basisvalidatie uit. Product-ID's worden door de beheerflow automatisch opgebouwd.
+Ondersteunt productcreatie/upsert, wijziging, veilige archivering en restore. Input omvat de productvelden uit hoofdstuk 4. Server controleert de adminsessie en voert basisvalidatie uit. Product-ID's worden door de beheerflow automatisch opgebouwd. `DELETE` archiveert een product in plaats van fysiek te verwijderen. `PATCH` ondersteunt `archive-current-catalogue` en `restore-archived-product`. Opslaan op een bestaande archived productcode wordt geblokkeerd zodat nieuwe imports oude producten niet stil heractiveren.
 
 ### `POST /api/admin/upload-product-image`
 
@@ -791,11 +806,15 @@ Ondersteunt productcreatie/upsert, wijziging en verwijdering. Input omvat de pro
 
 ### `/api/admin/orders`
 
-`GET` leest maximaal 500 orders inclusief geneste `order_items` en verrijkt gekoppelde orders met naam, e-mail, telefoon, adres en taal uit `customers`. `PATCH` wijzigt status of betaalstatus. Beide acties vereisen een geldige adminsessie. Mutaties gebruiken de database-RPC voor atomische voorraadtransities; belangrijke statussen kunnen een klantmail activeren.
+`GET` leest maximaal 500 orders inclusief geneste `order_items` en verrijkt gekoppelde orders met naam, e-mail, telefoon, adres en taal uit `customers`. `PATCH` wijzigt status of betaalstatus, slaat interne notities op, markeert testorders en archiveert/herstelt orders. `DELETE` bestaat uitsluitend voor expliciete testorders en roept `safe_delete_test_order` aan. Alle acties vereisen een geldige adminsessie. Statusmutaties gebruiken de database-RPC voor atomische voorraadtransities; belangrijke statussen kunnen een klantmail activeren.
 
 ### `/api/admin/invoices`
 
-`GET` geeft de factuurlijst met regels terug. `POST` ondersteunt `create` vanuit een order en `email` via Resend. Beide vereisen een adminsessie. Creatie gebruikt `create_invoice_from_order`; mailfalen verandert of verwijdert de factuur niet.
+`GET` geeft de factuurlijst met regels terug. `POST` ondersteunt `create` vanuit een order, `email` via Resend, markeren als test en archiveren/herstellen. Alle acties vereisen een adminsessie. Creatie gebruikt `create_invoice_from_order`; mailfalen verandert of verwijdert de factuur niet.
+
+### `/api/admin/customers`
+
+`GET` geeft klanten met order- en factuurtellingen terug. `PATCH` archiveert/herstelt of markeert een klant als test. `DELETE` verwijdert alleen klanten zonder Auth-account, orders en facturen en vereist exacte naam/e-mailbevestiging. Alle acties vereisen een adminsessie.
 
 ### `/api/admin/invoices/{id}/pdf`
 
@@ -839,14 +858,16 @@ Nog nodig:
 | Kanaal | Dienst | Afzender | Gebruik |
 |---|---|---|---|
 | Accountmail | Supabase Auth via Resend SMTP | `account@nancys.es` | Bevestiging, herstel en accountgerelateerde berichten |
-| Ordermail | Resend HTTP API | Standaard `orders@nancys.es` via `FROM_EMAIL` | Nieuwe order, klantbevestiging en statussen |
+| Ordermail | Resend HTTP API | `orders@nancys.es` met afzendernaam `Nancy's Castalla` | Nieuwe order, klantbevestiging en statussen |
 | Algemene communicatie | Handmatig/toekomstig | `info@nancys.es` | Contact, algemene informatie en nieuws |
 
 ## 10.2 Templates
 
 `supabase/templates/confirmation.html` en `recovery.html` bevatten merkgebonden accounttemplates. Deze moeten in het Supabase-dashboard bij Auth e-mailtemplates worden toegepast; bestanden in Git alleen veranderen de productie-template niet automatisch.
 
-Ordermails worden in applicatiecode als transactionele tekst- en HTML-inhoud opgebouwd. Er zijn teksten voor ontvangen, bevestigd, betaling ontvangen, klaar voor afhalen, onderweg, afgeleverd en geannuleerd in `en`, `nl`, `de`, `es` en `sv`. De eerste mail is warmer geformuleerd, toont orderregels, ordernummer, totaal, fulfilment en betaalmethode, en vermeldt dat beschikbaarheid eerst wordt gecontroleerd en betaalinstructies daarna volgen. Er is nog geen componentgebaseerde HTML-templatebibliotheek of queue.
+Ordermails worden in applicatiecode als transactionele tekst- en HTML-inhoud opgebouwd. Er zijn teksten voor ontvangen, bevestigd, betaling ontvangen, klaar voor afhalen, onderweg, afgeleverd en geannuleerd in `en`, `nl`, `de`, `es` en `sv`. De HTML-mails gebruiken een gedeelde responsive shell met logo, donkergroene header, witte/creme contentkaart, nette product-/ordertabel, betaalinformatie, contactknoppen, WhatsApp-link, website, Facebooklink en professionele footer. Iedere applicatiemail heeft een plain-text fallback. De eerste mail toont orderregels, ordernummer, totaal, fulfilment en betaalmethode en vermeldt dat beschikbaarheid eerst wordt gecontroleerd en betaalinstructies daarna volgen. Er is nog geen componentgebaseerde HTML-templatebibliotheek of queue.
+
+Verzendheaders volgen de huidige best-practice binnen Resend: `from` is `Nancy's Castalla <orders@nancys.es>`, klantmails gebruiken `reply_to: info@nancys.es`, adminordermeldingen gebruiken het klantadres als Reply-To, en iedere mail krijgt een `X-Entity-Ref-ID` plus Resend idempotency key. `List-Unsubscribe` is in de mailhelper voorbereid voor toekomstige marketing- of nieuwsbriefmails, maar staat bewust niet standaard aan voor noodzakelijke transactionele order-, status- en factuurmails.
 
 ## 10.3 Environmentvariabelen
 
@@ -1048,7 +1069,7 @@ Onder `src/payments` bestaan provider/typestructuren zodat een latere Stripe-, S
 
 ## 14.3 Facturatiestatus
 
-Aanwezig: transactionele factuurcreatie vanuit factureerbare orders, uniek oplopend nummer, kop- en regelsnapshots, IVA per tarief, Spaans/Engelse PDF, admin- en klantdownload, facturatielijst en Resend-bijlage met verzendregistratie. Externe nummerweergave is `NC-{jaar}-{zes cijfers}` zonder de bestaande identity of orderkoppeling te wijzigen.
+Aanwezig: transactionele factuurcreatie vanuit factureerbare orders, uniek oplopend nummer, kop- en regelsnapshots, IVA per tarief, Spaans/Engelse PDF, admin- en klantdownload, facturatielijst en Resend-bijlage met verzendregistratie. Nieuwe facturen gebruiken serievelden: `TEST-{jaar}-{zes cijfers}` in prelaunch en voor testorders, en `NC-{jaar}-{zes cijfers}` in liveproductie. Legacyfacturen zonder serie blijven hun eerdere externe weergave houden. Facturen kunnen als test worden gemarkeerd of gearchiveerd; verwijderen en hernummeren zijn niet voorzien.
 
 Ontbreekt: creditnota's, factuurcorrectieworkflow, boekhoudexport, betalingsmatching, automatische factuurcreatie na betaling en formele fiscale validatie door een gestor/boekhouder.
 
@@ -1380,7 +1401,7 @@ Bij bestellen verstuurt de browser alleen productcodes, aantallen en verpakkings
 
 Nieuwe orders boeken nog geen voorraad af. Wanneer een beheerder een order bevestigt, gebruikt PostgreSQL een transactionele RPC met row locks. Tracked voorraad wordt gecontroleerd en afgeboekt en er wordt een movement geschreven. `inventory_committed` voorkomt dubbel afboeken. Annuleren zet eerder geboekte voorraad terug. Dit is veilig bij gelijktijdige bevestigingen, maar open orders reserveren nog niets. Daardoor kan de tweede van twee concurrerende orders pas bij bevestiging onvoldoende voorraad blijken te hebben.
 
-Ordermail loopt via de Resend API met `orders@nancys.es` en afzendernaam `Nancy's Castalla Orders`; accountmail loopt via Supabase Custom SMTP met `account@nancys.es`. Order-, status- en factuurmails hebben responsive HTML in de merkstijl met logo, groene huisstijl, duidelijke koppen en vaste contactfooter. De order wordt opgeslagen voordat mail wordt verstuurd, zodat een mailstoring geen orderverlies of duplicatie veroorzaakt. Idempotency headers verminderen dubbele mails. Er is nog geen queue, automatische retry of uitgebreid eventlog. DNS-verificatie, SMTP-credentials, redirect-URL's en templates worden buiten Git in Resend/Supabase beheerd en moeten via een deploymentchecklist worden bewaakt.
+Ordermail loopt via de Resend API met `orders@nancys.es` en afzendernaam `Nancy's Castalla`; accountmail loopt via Supabase Custom SMTP met `account@nancys.es`. Order-, status- en factuurmails hebben responsive HTML in de merkstijl met logo, groene huisstijl, duidelijke koppen, tabelweergave waar relevant, betaalinformatie, contactknoppen, WhatsApp, website, Facebook en vaste footer. Iedere applicatiemail heeft een plain-text fallback. De order wordt opgeslagen voordat mail wordt verstuurd, zodat een mailstoring geen orderverlies of duplicatie veroorzaakt. Idempotency headers en `X-Entity-Ref-ID` verminderen dubbele mails en helpen traceerbaarheid. `List-Unsubscribe` is voorbereid in de helper maar niet standaard actief voor noodzakelijke transactionele order- en factuurmails. Er is nog geen queue, automatische retry of uitgebreid eventlog. DNS-verificatie, SMTP-credentials, redirect-URL's en templates worden buiten Git in Resend/Supabase beheerd en moeten via een deploymentchecklist worden bewaakt.
 
 WhatsApp blijft een belangrijk apart kanaal. De site bouwt een bericht naar `+34 644 05 97 69`, maar zo'n WhatsApp-bericht wordt niet vanzelf een databaseorder. Betaling gebeurt handmatig via Bizum, overschrijving of contant; Stripe en kaartbetaling zijn niet actief. Een providerstructuur maakt latere koppeling mogelijk. De bankrekening is nog een placeholder en het Bizum-nummer moet worden gecontroleerd op het nieuwe zakelijke nummer.
 

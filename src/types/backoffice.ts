@@ -13,6 +13,11 @@ export type PaymentMethod = "bizum" | "bank-transfer" | "cash" | "card" | "pendi
 export type InvoiceSummary = {
   id: string;
   invoice_number: number;
+  invoice_series?: string;
+  invoice_series_year?: number;
+  invoice_series_number?: number;
+  is_test?: boolean;
+  archived_at?: string;
   status: string;
   email_sent_at?: string;
   issued_at?: string;
@@ -26,6 +31,13 @@ export type BackofficeCustomer = {
   phone: string;
   address: string;
   language: string;
+  auth_user_id?: string | null;
+  created_at?: string;
+  archived_at?: string | null;
+  is_test?: boolean;
+  test_reason?: string;
+  order_count?: number;
+  invoice_count?: number;
 };
 
 export type BackofficeOrderItem = {
@@ -83,6 +95,10 @@ export type BackofficeOrder = {
   status: OrderStatus;
   payment_status: PaymentStatus;
   payment_method?: PaymentMethod;
+  is_test?: boolean;
+  test_reason?: string;
+  archived_at?: string;
+  inventory_committed?: boolean;
   delivery_method: string;
   created_at: string;
   updated_at?: string;

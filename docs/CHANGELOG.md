@@ -19,6 +19,18 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Toegevoegd
 
+- Migratie `202607110002_product_catalogue_archiving.sql` met product lifecycle-status, importbatchtracking, archive-current-catalogue RPC en restore-archived-product RPC.
+- Vervolg-migratie `202607110003_product_catalogue_conflict_protection.sql` met lookup-indexen voor leveranciercode/EAN/naam, een `product_import_conflicts`-logtabel en databasebescherming tegen gewone updates op archived producten.
+- Admin bulkactie `Archive current catalogue`, waarmee de huidige catalogus onder `IMPORT_2026_PRELAUNCH` wordt gearchiveerd en publiek onzichtbaar gemaakt zonder databaseverwijdering.
+- Productbeheerfilters voor Active, Archived, Disabled, Draft en All, met Active als standaardweergave.
+- Veilige individuele restore-actie voor archived producten.
+- Migratie `202607110001_admin_cleanup_and_invoice_series.sql` voor gecontroleerde adminopschoning, testmarkering, archiveren, auditlog en gescheiden factuurseries.
+- Klantenbeheer met detailpaneel, zoeken, filters voor actief/gearchiveerd/test/met account/zonder account, veilige archiefactie en geblokkeerde delete voor echte accounts, orders en facturen.
+- Compacter orderbeheer met zoekveld, status-, betaal-, datum- en test/real/archivefilters, bulkselectie voor testorders, testmarkering, archiveren en server-side veilige testorderverwijdering.
+- Factuurbeheer met filters voor productie, test, gearchiveerd en geannuleerd, plus markeer-test en archiveeracties zonder factuurnummers te wijzigen.
+- Configureerbare `businessMode`, `invoiceSeries` en `invoiceTestSeries` in `config/business.ts`.
+- Admin auditlogging voor cleanup- en beheeracties zonder secrets.
+- Centrale Facebooklink in `config/business.ts` voor transactionele e-mails en toekomstige contactblokken.
 - Migratie `202607080001_payment_method_polish.sql` voor betaalmethode op orders en facturen.
 - Betaalvoorkeur in checkout met ondersteuning voor Bizum, bankoverschrijving, contant, kaart en pending.
 - Gedeelde betaalmethode-labels voor checkout, admin, klantaccount, e-mail en factuur-PDF.
@@ -42,6 +54,14 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Verbeterd
 
+- Publieke productqueries tonen alleen nog `active` + `is_visible=true`; archived, disabled en draftproducten verdwijnen uit homepage, categorieën, productlijsten, productdetail en cart/order-validatie.
+- Product-DELETE in admin archiveert voortaan veilig in plaats van een database-delete uit te voeren.
+- Nieuwe productimport via de admin/API mag een archived productcode niet stil heractiveren of wijzigen; herstel moet bewust via restore.
+- Oude en nieuwe catalogusbatches kunnen naast elkaar bestaan: Nancy-productcode blijft uniek, terwijl supplier code en EAN niet uniek zijn en alleen als duplicaatsignalen worden gebruikt.
+- Nieuwe facturen gebruiken voortaan een expliciete serie: in `prelaunch` standaard `TEST-{jaar}-{zes cijfers}` en in `live` standaard `NC-{jaar}-{zes cijfers}`. Bestaande facturen behouden hun historische label.
+- Transactionele order-, status- en factuurmails hebben een professionelere responsive HTML-opmaak gekregen met logo, nette header, product-/ordertabel, betaalinformatie, contactknoppen, WhatsApp-link, website, Facebook en footer.
+- Resend-verzending gebruikt nu afzendernaam `Nancy's Castalla`, een Reply-To naar `info@nancys.es` voor klantmails en de klant als Reply-To voor adminordermeldingen.
+- Transactionele e-mails behouden een plain-text fallback en krijgen een stabiele `X-Entity-Ref-ID`; `List-Unsubscribe` is voorbereid maar niet standaard actief voor noodzakelijke order- en factuurmails.
 - Productzoekvelden zijn verduidelijkt en zoeken nu ook op zichtbare locale-productomschrijving en vertaalde categorienamen, naast productnaam, interne categorie, code en leveranciercode.
 - Productkaarten tonen de gekozen verkoopeenheid/verpakking prominenter als eigen `Sold as`/`Verkocht als`-regel, zodat aantallen zoals `4 stuks`, `40 x 85 g`, `1 kg` en `500 ml` direct zichtbaar zijn.
 - Productdetailpagina's labelen de verkoopeenheid nu als `Sold as`/`Verkocht als` in plaats van als algemene eenheid.

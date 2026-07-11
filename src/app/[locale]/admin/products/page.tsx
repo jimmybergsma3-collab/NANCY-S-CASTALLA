@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminProductsPage({ params }: { params: Promise<unknown> }) {
   const locale = await requireAdmin(params);
-  const products = await getProducts({ includeHidden: true });
+  const products = await getProducts({ includeHidden: true, includeArchived: true });
   return (
     <AdminShell locale={locale} title="Products" subtitle="Add, edit, publish, filter and remove products from one workspace.">
       <AdminProductManager initialProducts={products} />

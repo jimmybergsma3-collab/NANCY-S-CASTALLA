@@ -1,4 +1,5 @@
 export type ProductStatus = "available" | "preorder" | "coming-soon";
+export type ProductLifecycleStatus = "active" | "archived" | "disabled" | "draft";
 export type ProductType = "frozen" | "fresh" | "ambient";
 export type ProductOrigin = "Dutch" | "British" | "Irish" | "German" | "Scandinavian" | "Asian" | "Indonesian" | "South American" | "Other";
 
@@ -33,6 +34,9 @@ export type Product = {
   images?: string[];
   isVisible?: boolean;
   isNew?: boolean;
+  lifecycleStatus?: ProductLifecycleStatus;
+  importBatch?: string;
+  archivedAt?: string;
   category: ProductCategory;
   categories?: ProductCategory[];
   description: string;

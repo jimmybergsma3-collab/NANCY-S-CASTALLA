@@ -3,6 +3,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { InventoryPanel } from "@/components/admin/InventoryPanel";
 import { OrdersPanel } from "@/components/admin/OrdersPanel";
 import { InvoicesPanel } from "@/components/admin/InvoicesPanel";
+import { CustomersPanel } from "@/components/admin/CustomersPanel";
 import { businessConfig } from "@/config/business";
 import { requireAdmin } from "@/lib/admin-page";
 import { productCategories } from "@/lib/product-categories";
@@ -12,7 +13,7 @@ import { supabaseAdminFetch } from "@/lib/supabase-rest";
 
 const moduleCopy = {
   categories: ["Categories", "Manage the structure customers use to browse products."],
-  customers: ["Customers", "Customer profiles and order history are prepared in the database."],
+  customers: ["Customers", "Review, archive and safely clean up customer records without deleting real accounts."],
   orders: ["Orders", "Review orders and manage order and payment statuses."],
   inventory: ["Inventory", "Stock control, deliveries and low-stock monitoring."],
   suppliers: ["Suppliers", "Supplier details are separated from public product information."],
@@ -43,8 +44,8 @@ export default async function AdminModulePage({ params }: { params: Promise<unkn
   else if (moduleName === "inventory") content = <InventoryPanel />;
   else if (moduleName === "categories") content = <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{productCategories.map((category) => <div className="rounded-md border border-forest/10 bg-white p-4 font-bold text-forest" key={category}>{category}</div>)}</div>;
   else if (moduleName === "integrations") content = <div className="mt-6 grid gap-3 sm:grid-cols-2">{integrationRegistry.map((item) => <div className="flex items-center justify-between rounded-md border border-forest/10 bg-white p-4" key={item.id}><strong>{item.name}</strong><span className="rounded-full bg-cream px-3 py-1 text-xs font-bold text-forest">{item.status}</span></div>)}</div>;
-  else if (moduleName === "settings") content = <div className="mt-6 rounded-md border border-forest/10 bg-white p-5 text-sm leading-7 text-forest"><p><strong>Information:</strong> {businessConfig.emails.info}</p><p><strong>Orders:</strong> {businessConfig.emails.orders}</p><p><strong>Accounts:</strong> {businessConfig.emails.account}</p><p className="mt-3 text-forest/60">Business values are centrally configurable in config/business.ts.</p></div>;
-  else if (moduleName === "customers") { const rows = await safeRows<{ name: string; email: string; phone: string; language: string; created_at: string }>("customers?select=name,email,phone,language,created_at&order=created_at.desc&limit=500"); content = <DataTable columns={["Name", "Email", "Phone", "Language", "Created"]} rows={rows.map((row) => [row.name, row.email, row.phone || "-", row.language, new Date(row.created_at).toLocaleDateString()])}/>; }
+  else if (moduleName === "settings") content = <div className="mt-6 rounded-md border border-forest/10 bg-white p-5 text-sm leading-7 text-forest"><p><strong>Information:</strong> {businessConfig.emails.info}</p><p><strong>Orders:</strong> {businessConfig.emails.orders}</p><p><strong>Accounts:</strong> {businessConfig.emails.account}</p><p><strong>Business mode:</strong> {businessConfig.businessMode}</p><p><strong>Production invoice series:</strong> {businessConfig.invoiceSeries}</p><p><strong>Test invoice series:</strong> {businessConfig.invoiceTestSeries}</p><p className="mt-3 rounded-md border border-brass/30 bg-cream p-3 font-bold text-coffee">Warning: switching from prelaunch to live affects only future invoices. Existing invoice numbers are never changed automatically.</p><p className="mt-3 text-forest/60">Business values are centrally configurable in config/business.ts.</p></div>;
+  else if (moduleName === "customers") content = <CustomersPanel />;
   else if (moduleName === "suppliers") { const rows = await safeRows<{ name: string; code: string; email: string; phone: string; active: boolean }>("suppliers?select=name,code,email,phone,active&order=name.asc&limit=500"); content = <DataTable columns={["Supplier", "Code", "Email", "Phone", "Status"]} rows={rows.map((row) => [row.name, row.code || "-", row.email || "-", row.phone || "-", row.active ? "Active" : "Inactive"])}/>; }
   else if (moduleName === "purchasing") { const rows = await safeRows<{ purchase_number: number; status: string; total_incl_vat: number; expected_at?: string; created_at: string }>("purchase_orders?select=purchase_number,status,total_incl_vat,expected_at,created_at&order=created_at.desc&limit=500"); content = <DataTable columns={["Purchase order", "Status", "Total", "Expected", "Created"]} rows={rows.map((row) => [`PO-${String(row.purchase_number).padStart(6, "0")}`, row.status, `€${Number(row.total_incl_vat).toFixed(2)}`, row.expected_at ? new Date(row.expected_at).toLocaleDateString() : "-", new Date(row.created_at).toLocaleDateString()])}/>; }
   else if (moduleName === "invoicing") content = <InvoicesPanel />;

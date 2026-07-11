@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarClock, ChevronRight, Download, FileText, Mail, MessageCircle, Phone, Send, ShoppingBag, UserRound } from "lucide-react";
-import { formatEuro } from "@/lib/pricing";
-import type { BackofficeOrder, BackofficeOrderItem, OrderStatus, PaymentStatus } from "@/types/backoffice";
+import { Archive, CalendarClock, ChevronRight, Download, FileText, Mail, MessageCircle, Phone, RotateCcw, Search, Send, ShieldAlert, ShoppingBag, Trash2, UserRound } from "lucide-react";
 import { businessConfig } from "@/config/business";
 import { invoiceLabel } from "@/lib/invoice-format";
 import { paymentMethodLabel } from "@/lib/payment";
+import { formatEuro } from "@/lib/pricing";
+import type { BackofficeOrder, BackofficeOrderItem, OrderStatus, PaymentStatus } from "@/types/backoffice";
 
 const statuses: OrderStatus[] = ["new", "confirmed", "processing", "ready_for_collection", "shipped", "delivered", "cancelled"];
 const paymentStatuses: PaymentStatus[] = ["pending", "paid", "failed", "refunded", "cancelled"];
+const kindFilters = ["all", "real", "test", "archived"] as const;
 const addressPattern = /^(?:Address|Adres|Adresse|Dirección|Adress):\s*(.+)$/im;
 
 function orderLabel(order: BackofficeOrder) {
@@ -39,85 +40,180 @@ export function OrdersPanel() {
   const [saving, setSaving] = useState("");
   const [invoiceBusy, setInvoiceBusy] = useState("");
   const [notesDraft, setNotesDraft] = useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [paymentFilter, setPaymentFilter] = useState("all");
+  const [kindFilter, setKindFilter] = useState<(typeof kindFilters)[number]>("all");
+  const [dateFilter, setDateFilter] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/admin/orders")
       .then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.message); return data.orders ?? []; })
-      .then((loadedOrders: BackofficeOrder[]) => { setOrders(loadedOrders); setSelectedId(loadedOrders[0]?.id || ""); setNotesDraft(loadedOrders[0]?.notes ?? ""); setMessage(""); })
+      .then((loadedOrders: BackofficeOrder[]) => {
+        setOrders(loadedOrders);
+        setSelectedId(loadedOrders[0]?.id || "");
+        setNotesDraft(loadedOrders[0]?.notes ?? "");
+        setMessage("");
+      })
       .catch((error) => setMessage(error instanceof Error ? error.message : "Orders could not be loaded."));
   }, []);
 
+  const filteredOrders = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return orders.filter((order) => {
+      const matchesSearch = !needle || `${orderLabel(order)} ${order.customer_name} ${order.customer_email}`.toLowerCase().includes(needle);
+      const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+      const matchesPayment = paymentFilter === "all" || order.payment_status === paymentFilter;
+      const matchesKind = kindFilter === "all" || (kindFilter === "real" ? !order.is_test && !order.archived_at : kindFilter === "test" ? Boolean(order.is_test) : Boolean(order.archived_at));
+      const matchesDate = !dateFilter || order.created_at?.slice(0, 10) === dateFilter;
+      return matchesSearch && matchesStatus && matchesPayment && matchesKind && matchesDate;
+    });
+  }, [dateFilter, kindFilter, orders, paymentFilter, search, statusFilter]);
+
   const selectedOrder = useMemo(() => orders.find((order) => order.id === selectedId), [orders, selectedId]);
+
+  function mergeOrder(row: Partial<BackofficeOrder> & { id: string }) {
+    setOrders((current) => current.map((item) => item.id === row.id ? { ...item, ...row, customer: item.customer, order_items: item.order_items, invoices: row.invoices ?? item.invoices } : item));
+  }
 
   async function save(order: BackofficeOrder, patch: Partial<BackofficeOrder>) {
     const next = { ...order, ...patch };
     setSaving(order.id);
     setMessage("");
     const response = await fetch("/api/admin/orders", {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: next.id, status: next.status, paymentStatus: next.payment_status }),
     });
     const data = await response.json();
     setSaving("");
     if (!response.ok) { setMessage(data.message ?? "Order could not be updated."); return; }
-    setOrders((current) => current.map((item) => item.id === order.id ? { ...next, ...(data.order ?? {}), customer: item.customer, order_items: item.order_items } : item));
+    mergeOrder({ ...next, ...(data.order ?? {}) });
     if (data.email && !data.email.sent && !data.email.skipped) setMessage("Status saved, but the customer email could not be sent.");
   }
 
   async function invoiceAction(order: BackofficeOrder, action: "create" | "email", invoiceId?: string) {
-    setInvoiceBusy(action); setMessage("");
-    const response = await fetch("/api/admin/invoices", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(action === "create" ? { action, orderId: order.id } : { action, invoiceId }) });
-    const data = await response.json(); setInvoiceBusy("");
+    setInvoiceBusy(action);
+    setMessage("");
+    const response = await fetch("/api/admin/invoices", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(action === "create" ? { action, orderId: order.id } : { action, invoiceId }),
+    });
+    const data = await response.json();
+    setInvoiceBusy("");
     if (!response.ok) { setMessage(data.message ?? "Invoice action failed."); return; }
-    if (data.invoice) setOrders((current) => current.map((item) => item.id === order.id ? { ...item, invoices: [{ id: data.invoice.id, invoice_number: data.invoice.invoice_number, status: data.invoice.status, email_sent_at: data.invoice.email_sent_at, issued_at: data.invoice.issued_at, created_at: data.invoice.created_at }] } : item));
+    if (data.invoice) {
+      setOrders((current) => current.map((item) => item.id === order.id ? { ...item, invoices: [data.invoice] } : item));
+    }
     setMessage(action === "create" ? "Invoice created." : data.email?.sent ? "Invoice emailed to the customer." : "Invoice saved, but email is not configured.");
   }
 
   async function saveNotes(order: BackofficeOrder) {
-    setSaving(order.id); setMessage("");
-    const response = await fetch("/api/admin/orders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: order.id, action: "notes", notes: notesDraft }) });
-    const data = await response.json(); setSaving("");
+    setSaving(order.id);
+    setMessage("");
+    const response = await fetch("/api/admin/orders", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: order.id, action: "notes", notes: notesDraft }),
+    });
+    const data = await response.json();
+    setSaving("");
     if (!response.ok) { setMessage(data.message ?? "Notes could not be saved."); return; }
-    setOrders((current) => current.map((item) => item.id === order.id ? { ...item, notes: data.order?.notes ?? notesDraft } : item));
+    mergeOrder({ id: order.id, notes: data.order?.notes ?? notesDraft });
     setMessage("Notes saved.");
   }
 
+  async function orderAdminAction(order: BackofficeOrder, action: "mark-test" | "unmark-test" | "archive" | "restore" | "delete-test") {
+    setSaving(order.id);
+    setMessage("");
+    if (action === "delete-test") {
+      const confirmation = window.prompt(`Type DELETE TEST ORDER to permanently delete ${orderLabel(order)}.`);
+      if (confirmation !== "DELETE TEST ORDER") { setSaving(""); return; }
+      const response = await fetch("/api/admin/orders", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: order.id, confirmation }) });
+      const data = await response.json();
+      setSaving("");
+      if (!response.ok) { setMessage(data.message ?? "Test order could not be deleted safely."); return; }
+      setOrders((current) => current.filter((item) => item.id !== order.id));
+      setSelectedId((current) => current === order.id ? orders.find((item) => item.id !== order.id)?.id ?? "" : current);
+      setMessage("Test order deleted.");
+      return;
+    }
+    const body = action === "mark-test" || action === "unmark-test"
+      ? { id: order.id, action: "mark_test", isTest: action === "mark-test", reason: action === "mark-test" ? "Marked from admin cleanup" : "" }
+      : { id: order.id, action: "archive", archived: action === "archive" };
+    const response = await fetch("/api/admin/orders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const data = await response.json();
+    setSaving("");
+    if (!response.ok) { setMessage(data.message ?? "Order action failed."); return; }
+    mergeOrder(data.order);
+    setMessage("Order updated.");
+  }
+
+  async function archiveSelectedTestOrders() {
+    const targets = orders.filter((order) => selectedIds.includes(order.id) && order.is_test && !order.archived_at);
+    for (const order of targets) await orderAdminAction(order, "archive");
+    setSelectedIds([]);
+    setMessage(`${targets.length} test order(s) archived.`);
+  }
+
   return (
-    <div className="mt-6 grid min-w-0 gap-6 2xl:grid-cols-[430px_minmax(0,1fr)]">
+    <div className="mt-6 grid min-w-0 gap-5 2xl:grid-cols-[360px_minmax(0,1fr)]">
       <section className="min-w-0">
         {message ? <p className="mb-4 rounded-md border border-brass/30 bg-cream p-3 text-sm font-bold text-forest">{message}</p> : null}
+        <div className="mb-3 rounded-md border border-forest/10 bg-white p-3">
+          <label className="flex items-center gap-2 rounded-md border border-forest/15 px-3 py-2 text-sm">
+            <Search size={16} />
+            <input className="w-full bg-transparent outline-none" onChange={(event) => setSearch(event.target.value)} placeholder="Search order, customer or email" value={search} />
+          </label>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <select className="rounded-md border border-forest/15 bg-white p-2 text-sm" onChange={(event) => setStatusFilter(event.target.value)} value={statusFilter}><option value="all">All statuses</option>{statuses.map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}</select>
+            <select className="rounded-md border border-forest/15 bg-white p-2 text-sm" onChange={(event) => setPaymentFilter(event.target.value)} value={paymentFilter}><option value="all">All payments</option>{paymentStatuses.map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}</select>
+            <select className="rounded-md border border-forest/15 bg-white p-2 text-sm" onChange={(event) => setKindFilter(event.target.value as typeof kindFilter)} value={kindFilter}>{kindFilters.map((kind) => <option key={kind} value={kind}>{statusLabel(kind)}</option>)}</select>
+            <input className="rounded-md border border-forest/15 bg-white p-2 text-sm" onChange={(event) => setDateFilter(event.target.value)} type="date" value={dateFilter} />
+          </div>
+          <button className="mt-3 inline-flex items-center gap-2 rounded-md border border-forest/15 px-3 py-2 text-xs font-bold text-forest disabled:opacity-45" disabled={!selectedIds.some((id) => orders.find((order) => order.id === id)?.is_test)} onClick={() => void archiveSelectedTestOrders()} type="button"><Archive size={14} />Archive selected test orders</button>
+        </div>
         <div className="overflow-hidden rounded-md border border-forest/10 bg-white">
           <div className="border-b border-forest/10 bg-forest px-4 py-3 text-sm font-bold text-cream">Order overview</div>
           <div className="max-h-[72vh] overflow-y-auto">
-            {orders.map((order) => (
-              <button
-                className={`grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-forest/10 p-4 text-left transition last:border-b-0 ${selectedId === order.id ? "bg-cream" : "hover:bg-linen"}`}
-                key={order.id}
-                onClick={() => { setSelectedId(order.id); setNotesDraft(order.notes ?? ""); }}
-                type="button"
-              >
-                <span className="min-w-0">
+            {filteredOrders.map((order) => (
+              <div className={`grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-forest/10 p-3 text-left transition last:border-b-0 ${selectedId === order.id ? "bg-cream" : "hover:bg-linen"}`} key={order.id}>
+                <input checked={selectedIds.includes(order.id)} onChange={(event) => setSelectedIds((current) => event.target.checked ? [...current, order.id] : current.filter((id) => id !== order.id))} type="checkbox" />
+                <button className="min-w-0 text-left" onClick={() => { setSelectedId(order.id); setNotesDraft(order.notes ?? ""); }} type="button">
                   <span className="flex flex-wrap items-center gap-2"><strong className="text-forest">{orderLabel(order)}</strong><span className="rounded-full bg-linen px-2 py-1 text-[11px] font-bold text-coffee">{statusLabel(order.status)}</span></span>
-                  <span className="mt-2 block truncate text-sm font-bold text-forest">{order.customer_name}</span>
+                  <span className="mt-1 block truncate text-sm font-bold text-forest">{order.customer_name}</span>
                   <span className="mt-1 block truncate text-xs text-forest/55">{order.customer_email}</span>
-                  <span className="mt-2 block text-xs text-forest/55">{new Date(order.created_at).toLocaleString()} · {formatEuro(Number(order.total))}</span>
-                </span>
+                  <span className="mt-1 block text-xs text-forest/55">{new Date(order.created_at).toLocaleString()} · {formatEuro(Number(order.total))}</span>
+                  <span className="mt-1 flex flex-wrap gap-1 text-[11px] font-bold">{order.is_test ? <span className="rounded-full bg-brass/20 px-2 py-1 text-coffee">Test</span> : null}{order.archived_at ? <span className="rounded-full bg-forest px-2 py-1 text-cream">Archived</span> : null}</span>
+                </button>
                 <ChevronRight className="text-coffee" size={19} />
-              </button>
+              </div>
             ))}
-            {!message && orders.length === 0 ? <p className="p-5 text-sm text-forest/60">No orders yet.</p> : null}
+            {!message && filteredOrders.length === 0 ? <p className="p-5 text-sm text-forest/60">No orders match this filter.</p> : null}
           </div>
         </div>
       </section>
 
-      {selectedOrder ? <OrderDetail invoiceBusy={invoiceBusy} notesDraft={notesDraft} onInvoiceAction={invoiceAction} onNotesChange={setNotesDraft} onSave={save} onSaveNotes={saveNotes} order={selectedOrder} saving={saving === selectedOrder.id} /> : (
+      {selectedOrder ? <OrderDetail invoiceBusy={invoiceBusy} notesDraft={notesDraft} onAdminAction={orderAdminAction} onInvoiceAction={invoiceAction} onNotesChange={setNotesDraft} onSave={save} onSaveNotes={saveNotes} order={selectedOrder} saving={saving === selectedOrder.id} /> : (
         <div className="grid min-h-72 place-items-center rounded-md border border-dashed border-forest/20 bg-linen p-6 text-center text-sm text-forest/60">Select an order to view customer and product details.</div>
       )}
     </div>
   );
 }
 
-function OrderDetail({ invoiceBusy, notesDraft, onInvoiceAction, onNotesChange, onSave, onSaveNotes, order, saving }: { invoiceBusy: string; notesDraft: string; onInvoiceAction: (order: BackofficeOrder, action: "create" | "email", invoiceId?: string) => Promise<void>; onNotesChange: (notes: string) => void; onSave: (order: BackofficeOrder, patch: Partial<BackofficeOrder>) => Promise<void>; onSaveNotes: (order: BackofficeOrder) => Promise<void>; order: BackofficeOrder; saving: boolean }) {
+function OrderDetail({ invoiceBusy, notesDraft, onAdminAction, onInvoiceAction, onNotesChange, onSave, onSaveNotes, order, saving }: {
+  invoiceBusy: string;
+  notesDraft: string;
+  onAdminAction: (order: BackofficeOrder, action: "mark-test" | "unmark-test" | "archive" | "restore" | "delete-test") => Promise<void>;
+  onInvoiceAction: (order: BackofficeOrder, action: "create" | "email", invoiceId?: string) => Promise<void>;
+  onNotesChange: (notes: string) => void;
+  onSave: (order: BackofficeOrder, patch: Partial<BackofficeOrder>) => Promise<void>;
+  onSaveNotes: (order: BackofficeOrder) => Promise<void>;
+  order: BackofficeOrder;
+  saving: boolean;
+}) {
   const phone = order.customer_phone || order.customer?.phone || "";
   const email = order.customer_email || order.customer?.email || "";
   const whatsappNumber = phone.replace(/\D/g, "");
@@ -127,49 +223,60 @@ function OrderDetail({ invoiceBusy, notesDraft, onInvoiceAction, onNotesChange, 
   const vatTotal = Number(order.vat_total) || Math.max(0, Number(order.total) - subtotalExVat);
   const invoice = order.invoices?.[0];
   const canInvoice = ["confirmed", "ready_for_collection", "delivered"].includes(order.status) || order.payment_status === "paid";
+  const canDeleteTest = Boolean(order.is_test) && !order.inventory_committed && !invoice?.invoice_series?.startsWith("NC");
 
   return (
     <section className="min-w-0 rounded-md border border-forest/10 bg-white shadow-soft">
-      <header className="flex flex-col gap-4 border-b border-forest/10 p-5 sm:flex-row sm:items-start sm:justify-between">
+      <header className="sticky top-0 z-10 flex flex-col gap-3 border-b border-forest/10 bg-white p-4 sm:flex-row sm:items-start sm:justify-between">
         <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-coffee">Order detail</p><h2 className="mt-1 font-serif text-3xl font-bold text-forest">{orderLabel(order)}</h2><p className="mt-2 flex items-center gap-2 text-sm text-forest/60"><CalendarClock size={16} />{new Date(order.created_at).toLocaleString()}</p></div>
         <div className="flex flex-wrap gap-2">
-          {phone ? <a className="inline-flex min-h-10 items-center gap-2 rounded-md border border-forest/15 px-3 py-2 text-sm font-bold text-forest" href={`tel:${phone}`}><Phone size={16} />Call</a> : null}
-          {whatsappNumber ? <a className="inline-flex min-h-10 items-center gap-2 rounded-md bg-forest px-3 py-2 text-sm font-bold text-cream" href={`https://wa.me/${whatsappNumber}`} rel="noreferrer" target="_blank"><MessageCircle size={16} />WhatsApp</a> : null}
-          {email ? <a className="inline-flex min-h-10 items-center gap-2 rounded-md border border-forest/15 px-3 py-2 text-sm font-bold text-forest" href={`mailto:${email}?subject=${encodeURIComponent(`Nancy's Castalla order ${orderLabel(order)}`)}`}><Mail size={16} />Email</a> : null}
+          {phone ? <a className="inline-flex min-h-9 items-center gap-2 rounded-md border border-forest/15 px-3 py-2 text-xs font-bold text-forest" href={`tel:${phone}`}><Phone size={15} />Call</a> : null}
+          {whatsappNumber ? <a className="inline-flex min-h-9 items-center gap-2 rounded-md bg-forest px-3 py-2 text-xs font-bold text-cream" href={`https://wa.me/${whatsappNumber}`} rel="noreferrer" target="_blank"><MessageCircle size={15} />WhatsApp</a> : null}
+          {email ? <a className="inline-flex min-h-9 items-center gap-2 rounded-md border border-forest/15 px-3 py-2 text-xs font-bold text-forest" href={`mailto:${email}?subject=${encodeURIComponent(`Nancy's Castalla order ${orderLabel(order)}`)}`}><Mail size={15} />Email</a> : null}
         </div>
       </header>
 
-      <div className="grid gap-5 p-5 lg:grid-cols-2">
-        <div className="rounded-md bg-linen p-4"><h3 className="flex items-center gap-2 font-serif text-xl font-bold text-forest"><UserRound size={19} />Customer</h3><dl className="mt-4 grid gap-3 text-sm"><DetailRow label="Name" value={order.customer_name || order.customer?.name} /><DetailRow label="Email" value={email} /><DetailRow label="Phone / WhatsApp" value={phone || "Not provided"} /><DetailRow label="Address" value={orderAddress(order)} /><DetailRow label="Language" value={(order.customer?.language || "Unknown").toUpperCase()} /></dl></div>
-        <div className="rounded-md bg-linen p-4"><h3 className="flex items-center gap-2 font-serif text-xl font-bold text-forest"><ShoppingBag size={19} />Order</h3><dl className="mt-4 grid gap-3 text-sm"><DetailRow label="Order number" value={orderLabel(order)} /><DetailRow label="Fulfilment" value={order.delivery_method || order.fulfillment || "Not provided"} /><DetailRow label="Status" value={statusLabel(order.status)} /><DetailRow label="Payment status" value={statusLabel(order.payment_status)} /><DetailRow label="Payment method" value={paymentMethodLabel(order.payment_method, "en")} /><DetailRow label="Notes / preferred time" value={visibleNotes(order)} /></dl></div>
+      <div className="grid gap-3 p-4 lg:grid-cols-2">
+        <div className="rounded-md bg-linen p-3"><h3 className="flex items-center gap-2 font-serif text-lg font-bold text-forest"><UserRound size={18} />Customer</h3><dl className="mt-3 grid gap-2 text-sm"><DetailRow label="Name" value={order.customer_name || order.customer?.name} /><DetailRow label="Email" value={email} /><DetailRow label="Phone" value={phone || "Not provided"} /><DetailRow label="Address" value={orderAddress(order)} /><DetailRow label="Language" value={(order.customer?.language || "Unknown").toUpperCase()} /></dl></div>
+        <div className="rounded-md bg-linen p-3"><h3 className="flex items-center gap-2 font-serif text-lg font-bold text-forest"><ShoppingBag size={18} />Order</h3><dl className="mt-3 grid gap-2 text-sm"><DetailRow label="Fulfilment" value={order.delivery_method || order.fulfillment || "Not provided"} /><DetailRow label="Status" value={statusLabel(order.status)} /><DetailRow label="Payment" value={statusLabel(order.payment_status)} /><DetailRow label="Method" value={paymentMethodLabel(order.payment_method, "en")} /><DetailRow label="Notes/time" value={visibleNotes(order)} /></dl></div>
       </div>
 
-      <div className="grid gap-4 border-y border-forest/10 p-5 sm:grid-cols-2">
+      <div className="grid gap-3 border-y border-forest/10 p-4 lg:grid-cols-[1fr_1fr_auto]">
         <label className="text-sm font-bold text-forest">Order status<select className="mt-1 w-full rounded-md border border-forest/15 bg-white p-2 font-normal" disabled={saving} onChange={(event) => void onSave(order, { status: event.target.value as OrderStatus })} value={order.status}>{statuses.map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}</select></label>
         <label className="text-sm font-bold text-forest">Payment status<select className="mt-1 w-full rounded-md border border-forest/15 bg-white p-2 font-normal" disabled={saving} onChange={(event) => void onSave(order, { payment_status: event.target.value as PaymentStatus })} value={order.payment_status}>{paymentStatuses.map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}</select></label>
+        <div className="flex flex-wrap items-end gap-2">
+          {order.archived_at ? <button className="inline-flex items-center gap-2 rounded-md border border-forest/15 px-3 py-2 text-xs font-bold text-forest" onClick={() => void onAdminAction(order, "restore")} type="button"><RotateCcw size={15} />Restore</button> : <button className="inline-flex items-center gap-2 rounded-md border border-forest/15 px-3 py-2 text-xs font-bold text-forest" onClick={() => void onAdminAction(order, "archive")} type="button"><Archive size={15} />Archive</button>}
+          {order.is_test ? <button className="rounded-md border border-forest/15 px-3 py-2 text-xs font-bold text-forest" onClick={() => void onAdminAction(order, "unmark-test")} type="button">Unmark test</button> : <button className="rounded-md border border-brass/50 px-3 py-2 text-xs font-bold text-coffee" onClick={() => void onAdminAction(order, "mark-test")} type="button">Mark test</button>}
+          <button className="inline-flex items-center gap-2 rounded-md border border-red-200 px-3 py-2 text-xs font-bold text-red-700 disabled:opacity-40" disabled={!canDeleteTest} onClick={() => void onAdminAction(order, "delete-test")} type="button"><Trash2 size={15} />Delete test</button>
+        </div>
       </div>
+      {!canDeleteTest ? <p className="mx-4 mt-3 flex gap-2 rounded-md bg-red-50 p-3 text-sm font-bold text-red-800"><ShieldAlert size={18} />Delete is intentionally blocked unless this is an explicit test order with no committed inventory and no official live invoice.</p> : null}
 
-      <div className="border-b border-forest/10 p-5"><label className="text-sm font-bold text-forest">Order notes<textarea className="mt-2 min-h-28 w-full rounded-md border border-forest/15 bg-white p-3 font-normal" maxLength={5000} onChange={(event) => onNotesChange(event.target.value)} value={notesDraft}/></label><button className="mt-3 rounded-md bg-forest px-4 py-2 text-sm font-bold text-cream disabled:opacity-50" disabled={saving || notesDraft === order.notes} onClick={() => void onSaveNotes(order)} type="button">{saving ? "Saving..." : "Save notes"}</button></div>
+      <details className="border-b border-forest/10 p-4">
+        <summary className="cursor-pointer text-sm font-bold text-forest">Internal notes</summary>
+        <textarea className="mt-2 min-h-20 w-full rounded-md border border-forest/15 bg-white p-3 text-sm" maxLength={5000} onChange={(event) => onNotesChange(event.target.value)} value={notesDraft}/>
+        <button className="mt-2 rounded-md bg-forest px-4 py-2 text-sm font-bold text-cream disabled:opacity-50" disabled={saving || notesDraft === order.notes} onClick={() => void onSaveNotes(order)} type="button">{saving ? "Saving..." : "Save notes"}</button>
+      </details>
 
-      <div className="border-b border-forest/10 bg-cream/45 p-5">
+      <div className="border-b border-forest/10 bg-cream/45 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div><h3 className="flex items-center gap-2 font-serif text-xl font-bold text-forest"><FileText size={19} />Invoice</h3><p className="mt-1 text-sm text-forest/60">{invoice ? `${invoiceLabel(invoice)} · ${statusLabel(invoice.status)}` : canInvoice ? "This order is eligible for invoicing." : "Confirm, complete or mark the order as paid first."}</p>{!businessConfig.fiscalName || !businessConfig.fiscalId ? <p className="mt-2 text-sm font-bold text-red-700">Fiscal business details are incomplete. Invoice may not be legally complete.</p> : null}</div>
+          <div><h3 className="flex items-center gap-2 font-serif text-xl font-bold text-forest"><FileText size={19} />Invoice</h3><p className="mt-1 text-sm text-forest/60">{invoice ? `${invoiceLabel(invoice)} · ${invoice.is_test ? "Test" : "Production"} · ${statusLabel(invoice.status)}` : canInvoice ? "This order is eligible for invoicing." : "Confirm, complete or mark the order as paid first."}</p>{!businessConfig.fiscalName || !businessConfig.fiscalId ? <p className="mt-2 text-sm font-bold text-red-700">Fiscal business details are incomplete. Invoice may not be legally complete.</p> : null}</div>
           <div className="flex flex-wrap gap-2">
-            {!invoice ? <button className="inline-flex min-h-10 items-center gap-2 rounded-md bg-forest px-4 py-2 text-sm font-bold text-cream disabled:opacity-50" disabled={!canInvoice || Boolean(invoiceBusy)} onClick={() => void onInvoiceAction(order, "create")} type="button"><FileText size={16} />{invoiceBusy === "create" ? "Creating..." : "Create invoice"}</button> : <>
-              <a className="inline-flex min-h-10 items-center gap-2 rounded-md border border-forest/15 bg-white px-3 py-2 text-sm font-bold text-forest" href={`/api/admin/invoices/${invoice.id}/pdf`}><Download size={16} />PDF</a>
-              <button className="inline-flex min-h-10 items-center gap-2 rounded-md bg-forest px-3 py-2 text-sm font-bold text-cream disabled:opacity-50" disabled={Boolean(invoiceBusy)} onClick={() => void onInvoiceAction(order, "email", invoice.id)} type="button"><Send size={16} />{invoiceBusy === "email" ? "Sending..." : invoice.email_sent_at ? "Email again" : "Email customer"}</button>
+            {!invoice ? <button className="inline-flex min-h-9 items-center gap-2 rounded-md bg-forest px-3 py-2 text-xs font-bold text-cream disabled:opacity-50" disabled={!canInvoice || Boolean(invoiceBusy)} onClick={() => void onInvoiceAction(order, "create")} type="button"><FileText size={15} />{invoiceBusy === "create" ? "Creating..." : "Create invoice"}</button> : <>
+              <a className="inline-flex min-h-9 items-center gap-2 rounded-md border border-forest/15 bg-white px-3 py-2 text-xs font-bold text-forest" href={`/api/admin/invoices/${invoice.id}/pdf`}><Download size={15} />PDF</a>
+              <button className="inline-flex min-h-9 items-center gap-2 rounded-md bg-forest px-3 py-2 text-xs font-bold text-cream disabled:opacity-50" disabled={Boolean(invoiceBusy)} onClick={() => void onInvoiceAction(order, "email", invoice.id)} type="button"><Send size={15} />{invoiceBusy === "email" ? "Sending..." : invoice.email_sent_at ? "Email again" : "Email customer"}</button>
             </>}
           </div>
         </div>
       </div>
 
-      <div className="p-5"><h3 className="font-serif text-2xl font-bold text-forest">Ordered products</h3>{items.length === 0 ? <p className="mt-4 rounded-md border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">Deze order heeft geen orderregels.</p> : <><div className="mt-4 hidden overflow-x-auto md:block"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-forest text-cream"><tr><th className="p-3">Product code</th><th className="p-3">Product</th><th className="p-3">Package</th><th className="p-3">Qty</th><th className="p-3">Unit price</th><th className="p-3">VAT</th><th className="p-3 text-right">Line total</th></tr></thead><tbody>{items.map((item) => <tr className="border-b border-forest/10" key={item.id}><td className="p-3 font-bold">{item.product_id || "-"}</td><td className="p-3">{item.product_name}</td><td className="p-3">{item.package_label || item.unit}</td><td className="p-3">{item.quantity}</td><td className="p-3">{formatEuro(Number(item.sale_price_incl_vat))}</td><td className="p-3">{Number(item.vat_rate)}%</td><td className="p-3 text-right font-bold">{formatEuro(lineTotal(item))}</td></tr>)}</tbody></table></div><div className="mt-4 grid gap-3 md:hidden">{items.map((item) => <article className="rounded-md border border-forest/10 p-4" key={item.id}><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold text-coffee">{item.product_id || "-"}</p><h4 className="mt-1 font-bold text-forest">{item.product_name}</h4></div><strong>{formatEuro(lineTotal(item))}</strong></div><dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-forest/65"><DetailRow label="Package" value={item.package_label || item.unit} /><DetailRow label="Quantity" value={String(item.quantity)} /><DetailRow label="Unit price" value={formatEuro(Number(item.sale_price_incl_vat))} /><DetailRow label="VAT" value={`${Number(item.vat_rate)}%`} /></dl></article>)}</div></>}</div>
+      <div className="p-4"><h3 className="font-serif text-2xl font-bold text-forest">Ordered products</h3>{items.length === 0 ? <p className="mt-4 rounded-md border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">Deze order heeft geen orderregels.</p> : <><div className="mt-4 hidden overflow-x-auto md:block"><table className="w-full min-w-[720px] text-left text-sm"><thead className="bg-forest text-cream"><tr><th className="p-2">Code</th><th className="p-2">Product</th><th className="p-2">Package</th><th className="p-2">Qty</th><th className="p-2">Unit</th><th className="p-2">VAT</th><th className="p-2 text-right">Total</th></tr></thead><tbody>{items.map((item) => <tr className="border-b border-forest/10" key={item.id}><td className="p-2 font-bold">{item.product_id || "-"}</td><td className="p-2">{item.product_name}</td><td className="p-2">{item.package_label || item.unit}</td><td className="p-2">{item.quantity}</td><td className="p-2">{formatEuro(Number(item.sale_price_incl_vat))}</td><td className="p-2">{Number(item.vat_rate)}%</td><td className="p-2 text-right font-bold">{formatEuro(lineTotal(item))}</td></tr>)}</tbody></table></div><div className="mt-4 grid gap-3 md:hidden">{items.map((item) => <article className="rounded-md border border-forest/10 p-4" key={item.id}><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold text-coffee">{item.product_id || "-"}</p><h4 className="mt-1 font-bold text-forest">{item.product_name}</h4></div><strong>{formatEuro(lineTotal(item))}</strong></div><dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-forest/65"><DetailRow label="Package" value={item.package_label || item.unit} /><DetailRow label="Quantity" value={String(item.quantity)} /><DetailRow label="Unit price" value={formatEuro(Number(item.sale_price_incl_vat))} /><DetailRow label="VAT" value={`${Number(item.vat_rate)}%`} /></dl></article>)}</div></>}</div>
 
-      <div className="ml-auto grid max-w-md gap-2 border-t border-forest/10 p-5 text-sm"><div className="flex justify-between gap-4"><span>Subtotal excl. VAT</span><strong>{formatEuro(subtotalExVat)}</strong></div><div className="flex justify-between gap-4"><span>VAT</span><strong>{formatEuro(vatTotal)}</strong></div><div className="flex justify-between gap-4 border-t border-forest/10 pt-2 text-lg"><span className="font-bold">Total incl. VAT</span><strong>{formatEuro(Number(order.total))}</strong></div></div>
+      <div className="ml-auto grid max-w-md gap-2 border-t border-forest/10 p-4 text-sm"><div className="flex justify-between gap-4"><span>Subtotal excl. VAT</span><strong>{formatEuro(subtotalExVat)}</strong></div><div className="flex justify-between gap-4"><span>VAT</span><strong>{formatEuro(vatTotal)}</strong></div><div className="flex justify-between gap-4 border-t border-forest/10 pt-2 text-lg"><span className="font-bold">Total incl. VAT</span><strong>{formatEuro(Number(order.total))}</strong></div></div>
     </section>
   );
 }
 
 function DetailRow({ label, value }: { label: string; value?: string }) {
-  return <div className="grid gap-1 sm:grid-cols-[130px_minmax(0,1fr)]"><dt className="font-bold text-forest/60">{label}</dt><dd className="min-w-0 break-words text-forest">{value || "-"}</dd></div>;
+  return <div className="grid gap-1 sm:grid-cols-[110px_minmax(0,1fr)]"><dt className="font-bold text-forest/60">{label}</dt><dd className="min-w-0 break-words text-forest">{value || "-"}</dd></div>;
 }

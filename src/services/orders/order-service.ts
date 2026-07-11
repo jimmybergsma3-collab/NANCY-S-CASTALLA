@@ -271,7 +271,7 @@ async function enrichOrdersWithCustomers(orders: BackofficeOrder[]) {
   const customerIds = Array.from(new Set(orders.map((order) => order.customer_id).filter((id): id is string => Boolean(id))));
   if (customerIds.length === 0) return orders;
   const customers = await supabaseAdminFetch<BackofficeCustomer[]>(
-    `customers?select=id,name,email,phone,address,language&id=in.(${customerIds.map(encodeURIComponent).join(",")})`,
+    `customers?select=id,name,email,phone,address,language,auth_user_id,created_at,archived_at,is_test,test_reason&id=in.(${customerIds.map(encodeURIComponent).join(",")})`,
   );
   const customerMap = new Map(customers.map((customer) => [customer.id, customer]));
   return orders.map((order) => ({ ...order, order_items: order.order_items ?? [], customer: order.customer_id ? customerMap.get(order.customer_id) : undefined }));
@@ -279,7 +279,7 @@ async function enrichOrdersWithCustomers(orders: BackofficeOrder[]) {
 
 export async function listOrders() {
   if (!hasSupabaseAdmin()) return [];
-  const orders = await supabaseAdminFetch<BackofficeOrder[]>("orders?select=*,order_items(*),invoices(id,invoice_number,status,email_sent_at,issued_at,created_at)&order=created_at.desc&limit=500");
+  const orders = await supabaseAdminFetch<BackofficeOrder[]>("orders?select=*,order_items(*),invoices(id,invoice_number,invoice_series,invoice_series_year,invoice_series_number,is_test,archived_at,status,email_sent_at,issued_at,created_at)&order=created_at.desc&limit=500");
   return enrichOrdersWithCustomers(orders);
 }
 
@@ -301,8 +301,28 @@ export async function updateOrderNotes(id: string, notes: string) {
   return rows[0];
 }
 
+export async function markOrderTest(id: string, isTest: boolean, reason: string) {
+  const rows = await supabaseAdminFetch<BackofficeOrder[]>(`orders?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: { is_test: isTest, test_reason: isTest ? reason.slice(0, 500) : "", updated_at: new Date().toISOString() },
+  });
+  return rows[0];
+}
+
+export async function archiveOrder(id: string, archived: boolean) {
+  const rows = await supabaseAdminFetch<BackofficeOrder[]>(`orders?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: { archived_at: archived ? new Date().toISOString() : null, updated_at: new Date().toISOString() },
+  });
+  return rows[0];
+}
+
+export async function deleteTestOrder(id: string) {
+  await supabaseAdminFetch("rpc/safe_delete_test_order", { method: "POST", body: { p_order_id: id } });
+}
+
 export async function getOrderById(id: string) {
-  const rows = await supabaseAdminFetch<BackofficeOrder[]>(`orders?select=*,order_items(*),invoices(id,invoice_number,status,email_sent_at,issued_at,created_at)&id=eq.${encodeURIComponent(id)}&limit=1`);
+  const rows = await supabaseAdminFetch<BackofficeOrder[]>(`orders?select=*,order_items(*),invoices(id,invoice_number,invoice_series,invoice_series_year,invoice_series_number,is_test,archived_at,status,email_sent_at,issued_at,created_at)&id=eq.${encodeURIComponent(id)}&limit=1`);
   return (await enrichOrdersWithCustomers(rows))[0];
 }
 

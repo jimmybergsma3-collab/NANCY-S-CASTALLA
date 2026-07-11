@@ -18,6 +18,7 @@ export default async function ProductsPage({ params }: { params: Promise<unknown
       products.filter((product) => productMatchesCategory(product, category)).length,
     ]),
   );
+  const visibleCategories = productCategories.filter((category) => (categoryCounts.get(category) ?? 0) > 0);
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-12">
@@ -25,7 +26,7 @@ export default async function ProductsPage({ params }: { params: Promise<unknown
       <h1 className="mt-2 font-serif text-5xl font-bold text-forest">{dictionary.products.title}</h1>
       <p className="mt-4 max-w-3xl leading-7 text-forest/72">{dictionary.products.intro}</p>
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {productCategories.map((category) => {
+        {visibleCategories.map((category) => {
           const count = categoryCounts.get(category) ?? 0;
 
           return (

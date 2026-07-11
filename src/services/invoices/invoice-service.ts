@@ -1,5 +1,6 @@
 import { supabaseAdminFetch } from "@/lib/supabase-rest";
 import type { BackofficeInvoice } from "@/types/backoffice";
+import { businessConfig } from "@/config/business";
 export { invoiceLabel } from "@/lib/invoice-format";
 
 export class InvoiceError extends Error {
@@ -19,7 +20,8 @@ export async function getInvoice(id: string) {
 
 export async function createInvoiceFromOrder(orderId: string) {
   try {
-    const id = await supabaseAdminFetch<string>("rpc/create_invoice_from_order", { method: "POST", body: { p_order_id: orderId } });
+    const series = businessConfig.businessMode === "live" ? businessConfig.invoiceSeries : businessConfig.invoiceTestSeries;
+    const id = await supabaseAdminFetch<string>("rpc/create_invoice_from_order", { method: "POST", body: { p_order_id: orderId, p_invoice_series: series, p_is_test: businessConfig.businessMode !== "live" } });
     const invoice = await getInvoice(id);
     if (!invoice) throw new InvoiceError("Invoice could not be loaded after creation.", 500);
     return invoice;
@@ -35,6 +37,20 @@ export async function createInvoiceFromOrder(orderId: string) {
 export async function markInvoiceEmailed(id: string) {
   const rows = await supabaseAdminFetch<BackofficeInvoice[]>(`invoices?id=eq.${encodeURIComponent(id)}`, {
     method: "PATCH", body: { email_sent_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  });
+  return rows[0];
+}
+
+export async function markInvoiceTest(id: string, isTest: boolean) {
+  const rows = await supabaseAdminFetch<BackofficeInvoice[]>(`invoices?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH", body: { is_test: isTest, updated_at: new Date().toISOString() },
+  });
+  return rows[0];
+}
+
+export async function archiveInvoice(id: string, archived: boolean) {
+  const rows = await supabaseAdminFetch<BackofficeInvoice[]>(`invoices?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH", body: { archived_at: archived ? new Date().toISOString() : null, updated_at: new Date().toISOString() },
   });
   return rows[0];
 }

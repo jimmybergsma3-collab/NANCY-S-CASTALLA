@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAdminSession } from "@/lib/admin-auth";
 import { calculatePricing } from "@/lib/pricing";
-import { createProduct, deleteProduct, getProducts } from "@/lib/product-store";
+import { archiveCurrentCatalogue, createProduct, deleteProduct, getProducts, restoreArchivedProduct } from "@/lib/product-store";
 import { hasSupabaseAdmin } from "@/lib/env";
 import type { Product } from "@/types/product";
 import { getEffectivePackageOptions } from "@/lib/product-packaging";
@@ -11,7 +11,7 @@ export async function GET() {
     return NextResponse.json({ ok: false, message: "Admin login required." }, { status: 401 });
   }
 
-  const products = await getProducts({ includeHidden: true });
+  const products = await getProducts({ includeHidden: true, includeArchived: true });
   return NextResponse.json({ ok: true, products, databaseEnabled: hasSupabaseAdmin() });
 }
 
@@ -49,7 +49,10 @@ export async function POST(request: Request) {
       quantity: Number(option.quantity),
       salePriceInclVat: Number(option.salePriceInclVat),
     })).filter((option) => option.label && option.quantity > 0),
-    isVisible: Boolean(body.isVisible),
+    lifecycleStatus: body.lifecycleStatus ?? "active",
+    importBatch: body.importBatch?.trim() ?? "",
+    archivedAt: body.archivedAt ?? "",
+    isVisible: (body.lifecycleStatus ?? "active") === "active" ? Boolean(body.isVisible) : false,
     ingredients: body.ingredients?.trim() ?? "",
     directions: body.directions?.trim() ?? "",
     conservation: body.conservation?.trim() ?? "",
@@ -67,11 +70,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, message: "Product code, name and supplier code are required." }, { status: 400 });
   }
 
-  const saved = await createProduct(product);
-  return NextResponse.json({ ok: true, product: saved });
+  try {
+    const saved = await createProduct(product);
+    return NextResponse.json({ ok: true, product: saved });
+  } catch (error) {
+    return NextResponse.json({ ok: false, message: error instanceof Error ? error.message : "Product could not be saved." }, { status: 409 });
+  }
 }
 
-export async function DELETE(request: Request) {
+export async function PATCH(request: Request) {
   if (!(await isAdminSession())) {
     return NextResponse.json({ ok: false, message: "Admin login required." }, { status: 401 });
   }
@@ -83,6 +90,34 @@ export async function DELETE(request: Request) {
     );
   }
 
+  const body = await request.json() as { action?: "archive-current-catalogue" | "restore-archived-product"; id?: string; importBatch?: string; confirmation?: string };
+  if (body.action === "archive-current-catalogue") {
+    if (body.confirmation !== "ARCHIVE CURRENT CATALOGUE") {
+      return NextResponse.json({ ok: false, message: "Type ARCHIVE CURRENT CATALOGUE to archive the current catalogue." }, { status: 400 });
+    }
+    const archivedCount = await archiveCurrentCatalogue(body.importBatch || "IMPORT_2026_PRELAUNCH");
+    return NextResponse.json({ ok: true, archivedCount });
+  }
+  if (body.action === "restore-archived-product") {
+    if (!body.id) return NextResponse.json({ ok: false, message: "Product code is required." }, { status: 400 });
+    const product = await restoreArchivedProduct(body.id);
+    return NextResponse.json({ ok: true, product });
+  }
+  return NextResponse.json({ ok: false, message: "Invalid product action." }, { status: 400 });
+}
+
+export async function DELETE(request: Request) {
+  if (!(await isAdminSession())) {
+    return NextResponse.json({ ok: false, message: "Admin login required." }, { status: 401 });
+  }
+
+  if (!hasSupabaseAdmin()) {
+    return NextResponse.json(
+      { ok: false, message: "Supabase is required before products can be archived from admin." },
+      { status: 503 },
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id")?.trim();
 
@@ -90,6 +125,6 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ ok: false, message: "Product code is required." }, { status: 400 });
   }
 
-  await deleteProduct(id);
-  return NextResponse.json({ ok: true });
+  const product = await deleteProduct(id);
+  return NextResponse.json({ ok: true, product, message: "Product archived. No data was deleted." });
 }

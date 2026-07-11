@@ -179,6 +179,26 @@ Dit document legt belangrijke technische beslissingen en hun motivatie vast. Het
 
 **Waarom:** een factuur moet historisch gelijk blijven wanneer een klantprofiel, productnaam, verpakking of prijs later wijzigt. Correcties horen later via creditnota's te lopen, niet door een bestaande factuur te overschrijven.
 
+## 2026-07-11
+
+### Gescheiden test- en productiefactuurseries
+
+**Besluit:** nieuwe facturen krijgen serievelden naast het bestaande factuurnummer. In `prelaunch` gebruikt de applicatie `TEST-{jaar}-{zes cijfers}`; in `live` gebruikt de applicatie `NC-{jaar}-{zes cijfers}`. Bestaande facturen worden niet automatisch hernummerd en factuurnummers worden niet hergebruikt.
+
+**Waarom:** Nancy's Castalla heeft testorders en testfacturen nodig vóór livegang, maar de officiële productieserie moet schoon en oplopend kunnen starten. Historische facturen mogen voor administratie en audit niet stil worden overschreven of gerecycled.
+
+### Veilig opschonen in plaats van vrij verwijderen
+
+**Besluit:** klanten, orders en facturen krijgen test- en archiefvelden. Echte klanten met Auth-account, orders of facturen kunnen niet worden verwijderd vanuit admin; archiveren is de veilige actie. Alleen expliciet gemarkeerde testorders zonder geboekte voorraadmutatie en zonder officiële livefactuur mogen via een server-side databasefunctie worden verwijderd. Alle cleanupacties worden in `admin_audit_log` vastgelegd.
+
+**Waarom:** een webshop mag geen echte klant-, order- of factuurhistorie verliezen door een beheerklik. Testdata moet wel beheersbaar blijven in de prelaunchfase, maar uitsluitend met harde databasechecks en auditspoor.
+
+### Oude prijslijstcatalogus archiveren voor livegang
+
+**Besluit:** de prelaunch-catalogus wordt niet verwijderd of geleegd. Producten krijgen een aparte lifecycle-status (`active`, `archived`, `disabled`, `draft`) en importbatch. De bulkactie `Archive current catalogue` zet bestaande producten op `archived`, maakt ze publiek onzichtbaar en labelt ze met `IMPORT_2026_PRELAUNCH`. Nieuwe imports mogen archived productcodes niet automatisch wijzigen of heractiveren; herstel kan alleen bewust per product.
+
+**Waarom:** de oude circa 1580 producten komen uit verouderde prijslijsten, maar productcodes, afbeeldingen, categorieën, voorraadgeschiedenis en relaties mogen niet verloren gaan. Archiveren houdt de dagelijkse omgeving schoon voor livegang terwijl audit en terugzoekbaarheid behouden blijven.
+
 ### PDF-generatie blijft server-side en providerneutraal
 
 **Besluit:** `pdf-lib` genereert de factuur uit interne data; Resend is alleen het verzendkanaal en niet de factuurbron.
@@ -268,6 +288,20 @@ Dit document legt belangrijke technische beslissingen en hun motivatie vast. Het
 **Besluit:** bekende klantgerichte productnamen worden via een centrale helper vertaald voor publieke productkaarten, productdetail, zoeken, cart, mails, klantaccount en factuur-PDF. Onbekende producten vallen terug op de catalogusnaam.
 
 **Waarom:** er is nog geen volledig producttranslation-model. Automatisch alles vertalen kan merknamen, voedselinformatie of allergenen vervormen; een gecontroleerde helper verbetert de klantbeleving zonder data-risico.
+
+## 2026-07-11
+
+### Archived catalogus beschermen tegen import-upserts
+
+**Besluit:** `products.id`/`NC-xxxxx` blijft de unieke interne Nancy-productcode en publieke URL-sleutel. `supplier_code` en `ean` worden bewust niet uniek gemaakt. Archived producten worden via vervolg-migratie `202607110003_product_catalogue_conflict_protection.sql` door een database-trigger beschermd tegen gewone updates; alleen de expliciete restore-functie mag een archived product terugzetten. Nieuwe imports moeten een mogelijke match op leveranciercode, EAN, naam of verpakking als conflict behandelen en daarna bewust kiezen tussen nieuw importeren, overslaan of herstellen/koppelen.
+
+**Waarom:** de oude prelaunchcatalogus moet volledig naast een nieuwe livecatalogus kunnen blijven bestaan. Leveranciers hergebruiken codes, EAN's kunnen in meerdere verpakkingen of batches terugkomen en productnamen zijn geen stabiele sleutel. Een oud importbestand met `on conflict (id) do update` mag archived producten niet stil wijzigen of heractiveren.
+
+### Professionele transactionele e-mailstandaard
+
+**Besluit:** transactionele order-, status- en factuurmails gebruiken een gedeelde responsive Nancy's Castalla-shell met logo, groene header, product-/ordertabel, betaalinformatie, contactknoppen, WhatsApp, website, Facebook en plain-text fallback. Resend gebruikt `Nancy's Castalla <orders@nancys.es>` als From, `info@nancys.es` als Reply-To voor klantmails en het klantadres als Reply-To voor adminordermeldingen. `List-Unsubscribe` blijft voorbereid maar niet standaard actief voor noodzakelijke transactionele mails.
+
+**Waarom:** echte klanten moeten professionele, herkenbare mails ontvangen in Gmail, Outlook, Apple Mail en mobiele mailapps. Transactionele mails mogen niet lijken op losse tekstberichten en moeten duidelijk maken dat betaling pas na beschikbaarheidscontrole volgt. Een unsubscribe-header is zinvol voor marketing, maar niet standaard passend voor noodzakelijke order-, status- en factuurcommunicatie.
 
 ## Beslisregel voor toekomstige wijzigingen
 

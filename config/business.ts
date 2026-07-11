@@ -4,6 +4,10 @@ export const businessEmails = {
   account: "account@nancys.es",
 } as const;
 
+const configuredBusinessMode = process.env.BUSINESS_MODE === "live" ? "live" : "prelaunch";
+const configuredInvoiceSeries = process.env.INVOICE_SERIES?.trim() || "NC";
+const configuredInvoiceTestSeries = process.env.INVOICE_TEST_SERIES?.trim() || "TEST";
+
 export const businessConfig = {
   businessName: "Nancy's Castalla",
   phaseLabel: "Starting soon / pre-order phase",
@@ -18,12 +22,18 @@ export const businessConfig = {
   emails: businessEmails,
   orderEmail: businessEmails.orders,
   fromEmail: `Nancy's Castalla <${businessEmails.orders}>`,
+  businessMode: configuredBusinessMode,
+  invoiceSeries: configuredInvoiceSeries,
+  invoiceTestSeries: configuredInvoiceTestSeries,
   bankAccount: "Add bank account details here",
   bizumNumber: "+34 694 26 93 89",
   deliveryMinimum: 25,
   deliveryRadiusKm: 15,
   deliveryFee: 3.5,
   whatsappCtaLabel: "Order support",
+  social: {
+    facebookUrl: "https://www.facebook.com/p/Nancys-Castalla-61590879870532/",
+  },
   openingTexts: {
     headline: "International food, coffee and pre-orders for expats around Castalla.",
     shortIntro:
