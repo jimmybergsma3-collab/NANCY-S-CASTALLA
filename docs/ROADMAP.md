@@ -1,6 +1,6 @@
 # Roadmap: Nancy's Castalla
 
-**Peildatum:** 8 juli 2026
+**Peildatum:** 12 juli 2026
 **Status:** levende roadmap
 
 Deze roadmap bevat alleen toekomstig werk. Afgeronde functionaliteit staat in `CHANGELOG.md` en `PROJECT_STATUS.md`; technische details staan in `TECHNICAL_HANDOVER.md`.
@@ -10,10 +10,11 @@ Deze roadmap bevat alleen toekomstig werk. Afgeronde functionaliteit staat in `C
 ### Productiecontrole
 
 - [ ] Controleer Vercel-environmentvariabelen voor Production en Preview.
-- [ ] Bevestig dat alle Supabase-migraties tot en met `202607080001_payment_method_polish.sql` actief zijn.
+- [x] Bevestig dat Supabase-migratie `202607120001_supplier_import_workflow.sql` actief is.
 - [ ] Test op productie één volledige nieuwe-klantflow inclusief accountmail, ordermail, statusmail en factuurmail.
 - [ ] Controleer Resend-domein, SPF, DKIM, DMARC, API-key, Supabase SMTP en bounce-/complaintgedrag.
-- [ ] Bevestig het zakelijke Bizum-nummer en vervang de placeholder-bankrekening.
+- [x] Zakelijk Bizum-nummer en bankrekening in centrale configuratie zetten.
+- [ ] Controleer operationeel met Nancy/boekhouder dat Bizum- en bankgegevens exact correct zijn.
 - [ ] Laat Spaanse factuurgegevens en teksten door gestor/boekhouder valideren.
 - [ ] Leg een eenvoudige releasechecklist vast voor Vercel, Supabase, Resend, DNS, lint, build en smoke-test.
 
@@ -28,6 +29,7 @@ Deze roadmap bevat alleen toekomstig werk. Afgeronde functionaliteit staat in `C
 
 ### Orders, voorraad en bezorging
 
+- [ ] Controleer en publiceer een kleine selectie geïmporteerde Tindale/Europ Foods-draftproducten na prijs-, IVA-, categorie- en verpakkingsreview.
 - [ ] Server-side bezorgminimum, bezorgkosten en leveringsgebied berekenen en afdwingen.
 - [ ] Apart onveranderlijk afleveradres-snapshot op orders opslaan.
 - [ ] Formele order-state-machine en statushistorie toevoegen.

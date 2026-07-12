@@ -25,8 +25,19 @@ type ImportRun = {
 
 type DryRunResponse = {
   ok: boolean;
+  errorCode?: string;
   message?: string;
+  diagnosticId?: string;
   dryRun?: boolean;
+  importResult?: {
+    importRunId: string;
+    createdProducts: number;
+    supplierOffersCreated: number;
+    skipped: number;
+    conflictsWritten: number;
+    warnings: string[];
+    errors: Array<{ sourceRow: string; message: string }>;
+  };
   writes?: {
     productsBefore: number;
     productsAfter: number;
@@ -42,6 +53,17 @@ const supplierOptions: Array<{ value: SupplierImportKind; label: string; batch: 
 ];
 
 const numberFormat = new Intl.NumberFormat("en-GB");
+
+async function readJsonResponse<T extends { message?: string; diagnosticId?: string }>(response: Response): Promise<T> {
+  const body = await response.text();
+  try {
+    return JSON.parse(body) as T;
+  } catch {
+    return {
+      message: `Server returned a non-JSON response (${response.status}). ${body.slice(0, 240)}`,
+    } as T;
+  }
+}
 
 function MetricCard({ label, tone = "normal", value }: { label: string; tone?: "normal" | "warning" | "danger" | "good"; value: number | string }) {
   const toneClass =
@@ -271,9 +293,9 @@ export function SupplierImportsPanel() {
     formData.set("file", file);
     try {
       const response = await fetch("/api/admin/imports", { method: "POST", body: formData });
-      const data = await response.json() as DryRunResponse;
+      const data = await readJsonResponse<DryRunResponse>(response);
       if (!response.ok || !data.ok || !data.preview) {
-        setMessage(data.message ?? "Dry-run failed.");
+        setMessage(`${data.message ?? "Dry-run failed."}${data.diagnosticId ? ` Diagnostic ID: ${data.diagnosticId}` : ""}`);
         return;
       }
       setPreview(data.preview);
@@ -288,14 +310,34 @@ export function SupplierImportsPanel() {
   }
 
   async function guardedConfirmedImport() {
+    if (!file) {
+      setMessage("Choose a supplier file first.");
+      return;
+    }
+    setLoading(true);
+    setMessage("");
     const formData = new FormData();
     formData.set("action", "confirm-import");
     formData.set("supplier", supplier);
     formData.set("importBatch", importBatch);
     if (file) formData.set("file", file);
-    const response = await fetch("/api/admin/imports", { method: "POST", body: formData });
-    const data = await response.json() as { message?: string };
-    setMessage(data.message ?? (response.ok ? "Import started." : "Confirmed import is not available yet."));
+    try {
+      const response = await fetch("/api/admin/imports", { method: "POST", body: formData });
+      const data = await readJsonResponse<DryRunResponse>(response);
+      if (!response.ok || !data.ok || !data.importResult) {
+        setMessage(`${data.message ?? "Confirmed import failed."}${data.diagnosticId ? ` Diagnostic ID: ${data.diagnosticId}` : ""}`);
+        return;
+      }
+      setPreview(data.preview ?? null);
+      setWrites(data.writes);
+      setActionBatch(importBatch);
+      setMessage(`Import complete. Draft products created: ${data.importResult.createdProducts}. Supplier offers: ${data.importResult.supplierOffersCreated}. Skipped/review: ${data.importResult.skipped}. Conflicts written: ${data.importResult.conflictsWritten}.`);
+      await loadHistory();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Confirmed import failed.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function runBatchAction(action: "publish-batch" | "rollback-batch") {
@@ -359,11 +401,11 @@ export function SupplierImportsPanel() {
             <FileSpreadsheet size={17} /> {loading ? "Analysing..." : "Dry run preview"}
           </button>
           <button className="inline-flex items-center gap-2 rounded-full border border-forest/20 px-5 py-3 text-sm font-bold text-forest disabled:opacity-50" disabled={loading || !file} onClick={guardedConfirmedImport} type="button">
-            <UploadCloud size={17} /> Confirm import
+            <UploadCloud size={17} /> Confirm import to draft
           </button>
         </div>
         <p className="mt-3 text-xs leading-5 text-forest/60">
-          Confirm import is present for workflow clarity, but the current endpoint deliberately refuses it until a reviewed go-ahead is given. Accepted files: Europ Foods PDF, Tindale XLS/XLSX.
+          Confirm import creates draft products only. It never publishes products, changes stock, restores archived products or deletes data. Accepted files: Europ Foods PDF, Tindale XLS/XLSX.
         </p>
       </form>
 

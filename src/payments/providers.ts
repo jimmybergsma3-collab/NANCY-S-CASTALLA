@@ -12,19 +12,7 @@ export const paymentProviders: PaymentProvider[] = [
     id: "bank-transfer",
     label: "Bank transfer",
     active: true,
-    instructions: `Bank details are confirmed after order review. Current setting: ${businessConfig.bankAccount}.`,
-  },
-  {
-    id: "cash-collection",
-    label: "Cash on collection",
-    active: true,
-    instructions: "Pay in cash when collecting your order in Castalla.",
-  },
-  {
-    id: "cash-delivery",
-    label: "Cash on delivery",
-    active: true,
-    instructions: "Pay in cash when your local delivery is handed over.",
+    instructions: `Bank details are confirmed after order review. Account holder: ${businessConfig.bankAccountName}. IBAN: ${businessConfig.bankIban}. BIC: ${businessConfig.bankBic}.`,
   },
   {
     id: "stripe",

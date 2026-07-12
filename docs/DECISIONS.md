@@ -329,6 +329,18 @@ Dit document legt belangrijke technische beslissingen en hun motivatie vast. Het
 
 **Waarom:** de webshop moet professioneel ogen in browser-tabs, iOS en Android zonder extra brandingassets of redesign.
 
+### Confirmed leveranciersimport naar draft vrijgegeven
+
+**Besluit:** na productiemigratie `202607120001_supplier_import_workflow.sql` mag de adminimport-API confirmed imports uitvoeren voor goedgekeurde Tindale- en Europ Foods-bestanden. De import maakt uitsluitend draftproducten, supplier offers en conflictlogs aan; publicatie blijft een aparte handmatige stap met reviewflags.
+
+**Waarom:** Nancy's Castalla moet actuele leverancierslijsten snel kunnen bewerken voor livegang, maar producten mogen niet automatisch zichtbaar worden zolang verkoopprijs, IVA, categorie, verpakking en reviewstatus niet gecontroleerd zijn.
+
+### Alleen Bizum en bankoverschrijving in klantflow
+
+**Besluit:** nieuwe klantorders tonen alleen Bizum en bankoverschrijving als betaalmethode. WhatsApp-klantenservice, Bizum-betaalnummer en bankgegevens zijn centraal gescheiden in `config/business.ts`. Contant, kaart en Stripe blijven niet zichtbaar/selecteerbaar.
+
+**Waarom:** de go-livefase werkt zonder online betaalprovider en zonder contante betaling. Duidelijke scheiding van WhatsApp en Bizum voorkomt dat klanten naar het verkeerde nummer betalen of appen.
+
 ## Beslisregel voor toekomstige wijzigingen
 
 Leg een besluit hier vast wanneer het een architectuurgrens, datamodel, beveiligingsmodel, externe provider, kernworkflow of blijvende ontwikkelconventie verandert. Vermeld altijd datum, besluit, motivatie, gevolgen en eventueel het vervangen besluit.

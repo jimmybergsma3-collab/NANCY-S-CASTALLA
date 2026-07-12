@@ -2,7 +2,7 @@ import type { Locale } from "@/i18n/config";
 
 export type PaymentMethod = "bizum" | "bank-transfer" | "cash" | "card" | "pending";
 
-export const paymentMethods: PaymentMethod[] = ["bizum", "bank-transfer", "cash", "card", "pending"];
+export const paymentMethods: PaymentMethod[] = ["bizum", "bank-transfer", "pending"];
 
 const labels: Record<Locale, Record<PaymentMethod, string>> = {
   en: { bizum: "Bizum", "bank-transfer": "Bank transfer", cash: "Cash", card: "Card", pending: "Pending" },

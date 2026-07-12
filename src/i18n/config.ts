@@ -85,7 +85,7 @@ export const dictionaries = {
       localText: "Delivery is possible when routes and timing allow.",
       paymentTitle: "Payment after confirmation",
       paymentText:
-        "No Stripe checkout is active in version 1. After receiving the WhatsApp order, Nancy's Castalla sends Bizum details, bank transfer details or confirms cash payment on collection or delivery.",
+        "No online checkout is active in version 1. After receiving the order, Nancy's Castalla confirms availability and sends Bizum or bank transfer details.",
     },
     about: {
       eyebrow: "About Nancy's Castalla",
@@ -110,7 +110,7 @@ export const dictionaries = {
       estimatedTotal: "Estimated total",
       deliveryNote: "Local delivery minimum is",
       after:
-        "After receiving the order, Nancy's Castalla confirms availability and sends Bizum, bank transfer or cash payment instructions.",
+        "After receiving the order, Nancy's Castalla confirms availability and sends Bizum or bank transfer instructions.",
     },
   },
   nl: {
@@ -173,7 +173,7 @@ export const dictionaries = {
       localText: "Bezorging is mogelijk wanneer route en timing passen.",
       paymentTitle: "Betalen na bevestiging",
       paymentText:
-        "In versie 1 is er geen Stripe checkout. Na ontvangst van de WhatsApp-bestelling stuurt Nancy's Castalla Bizum-gegevens, bankgegevens of bevestigt contante betaling bij afhalen of bezorgen.",
+        "In versie 1 is er geen online checkout. Na ontvangst van de bestelling bevestigt Nancy's Castalla de beschikbaarheid en stuurt Bizum- of bankgegevens.",
     },
     about: {
       eyebrow: "Over Nancy's Castalla",
@@ -198,7 +198,7 @@ export const dictionaries = {
       estimatedTotal: "Geschat totaal",
       deliveryNote: "Minimum voor lokale bezorging is",
       after:
-        "Na ontvangst bevestigt Nancy's Castalla beschikbaarheid en stuurt instructies voor Bizum, bankoverschrijving of contante betaling.",
+        "Na ontvangst bevestigt Nancy's Castalla beschikbaarheid en stuurt instructies voor Bizum of bankoverschrijving.",
     },
   },
   de: {
@@ -261,7 +261,7 @@ export const dictionaries = {
       localText: "Lieferung ist möglich, wenn Route und Zeit passen.",
       paymentTitle: "Zahlung nach Bestätigung",
       paymentText:
-        "In Version 1 gibt es keinen Stripe Checkout. Nach der WhatsApp-Bestellung sendet Nancy's Castalla Bizum-Daten, Bankdaten oder bestätigt Barzahlung bei Abholung oder Lieferung.",
+        "In Version 1 gibt es keinen Online-Checkout. Nach Eingang der Bestellung bestätigt Nancy's Castalla die Verfügbarkeit und sendet Bizum- oder Bankdaten.",
     },
     about: {
       eyebrow: "Über Nancy's Castalla",
@@ -286,7 +286,7 @@ export const dictionaries = {
       estimatedTotal: "Geschätzte Summe",
       deliveryNote: "Mindestbestellung für lokale Lieferung ist",
       after:
-        "Nach Eingang der Bestellung bestätigt Nancy's Castalla die Verfügbarkeit und sendet Zahlungsanweisungen für Bizum, Überweisung oder Barzahlung.",
+        "Nach Eingang der Bestellung bestätigt Nancy's Castalla die Verfügbarkeit und sendet Zahlungsanweisungen für Bizum oder Überweisung.",
     },
   },
   es: {
@@ -349,7 +349,7 @@ export const dictionaries = {
       localText: "La entrega es posible cuando la ruta y el horario lo permiten.",
       paymentTitle: "Pago tras confirmación",
       paymentText:
-        "En la versión 1 no hay Stripe checkout. Tras recibir el pedido por WhatsApp, Nancy's Castalla envía datos de Bizum, transferencia bancaria o confirma pago en efectivo al recoger o recibir.",
+        "En la versión 1 no hay checkout online. Tras recibir el pedido, Nancy's Castalla confirma disponibilidad y envía datos de Bizum o transferencia bancaria.",
     },
     about: {
       eyebrow: "Sobre Nancy's Castalla",
@@ -374,7 +374,7 @@ export const dictionaries = {
       estimatedTotal: "Total estimado",
       deliveryNote: "El mínimo para entrega local es",
       after:
-        "Tras recibir el pedido, Nancy's Castalla confirma disponibilidad y envía instrucciones para Bizum, transferencia o pago en efectivo.",
+        "Tras recibir el pedido, Nancy's Castalla confirma disponibilidad y envía instrucciones para Bizum o transferencia bancaria.",
     },
   },
   sv: {
@@ -437,7 +437,7 @@ export const dictionaries = {
       localText: "Delivery is possible when routes and timing allow.",
       paymentTitle: "Payment after confirmation",
       paymentText:
-        "No Stripe checkout is active in version 1. After receiving the WhatsApp order, Nancy's Castalla sends Bizum details, bank transfer details or confirms cash payment on collection or delivery.",
+        "No online checkout is active in version 1. After receiving the order, Nancy's Castalla confirms availability and sends Bizum or bank transfer details.",
     },
     about: {
       eyebrow: "About Nancy's Castalla",
@@ -462,7 +462,7 @@ export const dictionaries = {
       estimatedTotal: "Estimated total",
       deliveryNote: "Local delivery minimum is",
       after:
-        "After receiving the order, Nancy's Castalla confirms availability and sends Bizum, bank transfer or cash payment instructions.",
+        "After receiving the order, Nancy's Castalla confirms availability and sends Bizum or bank transfer instructions.",
     },
   },
 } as const;

@@ -93,7 +93,7 @@ const copies: Record<Locale, UiCopy> = {
       youMayAlsoLike: "You may also like",
     },
     order: {
-      address: "Address", after: "After receiving the order, Nancy's Castalla confirms availability and sends Bizum, bank transfer or cash payment instructions.",
+      address: "Address", after: "After receiving the order, Nancy's Castalla confirms availability and sends Bizum or bank transfer instructions.",
       deliveryFeeFrom: "Delivery fee from", deliveryMinimum: "Local delivery minimum is", email: "Email for confirmation",
       emailUnavailable: "The email provider is not configured yet.", empty: "Choose products and quantities to prepare your order request.", estimatedTotal: "Estimated total",
       name: "Name", notes: "Notes or preferred time", orderError: "Order could not be sent.", orderReceived: "received", orderSent: "sent. Please check your email.",
@@ -109,7 +109,7 @@ const copies: Record<Locale, UiCopy> = {
       "Non-food & packaging": "Non-food & packaging",
     },
     statuses: { available: "Available", preorder: "Pre-order", "coming-soon": "Coming soon" },
-    whatsappMessage: { address: "Delivery address, if needed:", availability: "I would like to ask about current availability.", collection: "Collection", greeting: "Hello", localDelivery: "Local delivery", name: "Name:", payment: "Payment preference: Bizum / bank transfer / cash", preOrder: "I would like to place a pre-order:", preferredOption: "Preferred option", preferredTime: "Preferred collection or delivery time:", total: "Estimated product total" },
+    whatsappMessage: { address: "Delivery address, if needed:", availability: "I would like to ask about current availability.", collection: "Collection", greeting: "Hello", localDelivery: "Local delivery", name: "Name:", payment: "Payment preference: Bizum / bank transfer", preOrder: "I would like to place a pre-order:", preferredOption: "Preferred option", preferredTime: "Preferred collection or delivery time:", total: "Estimated product total" },
   },
   nl: {
     header: { closeMenu: "Menu sluiten", home: "Nancy's Castalla home", openMenu: "Menu openen", orderSupport: "Bestelhulp", switchLanguage: "Taal wijzigen naar" },
@@ -125,7 +125,7 @@ const copies: Record<Locale, UiCopy> = {
       youMayAlsoLike: "Misschien vind je dit ook interessant",
     },
     order: {
-      address: "Adres", after: "Na ontvangst bevestigt Nancy's Castalla de beschikbaarheid en volgen instructies voor Bizum, bankoverschrijving of contante betaling.",
+      address: "Adres", after: "Na ontvangst bevestigt Nancy's Castalla de beschikbaarheid en volgen instructies voor Bizum of bankoverschrijving.",
       deliveryFeeFrom: "Bezorgkosten vanaf", deliveryMinimum: "Minimum voor lokale bezorging is", email: "E-mail voor bevestiging",
       emailUnavailable: "De e-maildienst is nog niet geconfigureerd.", empty: "Kies producten en aantallen om je bestelaanvraag voor te bereiden.", estimatedTotal: "Geschat totaal",
       name: "Naam", notes: "Opmerkingen of gewenst tijdstip", orderError: "De bestelling kon niet worden verzonden.", orderReceived: "ontvangen", orderSent: "verzonden. Controleer je e-mail.",
@@ -141,7 +141,7 @@ const copies: Record<Locale, UiCopy> = {
       "Non-food & packaging": "Non-food & verpakkingen",
     },
     statuses: { available: "Beschikbaar", preorder: "Voorbestelling", "coming-soon": "Binnenkort" },
-    whatsappMessage: { address: "Bezorgadres, indien nodig:", availability: "Ik wil graag informeren naar de actuele beschikbaarheid.", collection: "Afhalen", greeting: "Hallo", localDelivery: "Lokale bezorging", name: "Naam:", payment: "Betaalvoorkeur: Bizum / bankoverschrijving / contant", preOrder: "Ik wil graag een pre-order plaatsen:", preferredOption: "Gewenste optie", preferredTime: "Gewenst afhaal- of bezorgmoment:", total: "Geschat producttotaal" },
+    whatsappMessage: { address: "Bezorgadres, indien nodig:", availability: "Ik wil graag informeren naar de actuele beschikbaarheid.", collection: "Afhalen", greeting: "Hallo", localDelivery: "Lokale bezorging", name: "Naam:", payment: "Betaalvoorkeur: Bizum / bankoverschrijving", preOrder: "Ik wil graag een pre-order plaatsen:", preferredOption: "Gewenste optie", preferredTime: "Gewenst afhaal- of bezorgmoment:", total: "Geschat producttotaal" },
   },
   de: {
     header: { closeMenu: "Menü schließen", home: "Nancy's Castalla Startseite", openMenu: "Menü öffnen", orderSupport: "Bestellhilfe", switchLanguage: "Sprache wechseln zu" },
@@ -157,7 +157,7 @@ const copies: Record<Locale, UiCopy> = {
       youMayAlsoLike: "Das könnte Ihnen auch gefallen",
     },
     order: {
-      address: "Adresse", after: "Nach Eingang bestätigt Nancy's Castalla die Verfügbarkeit und sendet Anweisungen für Bizum, Überweisung oder Barzahlung.",
+      address: "Adresse", after: "Nach Eingang bestätigt Nancy's Castalla die Verfügbarkeit und sendet Anweisungen für Bizum oder Überweisung.",
       deliveryFeeFrom: "Liefergebühr ab", deliveryMinimum: "Mindestbestellung für lokale Lieferung ist", email: "E-Mail für Bestätigung",
       emailUnavailable: "Der E-Mail-Dienst ist noch nicht konfiguriert.", empty: "Wählen Sie Produkte und Mengen für Ihre Bestellanfrage.", estimatedTotal: "Geschätzte Summe",
       name: "Name", notes: "Anmerkungen oder gewünschte Zeit", orderError: "Die Bestellung konnte nicht gesendet werden.", orderReceived: "eingegangen", orderSent: "gesendet. Bitte prüfen Sie Ihre E-Mail.",
@@ -189,7 +189,7 @@ const copies: Record<Locale, UiCopy> = {
       youMayAlsoLike: "También te puede gustar",
     },
     order: {
-      address: "Dirección", after: "Tras recibir el pedido, Nancy's Castalla confirma disponibilidad y envía instrucciones para Bizum, transferencia o pago en efectivo.",
+      address: "Dirección", after: "Tras recibir el pedido, Nancy's Castalla confirma disponibilidad y envía instrucciones para Bizum o transferencia bancaria.",
       deliveryFeeFrom: "Gastos de entrega desde", deliveryMinimum: "El mínimo para entrega local es", email: "Correo para confirmación",
       emailUnavailable: "El servicio de correo aún no está configurado.", empty: "Elige productos y cantidades para preparar tu solicitud de pedido.", estimatedTotal: "Total estimado",
       name: "Nombre", notes: "Notas u horario preferido", orderError: "No se pudo enviar el pedido.", orderReceived: "recibido", orderSent: "enviado. Revisa tu correo.",
@@ -205,7 +205,7 @@ const copies: Record<Locale, UiCopy> = {
       "Non-food & packaging": "No alimentario y envases",
     },
     statuses: { available: "Disponible", preorder: "Prepedido", "coming-soon": "Próximamente" },
-    whatsappMessage: { address: "Dirección de entrega, si es necesaria:", availability: "Quisiera consultar la disponibilidad actual.", collection: "Recogida", greeting: "Hola", localDelivery: "Entrega local", name: "Nombre:", payment: "Preferencia de pago: Bizum / transferencia / efectivo", preOrder: "Quisiera realizar un prepedido:", preferredOption: "Opción preferida", preferredTime: "Horario preferido de recogida o entrega:", total: "Total estimado de productos" },
+    whatsappMessage: { address: "Dirección de entrega, si es necesaria:", availability: "Quisiera consultar la disponibilidad actual.", collection: "Recogida", greeting: "Hola", localDelivery: "Entrega local", name: "Nombre:", payment: "Preferencia de pago: Bizum / transferencia bancaria", preOrder: "Quisiera realizar un prepedido:", preferredOption: "Opción preferida", preferredTime: "Horario preferido de recogida o entrega:", total: "Total estimado de productos" },
   },
   sv: {
     header: { closeMenu: "Stäng menyn", home: "Nancy's Castalla startsida", openMenu: "Öppna menyn", orderSupport: "Beställningshjälp", switchLanguage: "Byt språk till" },
@@ -221,7 +221,7 @@ const copies: Record<Locale, UiCopy> = {
       youMayAlsoLike: "Du kanske också gillar",
     },
     order: {
-      address: "Adress", after: "När beställningen har tagits emot bekräftar Nancy's Castalla tillgänglighet och skickar instruktioner för Bizum, banköverföring eller kontant betalning.",
+      address: "Adress", after: "När beställningen har tagits emot bekräftar Nancy's Castalla tillgänglighet och skickar instruktioner för Bizum eller banköverföring.",
       deliveryFeeFrom: "Leveransavgift från", deliveryMinimum: "Minsta order för lokal leverans är", email: "E-post för bekräftelse",
       emailUnavailable: "E-posttjänsten är ännu inte konfigurerad.", empty: "Välj produkter och antal för att förbereda din beställningsförfrågan.", estimatedTotal: "Beräknad totalsumma",
       name: "Namn", notes: "Anteckningar eller önskad tid", orderError: "Beställningen kunde inte skickas.", orderReceived: "mottagen", orderSent: "skickad. Kontrollera din e-post.",
@@ -237,7 +237,7 @@ const copies: Record<Locale, UiCopy> = {
       "Non-food & packaging": "Icke-livsmedel och förpackningar",
     },
     statuses: { available: "Tillgänglig", preorder: "Förbeställning", "coming-soon": "Kommer snart" },
-    whatsappMessage: { address: "Leveransadress vid behov:", availability: "Jag vill fråga om aktuell tillgänglighet.", collection: "Hämtning", greeting: "Hej", localDelivery: "Lokal leverans", name: "Namn:", payment: "Betalningsönskemål: Bizum / banköverföring / kontant", preOrder: "Jag vill göra en förbeställning:", preferredOption: "Önskat alternativ", preferredTime: "Önskad tid för hämtning eller leverans:", total: "Beräknad produktsumma" },
+    whatsappMessage: { address: "Leveransadress vid behov:", availability: "Jag vill fråga om aktuell tillgänglighet.", collection: "Hämtning", greeting: "Hej", localDelivery: "Lokal leverans", name: "Namn:", payment: "Betalningsönskemål: Bizum / banköverföring", preOrder: "Jag vill göra en förbeställning:", preferredOption: "Önskat alternativ", preferredTime: "Önskad tid för hämtning eller leverans:", total: "Beräknad produktsumma" },
   },
 };
 

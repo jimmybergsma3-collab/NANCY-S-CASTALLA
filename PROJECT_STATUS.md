@@ -19,8 +19,8 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 | Facturatie | Operationeel voor normale facturen | Unieke factuur per order, snapshots, Spaans/Engelse PDF, admin- en klantdownload, e-mail. |
 | E-mail | Operationeel mits extern geconfigureerd | Resend voor order/factuur met professionele responsive HTML, plain-text fallback en correcte Reply-To; Supabase SMTP voor accountmail; geen queue of automatische retry. |
 | Admin | Gemengd | Producten, orders, voorraad en facturen functioneel; overige modules variëren van overzicht tot voorbereiding. |
-| Leveranciersimport | Preview-only gebouwd | Nieuwe migratie en adminmodule voor veilige dry-run, conflictpreview, supplier offers, batchpublicatie en rollback zijn voorbereid. Confirmed import is bewust nog geblokkeerd en migratie is niet automatisch uitgevoerd. |
-| Betaling | Handmatig | Bizum, bankoverschrijving en contant; kaart slechts als vastgelegde keuze, geen online provider. |
+| Leveranciersimport | Operationeel voor draftimport | Migratie `202607120001` staat live. Tindale en Europ Foods kunnen via dry-run en confirmed import naar draftproducten/supplier offers, zonder voorraadmutaties of automatische publicatie. |
+| Betaling | Handmatig | Alleen Bizum en bankoverschrijving zijn zichtbaar/selecteerbaar voor klanten. Stripe, kaart en contant staan niet actief in de klantflow. |
 | Bezorging | Gedeeltelijk | Beleid wordt getoond, maar minimum, radius en fee zijn niet volledig server-authoritatief. |
 | Tests/CI | Onvoldoende geautomatiseerd | Lint en build slagen; geen vaste geautomatiseerde regressiesuite of CI-gate. |
 
@@ -56,7 +56,9 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 - Productarchivering voor livegang: oude catalogus kan in bulk naar `archived` onder batch `IMPORT_2026_PRELAUNCH`, zonder producten, afbeeldingen, categorieën, codes, relaties of voorraadhistorie te verwijderen.
 - Vervolg-migratie `202607110003_product_catalogue_conflict_protection.sql` bereidt bescherming voor tegen gewone database-updates op archived producten; oude importbestanden of toekomstige importtools mogen ze niet stil overschrijven of heractiveren. Supplier code en EAN zijn duplicaatsignalen, geen unieke productsleutels.
 - Productbeheer toont standaard alleen actieve producten en heeft filters voor Active, Archived, Disabled, Draft en All; individuele archived producten kunnen veilig worden hersteld.
-- Supplier Imports-module toegevoegd voor Europ Foods PDF en Tindale XLS/XLSX: leverancier selecteren, batchnaam, dry-run preview, conflicten/waarschuwingen, importgeschiedenis, publish approved batch en veilige rollback naar draft/archive. Dry-run schrijft niets; confirmed import is nog niet geactiveerd.
+- Supplier Imports-module toegevoegd voor Europ Foods PDF en Tindale XLS/XLSX: leverancier selecteren, batchnaam, dry-run preview, conflicten/waarschuwingen, importgeschiedenis, confirmed import naar draft, publish approved batch en veilige rollback naar draft/archive.
+- `IMPORT_2026_LIVE_TINDALE_JULY` is in productie als draft geïmporteerd: 924 producten, 924 supplier offers, geen voorraadmutaties en geen live publicatie.
+- `IMPORT_2026_LIVE_EUROPFOODS_JULY` is in productie als draft geïmporteerd: 713 veilige unieke producten, 713 supplier offers, 466 regels overgeslagen/conflict-review en 483 conflictregels.
 - Nieuwe importarchitectuur voorbereid met `product_import_runs`, `supplier_product_offers`, reviewvelden, transactionele Nancy-productcode-reservering vanaf de actuele hoogste `NC-xxxxx`, en batch-RPC's voor publiceren/rollback.
 - Categorieoverzicht, klantoverzicht, leveranciersoverzicht, inkooporderoverzicht, IVA-samenvatting, rapportagekaarten, instellingen en integratieregister.
 - Orderoverzicht en responsieve orderdetails met klantgegevens, adres, opmerkingen, regels, verpakking, aantallen, prijzen, IVA en totalen.
@@ -92,10 +94,10 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 Uitsluitend punten die nog daadwerkelijk openstaan voor betrouwbare eerste klantorders:
 
 1. Controleer in Vercel alle vereiste environmentvariabelen voor Production én Preview, zonder waarden in Git te zetten.
-2. Bevestig dat alle migraties tot en met `202607110003_product_catalogue_conflict_protection.sql` in productie zijn uitgevoerd; beoordeel en voer daarna pas `202607120001_supplier_import_workflow.sql` handmatig uit.
+2. Controleer in de backoffice de geïmporteerde Tindale- en Europ Foods-draftproducten: verkoopprijs, IVA, categorie, verpakking en afbeelding/placeholder.
 3. Voer één volledige productieflow uit met een nieuw klantaccount: verificatie, login, checkout, adminbevestiging, voorraadmutatie, factuur, PDF, e-mail, klantdownload en annulering/terugboeking.
 4. Controleer Resend-domein, SPF, DKIM, DMARC, API-key en Supabase Custom SMTP; verifieer ontvangst van account-, order-, status- en factuurmails.
-5. Vervang de placeholder-bankrekening en bevestig het zakelijke Bizum-nummer in de centrale bedrijfsconfiguratie.
+5. Bevestig operationeel dat Bizum `+34 644 21 22 57` en bankrekening `ES89 2100 1460 6002 0010 3972` correct zijn voor klantbetalingen.
 6. Laat fiscale gegevens, factuurlayout, nummerreeks en teksten vóór officieel gebruik controleren door een Spaanse gestor/boekhouder.
 7. Maak bezorgminimum, bezorgkosten en leveringsgebied server-side autoritatief of communiceer tijdens de pre-orderfase expliciet dat bezorgkosten handmatig worden bevestigd.
 8. Voeg rate limiting/botbescherming toe aan adminlogin, registratie, ordercreatie, profielmutaties en uploads.
@@ -103,8 +105,8 @@ Uitsluitend punten die nog daadwerkelijk openstaan voor betrouwbare eerste klant
 10. Voeg geautomatiseerde regressietests en een CI-gate voor lint/build toe; behandel de bekende dependency-auditmeldingen gericht.
 11. Beslis of open orders voorraad moeten reserveren; tot die tijd moet admin beschikbaarheid controleren vóór bevestiging.
 12. Controleer juridische teksten, privacy/cookiebeleid, bewaartermijnen, allergeneninformatie en consumentenvoorwaarden met passende deskundigen.
-13. Archiveer of beoordeel de twee resterende actieve prelaunchproducten `NC-00001` en `NC-00002` voordat de nieuwe livecatalogus wordt gepubliceerd.
-14. Voer een admin dry-run uit voor `IMPORT_2026_LIVE_EUROPFOODS_JULY` en `IMPORT_2026_LIVE_TINDALE_JULY`, los reviewflags/conflicten op en publiceer alleen goedgekeurde batches.
+13. Los importconflicten en reviewflags op; publiceer alleen producten die `ready_for_publish` zijn en een gecontroleerde verkoopprijs, IVA, categorie en verpakking hebben.
+14. Voer na publicatie van een kleine selectie een echte cart/order-smoketest uit met Bizum en bankoverschrijving.
 
 ## Niet blokkerend voor de eerste gecontroleerde pre-orders
 
@@ -118,4 +120,4 @@ Uitsluitend punten die nog daadwerkelijk openstaan voor betrouwbare eerste klant
 
 Op 9 juli 2026 is de registratieflow aangepast om Supabase-signup via de centrale serverroute te laten lopen, zodat de bevestigingslink de productiebase-URL en locale gebruikt. De productdetail-bestelkaart rendert geen tweede productfoto meer, om Android/Chrome overlap bij onder andere Potato Scones te voorkomen. De checkout is getest met actuele Potato Scones-verpakking: Collection is opgeslagen als `NC-000008`, Local delivery als `NC-000009`, en een verouderde verpakking geeft nu `package_unavailable` met een duidelijke boodschap. Daarna is extra testerfeedback verwerkt: registratie wist velden na succes, toont expliciet inbox/spammap, biedt resend na 60 seconden, het accountdashboard heeft een sessie-fallback wanneer profieldata traag of afwezig is, en Nederlandse productkaarten/details tonen geen Engelse of Spaanse leveranciersomschrijvingen meer maar Nederlandse bekende teksten of `Vertaling volgt binnenkort`. Een mobiele productlijstcontrole op 390px breed gaf geen horizontale overflow en geen browserconsole-errors. Een live-productietest liet zien dat `POST /api/cart/validate` werkte maar `POST /api/orders` op de live deployment 500 terugstuurde met alleen `order_failed`; de repository is daarop uitgebreid met staplogging, diagnose-id, echte foutmelding in de API-response en een REST-fallback wanneer de order-RPC in productie faalt of achterloopt. Lokaal is na deze patch een testorder opgeslagen als `NC-000012`. Op 10 juli 2026 zijn uitsluitend frontend-UX-verbeteringen toegevoegd: zoeken doorzoekt nu ook locale-categorieën en zichtbare omschrijvingen, verpakkingsinformatie staat duidelijker op productkaarten, productdetail, winkelmand en klantorderdetails, en het checkoutformulier verbergt het bezorgadres bij afhalen. `npm run lint` en `npm run build` zijn succesvol uitgevoerd.
 
-Op 12 juli 2026 is de veilige leveranciersimportworkflow voorbereid met een nieuwe migratie, server-side PDF/XLS(X)-parsers, admin dry-run preview, guarded confirm import, batchpublicatie/rollback en faviconset. Lokale dry-runanalyse schreef niets naar de database en gaf: Europ Foods PDF 1.641 bronregels, 1.179 herkende producten, 63 secties, 196 dubbele leverancierscodegroepen, 1.179 ontbrekende EAN en 18 onduidelijke verpakkingen; Tindale XLS 1.000 bronregels, 924 producten, 68 secties en 7 ontbrekende EAN. `npm run lint` en `npm run build` zijn succesvol uitgevoerd.
+Op 12 juli 2026 is de veilige leveranciersimportworkflow voorbereid met een nieuwe migratie, server-side PDF/XLS(X)-parsers, admin dry-run preview, confirmed import naar draft, batchpublicatie/rollback en faviconset. Productiecontrole bevestigde dat migratie `202607120001_supplier_import_workflow.sql` live staat. Tindale is geïmporteerd als 924 draftproducten en 924 supplier offers vanaf `NC-01581`. Europ Foods geeft geen JSON-crash meer, gebruikt compacte JSON-responses en is geïmporteerd als 713 veilige draftproducten en 713 supplier offers vanaf `NC-02505`; 466 regels bleven in skip/conflict-review. De twee oude actieve prelaunchproducten `NC-00001` en `NC-00002` zijn veilig gearchiveerd. `npm run lint` en `npm run build` zijn succesvol uitgevoerd.

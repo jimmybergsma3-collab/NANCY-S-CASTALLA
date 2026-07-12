@@ -11,8 +11,6 @@ export function Footer({ locale = defaultLocale }: { locale?: Locale }) {
   const paymentLabels: Record<string, string> = {
     bizum: "Bizum",
     "bank-transfer": ui.footer.bankTransfer,
-    "cash-collection": ui.footer.cashCollection,
-    "cash-delivery": ui.footer.cashDelivery,
   };
 
   return (
@@ -37,7 +35,6 @@ export function Footer({ locale = defaultLocale }: { locale?: Locale }) {
               .map((provider) => (
                 <li key={provider.id}>{paymentLabels[provider.id] ?? provider.label}</li>
               ))}
-            <li>{ui.footer.cardLater}</li>
           </ul>
         </div>
       </div>

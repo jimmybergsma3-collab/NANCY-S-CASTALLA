@@ -57,7 +57,7 @@ De applicatie is online als productie-implementatie op Vercel, maar functioneel 
 | WhatsApp-bestellen | Werkend | CTA en samengesteld bericht; dit is een apart kanaal naast database-orders |
 | Voorraad | Werkend voor kernflow | Afboeken bij bevestiging, terugboeken bij annulering |
 | E-mail | Werkend mits extern correct ingesteld | Resend voor orders, Supabase Custom SMTP voor accounts |
-| Online betaling | Niet actief | Bizum, bankoverschrijving en contant worden handmatig afgehandeld |
+| Online betaling | Niet actief | Bizum en bankoverschrijving worden handmatig afgehandeld; contant, kaart en Stripe zijn niet zichtbaar/selecteerbaar voor klanten |
 | Inkoop/rapportages | Gedeeltelijk | Inkoop is overzicht/voorbereiding; rapportages tonen basistellingen en betaalde omzet |
 | Facturatie | Werkend na migratie | Orderfactuur, snapshots, PDF, klantdownload en Resend-verzending; nog geen creditnota of boekhoudexport |
 
@@ -123,7 +123,7 @@ Webpack is gekozen nadat Turbopack tijdens ontwikkeling instabiele chunk- en wor
 - **Supabase:** levert PostgreSQL, Auth, Storage en RPC's met weinig operationeel beheer. Het project kan daardoor klein starten en later uitbreiden.
 - **Vercel:** sluit direct aan op Next.js en GitHub-deployments.
 - **Resend:** verzorgt zowel API-mail voor orders als SMTP voor Supabase-accountmails met eigen domeinafzenders.
-- **Geen Stripe in V1:** de onderneming werkt eerst met Bizum, overschrijving en contante betaling. De betaalproviderlaag voorkomt een toekomstige herbouw.
+- **Geen Stripe in V1:** de onderneming werkt eerst met Bizum en overschrijving. De betaalproviderlaag voorkomt een toekomstige herbouw.
 
 ## 2.3 Ontbrekende engineeringtools
 
@@ -313,7 +313,7 @@ Belangrijkste kolommen:
 - Klant: `customer_id`, `customer_name`, `customer_email`, `customer_phone`.
 - Fulfilment: `fulfillment`, `delivery_method`, `notes`.
 - Financieel: `subtotal_ex_vat`, `vat_total`, `total`, `payment_status`.
-- Betaalvoorkeur: `payment_method` met `bizum`, `bank-transfer`, `cash`, `card` of `pending`.
+- Betaalvoorkeur: nieuwe klantorders tonen alleen `bizum` en `bank-transfer`; historische waarden `cash`, `card` en `pending` blijven leesbaar als labels.
 - Proces: `status`, `inventory_committed`.
 - E-mailtracking: tijdstempels voor admin-, klant- en statusmail.
 - Audit: `created_at`, `updated_at`.
@@ -409,7 +409,7 @@ RLS: ingeschakeld.
 
 Deze tabel wordt toegevoegd door de nieuwe, nog handmatig uit te voeren migratie `202607120001_supplier_import_workflow.sql`. Velden omvatten leverancier, bronbestand, importbatch, bestandstype, status, dry-run vlag, start/eindtijden, aantallen voor bronregels/geparseerde producten/aangemaakte producten/updated offers/skips/conflicten/waarschuwingen/fouten en `report_json`.
 
-Statuswaarden zijn `pending`, `analysing`, `preview_ready`, `importing`, `completed`, `failed` en `rolled_back`. RLS staat aan. Dry-runs in de huidige API schrijven bewust geen import run; import runs worden relevant zodra confirmed import later expliciet wordt geactiveerd.
+Statuswaarden zijn `pending`, `analysing`, `preview_ready`, `importing`, `completed`, `failed` en `rolled_back`. RLS staat aan. Dry-runs in de API schrijven niets naar producten of supplier offers. Confirmed imports schrijven een import run en maken uitsluitend draftproducten plus supplier offers aan.
 
 ## 4.13 `supplier_product_offers`
 
@@ -611,7 +611,7 @@ De module `/{locale}/admin/imports` is bedoeld voor de nieuwe livecatalogus en w
 - Batchnaam invullen, bijvoorbeeld `IMPORT_2026_LIVE_EUROPFOODS_JULY`.
 - Dry-run preview draaien. Deze preview schrijft niets naar `products`, `supplier_product_offers`, voorraad of orders.
 - Previewrapport toont bronregels, herkende producten, secties, dubbele leveranciercodes, ontbrekende EAN, onduidelijke verpakking, ontbrekende prijs, mogelijke active/archived matches, in-file duplicates, reviewflags en parseproblemen.
-- Confirm import-knop bestaat voor de workflow, maar de API weigert confirmed import bewust totdat deze fase expliciet wordt vrijgegeven.
+- Confirm import schrijft uitsluitend draftproducten en supplier offers. Producten blijven onzichtbaar totdat ze handmatig zijn gecontroleerd, goedgekeurd en gepubliceerd.
 - Publish approved batch roept `publish_approved_import_batch` aan en publiceert alleen review-schone draftproducten.
 - Rollback roept `rollback_import_batch_to_draft` aan en zet batchproducten naar draft/archive plus supplier offers inactive, zonder harde delete.
 
@@ -849,7 +849,7 @@ Ondersteunt productcreatie/upsert, wijziging, veilige archivering en restore. In
 
 ### `/api/admin/imports`
 
-`GET` leest recente import runs uit `product_import_runs` wanneer de nieuwe migratie beschikbaar is. `POST` accepteert multipart dry-runs voor Europ Foods PDF en Tindale XLS/XLSX, valideert bestandstype en grootte, parseert server-side en bouwt een preview tegen de bestaande productcatalogus. De dry-run schrijft niets naar `products`, `supplier_product_offers` of voorraad. `POST action=confirm-import` retourneert bewust een guard-error totdat confirmed import expliciet wordt vrijgegeven. `PATCH` ondersteunt `publish-batch` en `rollback-batch` met exacte bevestigingstekst en roept de bijbehorende database-RPC's aan. Alle acties vereisen adminsessie; service-role credentials blijven server-side.
+`GET` leest recente import runs uit `product_import_runs` wanneer de nieuwe migratie beschikbaar is. `POST` accepteert multipart dry-runs en confirmed imports voor Europ Foods PDF en Tindale XLS/XLSX, valideert bestandstype en grootte, parseert server-side en bouwt een preview tegen de bestaande productcatalogus. De dry-run schrijft niets naar `products`, `supplier_product_offers` of voorraad. `POST action=confirm-import` maakt alleen draftproducten aan, schrijft supplier offers en legt conflicten vast. `PATCH` ondersteunt `publish-batch` en `rollback-batch` met exacte bevestigingstekst en roept de bijbehorende database-RPC's aan. Alle acties vereisen adminsessie; service-role credentials blijven server-side. De API stuurt ook bij fouten altijd JSON terug met `errorCode`, `message` en `diagnosticId`.
 
 ## 9.6 Adminorders
 
@@ -1019,7 +1019,7 @@ Bij een geldig bearer-token wordt de Auth-user gekoppeld aan `customers`, waarna
 
 ## 11.7 Status- en betaalmodel
 
-Een nieuwe order start met `new` en betaalstatus `pending`. De beheerder bevestigt handmatig na beschikbaarheids- en betaalafspraak. Er is geen online payment webhook. Betaling en operationele status zijn gescheiden, wat correct is voor Bizum, overschrijving en contant.
+Een nieuwe order start met `new` en betaalstatus `pending`. De beheerder bevestigt handmatig na beschikbaarheids- en betaalafspraak. Er is geen online payment webhook. Betaling en operationele status zijn gescheiden, wat correct is voor Bizum en overschrijving.
 
 ---
 
@@ -1453,7 +1453,7 @@ Nieuwe orders boeken nog geen voorraad af. Wanneer een beheerder een order beves
 
 Ordermail loopt via de Resend API met `orders@nancys.es` en afzendernaam `Nancy's Castalla`; accountmail loopt via Supabase Custom SMTP met `account@nancys.es`. Order-, status- en factuurmails hebben responsive HTML in de merkstijl met logo, groene huisstijl, duidelijke koppen, tabelweergave waar relevant, betaalinformatie, contactknoppen, WhatsApp, website, Facebook en vaste footer. Iedere applicatiemail heeft een plain-text fallback. De order wordt opgeslagen voordat mail wordt verstuurd, zodat een mailstoring geen orderverlies of duplicatie veroorzaakt. Idempotency headers en `X-Entity-Ref-ID` verminderen dubbele mails en helpen traceerbaarheid. `List-Unsubscribe` is voorbereid in de helper maar niet standaard actief voor noodzakelijke transactionele order- en factuurmails. Er is nog geen queue, automatische retry of uitgebreid eventlog. DNS-verificatie, SMTP-credentials, redirect-URL's en templates worden buiten Git in Resend/Supabase beheerd en moeten via een deploymentchecklist worden bewaakt.
 
-WhatsApp blijft een belangrijk apart kanaal. De site bouwt een bericht naar `+34 644 05 97 69`, maar zo'n WhatsApp-bericht wordt niet vanzelf een databaseorder. Betaling gebeurt handmatig via Bizum, overschrijving of contant; Stripe en kaartbetaling zijn niet actief. Een providerstructuur maakt latere koppeling mogelijk. De bankrekening is nog een placeholder en het Bizum-nummer moet worden gecontroleerd op het nieuwe zakelijke nummer.
+WhatsApp blijft een belangrijk apart kanaal. De site bouwt een bericht naar `+34 644 05 97 69`, maar zo'n WhatsApp-bericht wordt niet vanzelf een databaseorder. Betaling gebeurt handmatig via Bizum `+34 644 21 22 57` of bankoverschrijving naar `NANCYS CASTALLA`, IBAN `ES89 2100 1460 6002 0010 3972`, BIC `CAIXESBBXXX`. Stripe, kaart en contant zijn niet zichtbaar/selecteerbaar voor klanten. Een providerstructuur maakt latere koppeling mogelijk.
 
 Afhalen is in Castalla; bezorging wordt gecommuniceerd met een minimum van EUR 25, circa 15 km en vanaf EUR 3,50. Deze regels zijn nog niet server-side afgedwongen en de fee wordt niet gegarandeerd in het ordertotaal opgenomen. Een toekomstige versie moet bezorgzones, adresvalidatie, ordersnapshots, capaciteit en server-side prijsberekening toevoegen.
 

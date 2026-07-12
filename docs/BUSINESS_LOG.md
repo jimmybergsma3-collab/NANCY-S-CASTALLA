@@ -82,17 +82,17 @@ Dit document legt uit waarom het bedrijf bepaalde product-, verkoop- en operatio
 
 **Motivatie:** in de pre-orderfase worden beschikbaarheid, levermoment en totaal eerst handmatig bevestigd. Een online betaling vóór die bevestiging kan terugbetalingen en extra administratie veroorzaken. De software bevat wel een providerstructuur zodat later Stripe, SumUp of een andere oplossing kan worden aangesloten.
 
-### Bizum, overschrijving en contant eerst
+### Bizum en overschrijving eerst
 
-**Keuze:** ondersteunde V1-methoden zijn Bizum, bankoverschrijving, contant bij afhalen en contant bij bezorgen.
+**Keuze:** ondersteunde V1-methoden zijn Bizum en bankoverschrijving. Contant, kaart en online checkout zijn voor de go-livefase niet zichtbaar of selecteerbaar.
 
 **Motivatie:** deze methoden zijn eenvoudig, lokaal herkenbaar en vereisen geen complete betaalcheckout. De klant ontvangt instructies nadat de order is gecontroleerd.
 
-**Open zakelijk besluit:** het Bizum-nummer en de bankrekening moeten definitief worden bevestigd. De bankrekening is nog een placeholder; het Bizum-nummer kan nog naar het eerdere telefoonnummer verwijzen.
+**Operationele gegevens:** Bizum gebruikt `+34 644 21 22 57`. WhatsApp-klantenservice gebruikt `+34 644 05 97 69`. Bankoverschrijving gebruikt rekeninghouder `NANCYS CASTALLA`, IBAN `ES89 2100 1460 6002 0010 3972` en BIC `CAIXESBBXXX`. Laat deze gegevens voor officieel gebruik nog door Nancy/boekhouder bevestigen.
 
 ### Betaalvoorkeur vastleggen zonder online afrekening
 
-**Keuze:** de checkout mag `Bizum`, `Bank transfer`, `Cash`, `Card` of `Pending` als klantvoorkeur vastleggen. Dit is informatie voor orderafhandeling en factuur; het is geen bewijs van betaling en activeert geen externe checkout.
+**Keuze:** de checkout mag `Bizum` of `Bank transfer` als klantvoorkeur vastleggen. Dit is informatie voor orderafhandeling en factuur; het is geen bewijs van betaling en activeert geen externe checkout.
 
 **Motivatie:** de klant en beheerder zien direct hoe betaling waarschijnlijk wordt afgehandeld, terwijl Nancy's Castalla eerst beschikbaarheid kan controleren. `payment_status` blijft afzonderlijk de bron voor de vraag of daadwerkelijk is betaald.
 

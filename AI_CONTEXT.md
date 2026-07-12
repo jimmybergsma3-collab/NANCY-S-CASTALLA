@@ -1,4 +1,4 @@
-# AI Context: Nancy's Castalla
+﻿# AI Context: Nancy's Castalla
 
 **Doel:** snelle, zelfstandige projectcontext voor ChatGPT, Codex en andere AI-assistenten.  
 **Laatst bijgewerkt:** 12 juli 2026
@@ -145,11 +145,11 @@ Row Level Security staat aan. De applicatie gebruikt server-side service-role to
 
 Productcodes volgen `NC-00001`, `NC-00002`, enzovoort. Productdetail-URL's gebruiken deze stabiele code.
 
-Producten hebben naast voorraadstatus (`available`, `preorder`, `coming-soon`) ook een admin lifecycle-status: `active`, `archived`, `disabled` of `draft`. Alleen `active` plus `is_visible=true` mag publiek verschijnen. Archived producten blijven volledig in de database met productcode, afbeeldingen, categorieën, voorraadhistorie en relaties, maar verdwijnen uit de publieke webshop en standaard uit productbeheer. De livegang-opschoning gebruikt migratie `202607110002_product_catalogue_archiving.sql` en batch `IMPORT_2026_PRELAUNCH`. Nieuwe imports mogen archived producten niet automatisch reactiveren of wijzigen; gebruik een nieuwe productcode of herstel bewust één product via `restore_archived_product`.
+Producten hebben naast voorraadstatus (`available`, `preorder`, `coming-soon`) ook een admin lifecycle-status: `active`, `archived`, `disabled` of `draft`. Alleen `active` plus `is_visible=true` mag publiek verschijnen. Archived producten blijven volledig in de database met productcode, afbeeldingen, categorieÃ«n, voorraadhistorie en relaties, maar verdwijnen uit de publieke webshop en standaard uit productbeheer. De livegang-opschoning gebruikt migratie `202607110002_product_catalogue_archiving.sql` en batch `IMPORT_2026_PRELAUNCH`. Nieuwe imports mogen archived producten niet automatisch reactiveren of wijzigen; gebruik een nieuwe productcode of herstel bewust Ã©Ã©n product via `restore_archived_product`.
 
 `products.id`/de Nancy-productcode is de enige publieke unieke productsleutel en blijft de URL-basis. `supplier_code` en `ean` zijn bewust niet uniek, omdat dezelfde leveranciercode of barcode in oude en nieuwe batches kan terugkomen. Gebruik deze velden alleen om mogelijke duplicaten te signaleren. Vervolg-migratie `202607110003_product_catalogue_conflict_protection.sql` beschermt archived producten op database-niveau tegen gewone updates, ook als een oud `on conflict (id) do update` importbestand per ongeluk opnieuw wordt uitgevoerd. Toekomstige imports moeten nieuwe records met een nieuwe Nancy-productcode aanmaken of expliciet overslaan/herstellen na handmatige keuze.
 
-Nieuwe leveranciersimports worden voorbereid via migratie `202607120001_supplier_import_workflow.sql`. Deze voegt import runs, supplier offers, reviewvelden en veilige batch-RPC's toe. De adminroute `/{locale}/admin/imports` ondersteunt nu dry-run previews voor Europ Foods PDF en Tindale XLS/XLSX, maar confirmed import is bewust geblokkeerd totdat een preview handmatig is goedgekeurd. Dry-runs mogen geen producten, supplier offers of voorraadmutaties schrijven. Nieuwe producten uit toekomstige confirmed imports moeten standaard `product_status='draft'`, `is_visible=false`, `featured=false`, `stock_quantity=0` en een nieuwe unieke `NC-xxxxx`-code krijgen. Bestanden van leveranciers mogen niet in Git worden gezet.
+Nieuwe leveranciersimports gebruiken migratie `202607120001_supplier_import_workflow.sql`. Deze staat in productie en voegt import runs, supplier offers, reviewvelden en veilige batch-RPC's toe. De adminroute `/{locale}/admin/imports` ondersteunt dry-run previews en confirmed import naar draft voor Europ Foods PDF en Tindale XLS/XLSX. Dry-runs schrijven niets. Confirmed import maakt uitsluitend `product_status='draft'`, `is_visible=false`, `featured=false`, `stock_quantity=0` en nieuwe unieke `NC-xxxxx`-codes aan. Bestanden van leveranciers mogen niet in Git worden gezet. Op 12 juli 2026 zijn `IMPORT_2026_LIVE_TINDALE_JULY` en `IMPORT_2026_LIVE_EUROPFOODS_JULY` naar draft geÃ¯mporteerd; er zijn geen producten automatisch gepubliceerd.
 
 ## 6. Orderflow
 
@@ -167,7 +167,7 @@ Er zijn twee orderkanalen:
 8. Order en orderregels worden via een database-RPC opgeslagen en krijgen UUID plus oplopend ordernummer.
 9. Als de order-RPC in productie faalt door schema-cache, ontbrekende functie, permissie of `payment_method`-mismatch, gebruikt de server een service-role REST-fallback om customer, order en orderregels alsnog op te slaan. Iedere orderpoging logt een veilige diagnose-id per stap.
 10. Resend verstuurt admin- en klantmail als e-mailconfiguratie werkt. Order-, status- en factuurmails gebruiken branded responsive HTML met logo, ordertabellen, betaalinformatie, contactknoppen, WhatsApp, website, Facebook en plain-text fallback. De afzendernaam is `Nancy's Castalla`; klantmails gebruiken `info@nancys.es` als Reply-To en adminordermeldingen gebruiken het klantadres als Reply-To.
-11. Nieuwe order start als `new` met betaalstatus `pending`; de klant kan een betaalvoorkeur opslaan als `bizum`, `bank-transfer`, `cash`, `card` of `pending`.
+11. Nieuwe order start als `new` met betaalstatus `pending`; de klant kan alleen `bizum` of `bank-transfer` als betaalvoorkeur kiezen. Oude opgeslagen waarden voor cash/card kunnen nog als historische labels gelezen worden, maar zijn niet zichtbaar of selecteerbaar in de klantflow.
 
 ### WhatsApp-order
 
@@ -196,7 +196,7 @@ Beschikbare modules:
 
 - Dashboard.
 - Producten.
-- Categorieën.
+- CategorieÃ«n.
 - Klanten.
 - Orders.
 - Voorraad.
@@ -208,7 +208,7 @@ Beschikbare modules:
 - Instellingen.
 - API-integraties.
 
-Producten, orders, voorraad en facturatie zijn de meest functionele onderdelen. Klanten en leveranciers zijn grotendeels overzicht/read-only. Categorieën en rapportages bieden bruikbare overzichten. Inkoop, BTW, instellingen en integraties zijn voorbereid of beperkt en niet volledig transactioneel.
+Producten, orders, voorraad en facturatie zijn de meest functionele onderdelen. Klanten en leveranciers zijn grotendeels overzicht/read-only. CategorieÃ«n en rapportages bieden bruikbare overzichten. Inkoop, BTW, instellingen en integraties zijn voorbereid of beperkt en niet volledig transactioneel.
 
 Het orderoverzicht is aanklikbaar en opent per order een responsieve detailweergave met klantprofiel, ordergegevens, alle orderregels, btw-totalen en directe bel-, WhatsApp- en e-mailacties. De server levert `order_items` samen met de order en verrijkt gekoppelde orders met het klantprofiel. Bij oudere orders wordt het afleveradres zo nodig uit de gelokaliseerde adresregel in `notes` gehaald; een afzonderlijk onveranderlijk adressnapshot op de order blijft gewenst.
 
@@ -216,9 +216,9 @@ Admin kan ordernotities afzonderlijk opslaan. Statuswijzigingen naar bevestigd, 
 
 Facturen worden intern uit een order aangemaakt via een transactionele databasefunctie. Alleen bevestigde, afhaalgerede, afgeleverde of betaalde orders zijn factureerbaar. Een unieke orderindex voorkomt dubbele facturen. Facturen bewaren eigen klant-, adres-, orderregel-, prijs-, betaalmethode- en btw-snapshots, krijgen een oplopend `INV-000001`-nummer en zijn als branded PDF downloadbaar. Admin kan de PDF via Resend mailen; een mailfout verwijdert de factuur niet. Klanten zien en downloaden uitsluitend facturen die via hun `customer_id` bij hun eigen order horen.
 
-Factuurnummers gebruiken de bestaande unieke globale identity en worden extern weergegeven als `NC-{jaar}-{zes cijfers}`, bijvoorbeeld `NC-2026-000002`. De PDF is Spaans/Engels, gebruikt Spaanse bedragnotatie, groepeert IVA per tarief, toont de betaalmethode als menselijk label en leest verkopergegevens uit `config/business.ts`. `NANCY'S CASTALLA` staat prominent als handelsnaam; `JIMMY BERGSMA` staat kleiner als titular/autónomo met NIF/NIE `Y8875740P` en het centrale adres. De titular staat ook in Terms/disclaimer. Laat inhoud en fiscale gegevens vóór officieel gebruik controleren door een gestor/boekhouder.
+Factuurnummers gebruiken de bestaande unieke globale identity en worden extern weergegeven als `NC-{jaar}-{zes cijfers}`, bijvoorbeeld `NC-2026-000002`. De PDF is Spaans/Engels, gebruikt Spaanse bedragnotatie, groepeert IVA per tarief, toont de betaalmethode als menselijk label en leest verkopergegevens uit `config/business.ts`. `NANCY'S CASTALLA` staat prominent als handelsnaam; `JIMMY BERGSMA` staat kleiner als titular/autÃ³nomo met NIF/NIE `Y8875740P` en het centrale adres. De titular staat ook in Terms/disclaimer. Laat inhoud en fiscale gegevens vÃ³Ã³r officieel gebruik controleren door een gestor/boekhouder.
 
-Vanaf migratie `202607110001_admin_cleanup_and_invoice_series.sql` ondersteunt de backoffice gecontroleerde opschoning en gescheiden factuurseries. `businessConfig.businessMode` bepaalt alleen toekomstige facturen: `prelaunch` gebruikt de testserie `TEST-2026-000001`, `live` gebruikt de productieserie `NC-2026-000001`. Bestaande factuurnummers worden nooit automatisch gewijzigd of hergebruikt. Klanten, orders en facturen kunnen als test worden gemarkeerd en worden gefilterd/gearchiveerd in admin. Verwijderen is bewust geblokkeerd voor echte klanten, klanten met Auth-account, klanten met orders/facturen en normale orders. Alleen expliciete testorders zonder geboekte voorraadmutatie en zonder officiële livefactuur kunnen via de server-side `safe_delete_test_order`-functie worden verwijderd. Adminacties worden vastgelegd in `admin_audit_log` zonder secrets.
+Vanaf migratie `202607110001_admin_cleanup_and_invoice_series.sql` ondersteunt de backoffice gecontroleerde opschoning en gescheiden factuurseries. `businessConfig.businessMode` bepaalt alleen toekomstige facturen: `prelaunch` gebruikt de testserie `TEST-2026-000001`, `live` gebruikt de productieserie `NC-2026-000001`. Bestaande factuurnummers worden nooit automatisch gewijzigd of hergebruikt. Klanten, orders en facturen kunnen als test worden gemarkeerd en worden gefilterd/gearchiveerd in admin. Verwijderen is bewust geblokkeerd voor echte klanten, klanten met Auth-account, klanten met orders/facturen en normale orders. Alleen expliciete testorders zonder geboekte voorraadmutatie en zonder officiÃ«le livefactuur kunnen via de server-side `safe_delete_test_order`-functie worden verwijderd. Adminacties worden vastgelegd in `admin_audit_log` zonder secrets.
 
 Registratie gebruikt aparte wachtwoord- en bevestigingsvelden met `autocomplete="new-password"`, browserwachtwoordsuggesties, gelijkheidscontrole en toon/verbergbediening. Login gebruikt `autocomplete="current-password"`. Na succesvolle registratie toont de site een duidelijke inbox/spammapmelding, wist het formulier en kan de klant na 60 seconden opnieuw een bevestigingsmail aanvragen. Het accountdashboard moet altijd invulbare velden voor naam, e-mail, telefoon, adres en taal tonen; als het customerrecord ontbreekt of tijdelijk niet geladen kan worden, valt de UI terug op de actieve Supabase-sessie.
 
@@ -227,16 +227,16 @@ Productbeheer ondersteunt onder meer:
 - Automatische Nancy-productcode.
 - Toevoegen, wijzigen en verwijderen.
 - Zoeken, filteren en grote catalogi.
-- Meerdere categorieën.
+- Meerdere categorieÃ«n.
 - Kostprijs, btw, verkoopprijs en margeweergave.
 - Leveranciers- en klantverpakkingen.
 - Voorraadtracking.
 - Online/verborgen, featured en nieuw.
 - Lifecycle-status `active`, `archived`, `disabled` en `draft`, met bulkactie `Archive current catalogue`.
 - Importbatchtracking zoals `IMPORT_2026_PRELAUNCH` en toekomstige batches zoals `IMPORT_2026_LIVE_JULY`.
-- Leveranciersimportpreview via de module Supplier imports: leverancier selecteren, bestand uploaden, dry-runrapport bekijken, importgeschiedenis controleren, approved batch publiceren en batch veilig terugzetten naar draft/archive.
+- Leveranciersimport via de module Supplier imports: leverancier selecteren, bestand uploaden, dry-runrapport bekijken, confirmed import naar draft uitvoeren, importgeschiedenis controleren, approved batch publiceren en batch veilig terugzetten naar draft/archive.
 - Afbeeldingsupload naar Supabase Storage.
-- Ingrediënten, instructies, bewaring en extra informatie.
+- IngrediÃ«nten, instructies, bewaring en extra informatie.
 
 ## 9. Betaalmethodes
 
@@ -244,17 +244,16 @@ Actief/ondersteund in V1:
 
 - Bizum.
 - Bankoverschrijving.
-- Contant.
-- Kaart als handmatige/toekomstige keuze.
 - Pending/nog te kiezen.
 
 Niet actief:
 
 - Stripe-checkout.
 - Online kaartbetaling.
+- Contant bij afhalen of bezorgen.
 - SumUp-integratie.
 
-Betaling wordt na handmatige orderbevestiging afgesproken. Stripe is niet geinstalleerd; alleen een providerstructuur is voorbereid. Controleer vóór productiegebruik het Bizum-nummer en de bankrekening in de bedrijfsconfiguratie.
+Betaling wordt na handmatige orderbevestiging afgesproken via Bizum of bankoverschrijving. Stripe is niet geinstalleerd; alleen een providerstructuur is voorbereid. WhatsApp-klantenservice en Bizum-betaalnummer zijn gescheiden in `config/business.ts`.
 
 ## 10. Bezorgbeleid
 
@@ -319,7 +318,7 @@ Verwijder geen bestaande functionaliteit, migratie of data-import omdat deze ver
 
 - Externe Vercel-, Supabase-, Resend- en DNS-configuratie is niet volledig vanuit Git te bewijzen.
 - Geen applicatiebrede rate limiting of botbescherming.
-- Admin gebruikt nog één gedeeld account zonder MFA/RBAC.
+- Admin gebruikt nog Ã©Ã©n gedeeld account zonder MFA/RBAC.
 - Geen geautomatiseerde testset, CI of visuele regressietests.
 - Open orders reserveren geen voorraad.
 - Bezorgminimum, fee en radius zijn niet server-authoritatief.

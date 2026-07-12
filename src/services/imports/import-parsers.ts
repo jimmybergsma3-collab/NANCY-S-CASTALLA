@@ -1,9 +1,29 @@
 import * as XLSX from "xlsx";
+import { createRequire } from "node:module";
 import type { SupplierImportKind, SupplierImportParseResult, SupplierImportProduct, SupplierImportWarning } from "@/types/imports";
+
+const require = createRequire(import.meta.url);
 
 const storageWords = new Set(["diepvries", "droog", "vers"]);
 const priceTokenPattern = /^\d{1,5}(?:,\d{2})?$/;
 const supplierCodePattern = /^[A-Z]?\d[A-Z0-9]{2,7}$/;
+
+function logParserStep(diagnosticId: string | undefined, step: string, details?: Record<string, unknown>) {
+  if (!diagnosticId) return;
+  console.info("[supplier-import-parser]", JSON.stringify({ diagnosticId, step, ...details }));
+}
+
+function logParserError(diagnosticId: string | undefined, step: string, error: unknown, details?: Record<string, unknown>) {
+  if (!diagnosticId) return;
+  console.error("[supplier-import-parser]", JSON.stringify({
+    diagnosticId,
+    step,
+    message: error instanceof Error ? error.message : String(error),
+    name: error instanceof Error ? error.name : "UnknownError",
+    stack: error instanceof Error ? error.stack?.split("\n").slice(0, 6).join("\n") : undefined,
+    ...details,
+  }));
+}
 
 function normalizeSpace(value: string) {
   return value.replace(/\s+/g, " ").trim();
@@ -115,12 +135,33 @@ function createProduct(input: Omit<SupplierImportProduct, "currency" | "needsTax
   };
 }
 
-export async function parseEuropFoodsPdf(buffer: Buffer, sourceFilename: string, importBatch: string): Promise<SupplierImportParseResult> {
-  const { PDFParse } = await import("pdf-parse");
+export async function parseEuropFoodsPdf(buffer: Buffer, sourceFilename: string, importBatch: string, diagnosticId?: string): Promise<SupplierImportParseResult> {
+  logParserStep(diagnosticId, "europ_pdf_import_start", { sourceFilename, importBatch, bytes: buffer.length });
+  const { PDFParse } = require("pdf-parse") as {
+    PDFParse: {
+      new (input: { data: Buffer }): { getText: () => Promise<{ text: string }>; destroy: () => Promise<void> };
+    };
+  };
+  logParserStep(diagnosticId, "europ_pdf_module_loaded");
   const parser = new PDFParse({ data: buffer });
-  const parsed = await parser.getText();
-  await parser.destroy();
+  logParserStep(diagnosticId, "europ_pdf_parser_created");
+  let parsed: { text: string };
+  try {
+    parsed = await parser.getText();
+    logParserStep(diagnosticId, "europ_pdf_text_extracted", { textLength: parsed.text.length });
+  } catch (error) {
+    logParserError(diagnosticId, "europ_pdf_text_extract_failed", error);
+    throw error;
+  } finally {
+    try {
+      await parser.destroy();
+      logParserStep(diagnosticId, "europ_pdf_parser_destroyed");
+    } catch (error) {
+      logParserError(diagnosticId, "europ_pdf_parser_destroy_failed", error);
+    }
+  }
   const lines = parsed.text.split(/\r?\n/).map(normalizeSpace).filter(Boolean);
+  logParserStep(diagnosticId, "europ_pdf_lines_ready", { lines: lines.length, firstLine: lines[0], lastLine: lines.at(-1) });
   const products: SupplierImportProduct[] = [];
   const warnings: SupplierImportWarning[] = [];
   const errors: SupplierImportWarning[] = [];
@@ -157,7 +198,7 @@ export async function parseEuropFoodsPdf(buffer: Buffer, sourceFilename: string,
     }));
   }
 
-  return {
+  const result: SupplierImportParseResult = {
     supplier: "Europ Foods",
     sourceFilename,
     fileType: "pdf",
@@ -168,13 +209,23 @@ export async function parseEuropFoodsPdf(buffer: Buffer, sourceFilename: string,
     warnings,
     errors,
   };
+  logParserStep(diagnosticId, "europ_pdf_parse_complete", {
+    products: products.length,
+    sections: result.sectionHeadings.length,
+    warnings: warnings.length,
+    errors: errors.length,
+  });
+  return result;
 }
 
-export async function parseTindaleWorkbook(buffer: Buffer, sourceFilename: string, importBatch: string): Promise<SupplierImportParseResult> {
+export async function parseTindaleWorkbook(buffer: Buffer, sourceFilename: string, importBatch: string, diagnosticId?: string): Promise<SupplierImportParseResult> {
+  logParserStep(diagnosticId, "tindale_workbook_import_start", { sourceFilename, importBatch, bytes: buffer.length });
   const workbook = XLSX.read(buffer, { type: "buffer" });
   const sheetName = workbook.SheetNames[0];
+  logParserStep(diagnosticId, "tindale_workbook_loaded", { sheetName, sheetCount: workbook.SheetNames.length });
   const sheet = workbook.Sheets[sheetName];
   const rows = XLSX.utils.sheet_to_json<Array<string | number | undefined>>(sheet, { header: 1, defval: "" });
+  logParserStep(diagnosticId, "tindale_rows_ready", { rows: rows.length });
   const products: SupplierImportProduct[] = [];
   const sectionHeadings: string[] = [];
   const warnings: SupplierImportWarning[] = [];
@@ -232,7 +283,7 @@ export async function parseTindaleWorkbook(buffer: Buffer, sourceFilename: strin
     }));
   }
 
-  return {
+  const result: SupplierImportParseResult = {
     supplier: "Tindale",
     sourceFilename,
     fileType: sourceFilename.toLowerCase().endsWith(".xlsx") ? "xlsx" : "xls",
@@ -243,11 +294,18 @@ export async function parseTindaleWorkbook(buffer: Buffer, sourceFilename: strin
     warnings,
     errors,
   };
+  logParserStep(diagnosticId, "tindale_parse_complete", {
+    products: products.length,
+    sections: result.sectionHeadings.length,
+    warnings: warnings.length,
+    errors: errors.length,
+  });
+  return result;
 }
 
-export async function parseSupplierFile(kind: SupplierImportKind, buffer: Buffer, sourceFilename: string, importBatch: string) {
-  if (kind === "europfoods") return parseEuropFoodsPdf(buffer, sourceFilename, importBatch);
-  return parseTindaleWorkbook(buffer, sourceFilename, importBatch);
+export async function parseSupplierFile(kind: SupplierImportKind, buffer: Buffer, sourceFilename: string, importBatch: string, diagnosticId?: string) {
+  if (kind === "europfoods") return parseEuropFoodsPdf(buffer, sourceFilename, importBatch, diagnosticId);
+  return parseTindaleWorkbook(buffer, sourceFilename, importBatch, diagnosticId);
 }
 
 export function supplierKindFromValue(value: string): SupplierImportKind | undefined {

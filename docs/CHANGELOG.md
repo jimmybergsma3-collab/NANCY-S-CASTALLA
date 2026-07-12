@@ -20,8 +20,10 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 ### Toegevoegd
 
 - Migratie `202607120001_supplier_import_workflow.sql` voor veilige leveranciersimports met `product_import_runs`, `supplier_product_offers`, reviewvelden, transactionele Nancy-productcode-reservering, batchpublicatie en veilige rollback zonder harde delete.
-- Server-side importlaag voor Europ Foods PDF en Tindale XLS/XLSX met dry-run preview, parsewaarschuwingen, duplicate/conflict-signalering en reviewflags. Confirmed import is bewust nog geblokkeerd.
-- Adminmodule `Supplier imports` met leverancierselectie, bestandupload, batchnaam, dry-runrapport, conflictvoorbeelden, importgeschiedenis, guarded confirm import, publish approved batch en rollback naar draft/archive.
+- Server-side importlaag voor Europ Foods PDF en Tindale XLS/XLSX met dry-run preview, parsewaarschuwingen, duplicate/conflict-signalering, reviewflags en confirmed import naar veilige draftproducten.
+- Adminmodule `Supplier imports` met leverancierselectie, bestandupload, batchnaam, dry-runrapport, conflictvoorbeelden, importgeschiedenis, confirmed import to draft, publish approved batch en rollback naar draft/archive.
+- Productie-import uitgevoerd voor `IMPORT_2026_LIVE_TINDALE_JULY`: 924 draftproducten en 924 supplier offers vanaf `NC-01581`, zonder publicatie of voorraadmutaties.
+- Productie-import uitgevoerd voor `IMPORT_2026_LIVE_EUROPFOODS_JULY`: 713 veilige unieke draftproducten en 713 supplier offers vanaf `NC-02505`; 466 regels zijn overgeslagen/conflict-review en 483 conflictregels zijn vastgelegd.
 - Complete faviconset op basis van het bestaande Nancy's Castalla-logo: `favicon.ico`, 16/32px iconen, Apple touch icon, Android iconen, webmanifest en donkergroene theme-color.
 - Migratie `202607110002_product_catalogue_archiving.sql` met product lifecycle-status, importbatchtracking, archive-current-catalogue RPC en restore-archived-product RPC.
 - Vervolg-migratie `202607110003_product_catalogue_conflict_protection.sql` met lookup-indexen voor leveranciercode/EAN/naam, een `product_import_conflicts`-logtabel en databasebescherming tegen gewone updates op archived producten.
@@ -58,6 +60,9 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Verbeterd
 
+- Betaalmethoden in de klantflow zijn teruggebracht tot Bizum en bankoverschrijving. WhatsApp-klantenservice, Bizum-nummer en bankgegevens zijn centraal gescheiden in `config/business.ts`.
+- Europ Foods PDF parsing gebruikt nu een server-side externe `pdf-parse` package en compacte JSON-responses, zodat zware PDF-dry-runs geen lege/non-JSON response meer veroorzaken.
+- Import-API-fouten geven altijd geldige JSON terug met `errorCode`, `message` en `diagnosticId`.
 - Publieke productqueries tonen alleen nog `active` + `is_visible=true`; archived, disabled en draftproducten verdwijnen uit homepage, categorieën, productlijsten, productdetail en cart/order-validatie.
 - Product-DELETE in admin archiveert voortaan veilig in plaats van een database-delete uit te voeren.
 - Nieuwe productimport via de admin/API mag een archived productcode niet stil heractiveren of wijzigen; herstel moet bewust via restore.
