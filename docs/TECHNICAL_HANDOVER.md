@@ -60,6 +60,7 @@ De applicatie is online als productie-implementatie op Vercel, maar functioneel 
 | Online betaling | Niet actief | Bizum en bankoverschrijving worden handmatig afgehandeld; contant, kaart en Stripe zijn niet zichtbaar/selecteerbaar voor klanten |
 | Inkoop/rapportages | Gedeeltelijk | Inkoop is overzicht/voorbereiding; rapportages tonen basistellingen en betaalde omzet |
 | Facturatie | Werkend na migratie | Orderfactuur, snapshots, PDF, klantdownload en Resend-verzending; nog geen creditnota of boekhoudexport |
+| Sales-unit prijsveiligheid | Applicatiecode aanwezig; migratie handmatig uitvoeren | Leveranciersdoosprijs, bron-eenheidsprijs en publieke verkoopeenheid zijn gescheiden zodat importproducten niet per ongeluk met doosverpakking tegen eenheidsprijs live gaan. |
 
 ## 1.3 Productie versus development
 
@@ -78,6 +79,7 @@ De applicatie is online als productie-implementatie op Vercel, maar functioneel 
 6. Resterende productinhoud, backoffice en compliance professioneel vertalen en controleren.
 7. Product- en categorie-SEO, structured data en volledige sitemap.
 8. Rate limiting, individuele admins/MFA, geautomatiseerde tests, CI, monitoring, auditlogging en operationele runbooks.
+9. Handmatig uitvoeren van `supabase/migrations/202607120002_sales_unit_price_basis_safety.sql` in Supabase productie voor database-level blokkade op ongecontroleerde sales-unit/prijsbasis.
 
 ---
 
@@ -114,6 +116,8 @@ npm run lint   -> eslint . --max-warnings=0
 ```
 
 Webpack is gekozen nadat Turbopack tijdens ontwikkeling instabiele chunk- en workerfouten gaf. Dit vermindert ontwikkelproblemen zonder de functionele architectuur te veranderen.
+
+Databasewijzigingen staan in `supabase/migrations` en moeten bewust in Supabase productie worden uitgevoerd. Let extra op bij leveranciersimports: leveranciersprijzen zijn geen publieke verkoopprijzen. Vanaf migratie `202607120002_sales_unit_price_basis_safety.sql` bewaart `products` aparte velden voor leverancierdoosprijs, bron-eenheidsprijs, aantal per doos, bronverpakking, publieke verkoopeenheid, sales-unit quantity en twee adminreviewvinkjes. De applicatiecode blokkeert geïmporteerde producten uit `IMPORT_2026_LIVE_%` in publieke queries, cartvalidatie en adminpublicatie wanneer deze prijsbasis niet gecontroleerd is.
 
 ## 2.2 Motivatie
 

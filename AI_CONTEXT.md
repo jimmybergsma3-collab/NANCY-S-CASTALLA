@@ -153,6 +153,18 @@ Nieuwe leveranciersimports gebruiken migratie `202607120001_supplier_import_work
 
 Europ Foods-conflictherstel staat in de Supplier Imports-module. De bronidentiteit is leverancier + supplier code + productnaam + verpakking + doosprijs + eenheidsprijs. Daardoor mogen varianten zoals `8775 MAGNERS CIDER 24x500ml` en `8780 MAGNERS CIDER 12x568ml` naast elkaar als aparte draftproducten bestaan. Exacte herhalingen worden niet dubbel aangemaakt, dezelfde supplier code met afwijkende inhoud blijft conflict-review, en archived producten worden nooit automatisch gewijzigd of hersteld.
 
+Sales-unit prijsveiligheid is verplicht voor alle nieuwe live leveranciersimports. Leveranciersvelden blijven gescheiden van publieke verkoopvelden:
+
+- `supplier_case_price`: inkoopprijs voor de leveranciersdoos/case.
+- `supplier_unit_price`: bron-eenheidsprijs van leverancier.
+- `supplier_case_quantity`: aantal eenheden per leveranciersdoos.
+- `source_package_text`: oorspronkelijke leveranciersverpakking.
+- `sales_unit_type`: publieke verkoopeenheid (`case`, `single`, `custom_pack`, `per_kg`, `per_unit`).
+- `sales_unit_quantity`: aantal bron-eenheden in de publieke verkoopeenheid.
+- `sales_unit_confirmed` en `price_basis_confirmed`: adminreviewvinkjes.
+
+Zet nooit automatisch `salePriceInclVat` gelijk aan de leveranciers-eenheidsprijs wanneer de publieke verpakking nog een doos/case toont. Geïmporteerde producten uit `IMPORT_2026_LIVE_%` mogen pas publiek zichtbaar of bestelbaar zijn wanneer sales unit, prijsbasis, verpakking, btw, categorie en verkoopprijs handmatig gecontroleerd zijn. Cart/order-validatie blokkeert producten die deze controle missen. Migratie `202607120002_sales_unit_price_basis_safety.sql` voegt databasevelden en database-level publicatiebescherming toe; voer deze handmatig in Supabase uit als productie hem nog niet heeft.
+
 ## 6. Orderflow
 
 Er zijn twee orderkanalen:

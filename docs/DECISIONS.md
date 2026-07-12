@@ -353,6 +353,12 @@ Dit document legt belangrijke technische beslissingen en hun motivatie vast. Het
 
 **Waarom:** Nancy's Castalla beweegt naar livegang. Een ontbrekende Vercel-env mag toekomstige facturen niet per ongeluk in de testserie houden, maar Preview/staging kan nog bewust prelaunch blijven.
 
+### Leveranciersdoosprijs en publieke verkoopeenheid blijven gescheiden
+
+**Besluit:** geïmporteerde leveranciersproducten krijgen aparte velden voor leverancierdoosprijs, bron-eenheidsprijs, aantal per doos, bronverpakking, publieke verkoopeenheid en reviewstatus. Producten uit `IMPORT_2026_LIVE_%` mogen niet publiek zichtbaar of bestelbaar zijn zolang `sales_unit_confirmed`, `price_basis_confirmed`, `sales_unit_type`, verpakking en verkoopprijs niet logisch samen gecontroleerd zijn.
+
+**Waarom:** leverancierslijsten bevatten vaak een doosprijs en een bron-eenheidsprijs. Wanneer de publieke verpakking nog `24x500ml` toont maar de verkoopprijs rond de eenheidsprijs ligt, lijkt de webshop een hele doos voor een stukprijs te verkopen. De Magners-controle op 12 juli 2026 heeft dit risico concreet aangetoond. De veilige regel is daarom: admin kiest expliciet of het product per doos, per stuk, per custom pack, per kg of per unit verkocht wordt voordat publicatie of cart/order-validatie mogelijk is.
+
 ## Beslisregel voor toekomstige wijzigingen
 
 Leg een besluit hier vast wanneer het een architectuurgrens, datamodel, beveiligingsmodel, externe provider, kernworkflow of blijvende ontwikkelconventie verandert. Vermeld altijd datum, besluit, motivatie, gevolgen en eventueel het vervangen besluit.

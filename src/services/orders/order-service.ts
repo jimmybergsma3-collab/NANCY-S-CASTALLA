@@ -5,6 +5,7 @@ import { getProductsByIds } from "@/lib/product-store";
 import { SupabaseRestError, supabaseAdminFetch } from "@/lib/supabase-rest";
 import { evaluateProductAvailability } from "@/lib/product-availability";
 import { normalizePaymentMethod } from "@/lib/payment";
+import { evaluateSalesUnitSafety, isSupplierImportProduct } from "@/lib/sales-unit-safety";
 import type { BackofficeCustomer, BackofficeOrder, OrderInput, OrderLineInput, OrderStatus, PaymentStatus } from "@/types/backoffice";
 
 export class OrderValidationError extends Error {
@@ -36,7 +37,7 @@ function isMissingColumnError(error: unknown) {
   return error instanceof SupabaseRestError && /42703|column .* does not exist/i.test(error.message);
 }
 
-export type CartValidationCode = "available" | "product_unavailable" | "coming_soon" | "invalid_quantity" | "package_unavailable" | "insufficient_stock";
+export type CartValidationCode = "available" | "product_unavailable" | "coming_soon" | "invalid_quantity" | "package_unavailable" | "insufficient_stock" | "price_basis_review";
 
 export type ValidatedCartLine = {
   productId: string;
@@ -58,9 +59,29 @@ export type ValidatedCartLine = {
   code: CartValidationCode;
 };
 
+async function loadSupplierOfferSafetyRows(productIds: string[]) {
+  if (!productIds.length || !hasSupabaseAdmin()) return new Map<string, { casePrice?: number; unitPrice?: number; unitsPerCase?: number; packageDescription?: string }>();
+  try {
+    const escaped = productIds.map((id) => `"${id.replaceAll('"', "")}"`).join(",");
+    const rows = await supabaseAdminFetch<Array<{ product_id: string; case_price: number | null; unit_price: number | null; units_per_case: number | null; package_description: string | null }>>(
+      `supplier_product_offers?select=product_id,case_price,unit_price,units_per_case,package_description&product_id=in.(${encodeURIComponent(escaped)})&active=eq.true&limit=500`,
+    );
+    return new Map(rows.map((row) => [row.product_id, {
+      casePrice: row.case_price ?? undefined,
+      unitPrice: row.unit_price ?? undefined,
+      unitsPerCase: row.units_per_case ?? undefined,
+      packageDescription: row.package_description ?? undefined,
+    }]));
+  } catch (error) {
+    console.warn("supplier_offer_safety_rows_unavailable", { message: sanitizeErrorMessage(error) });
+    return new Map<string, { casePrice?: number; unitPrice?: number; unitsPerCase?: number; packageDescription?: string }>();
+  }
+}
+
 export async function validateCartLines(lines: OrderLineInput[]): Promise<ValidatedCartLine[]> {
   if (lines.length > 100) throw new OrderValidationError("Too many order lines.", 400, "invalid_order");
   const products = await getProductsByIds(Array.from(new Set(lines.map((line) => line.productId))));
+  const offerSafetyRows = await loadSupplierOfferSafetyRows(products.filter(isSupplierImportProduct).map((product) => product.id));
   const productMap = new Map(products.map((product) => [product.id, product]));
   return lines.map((requested) => {
     const product = productMap.get(requested.productId);
@@ -83,8 +104,10 @@ export async function validateCartLines(lines: OrderLineInput[]): Promise<Valida
     const selectedPrice = options.length > 0 ? selected?.salePriceInclVat ?? product.salePriceInclVat : product.salePriceInclVat;
     const stockUnits = requested.quantity * selectedQuantity;
     let code: CartValidationCode = "available";
+    const salesUnitSafety = evaluateSalesUnitSafety(product, offerSafetyRows.get(product.id));
     if (!quantityValid) code = "invalid_quantity";
     else if (!selected && options.length > 0) code = "package_unavailable";
+    else if (!salesUnitSafety.ok) code = "price_basis_review";
     else code = evaluateProductAvailability({ stockStatus: product.stockStatus, trackInventory: Boolean(product.trackInventory), stockQuantity: Number(product.stockQuantity ?? 0), requestedUnits: stockUnits });
     const lineTotal = roundMoney(requested.quantity * selectedPrice);
     const lineExVat = roundMoney(lineTotal / (1 + product.vatRate / 100));
@@ -118,6 +141,7 @@ export async function createOrder(input: OrderInput) {
       coming_soon: `${invalidLine.name} cannot be ordered yet.`, invalid_quantity: `Invalid quantity for ${invalidLine.name}.`,
       package_unavailable: `The selected package for ${invalidLine.name} is no longer available.`,
       insufficient_stock: `Insufficient stock for ${invalidLine.name}.`,
+      price_basis_review: `${invalidLine.name} is temporarily unavailable while package and price are checked.`,
     };
     throw new OrderValidationError(messages[invalidLine.code], invalidLine.code === "invalid_quantity" ? 400 : 409, invalidLine.code);
   }

@@ -5,6 +5,7 @@ import { archiveCurrentCatalogue, createProduct, deleteProduct, getProducts, res
 import { hasSupabaseAdmin } from "@/lib/env";
 import type { Product } from "@/types/product";
 import { getEffectivePackageOptions } from "@/lib/product-packaging";
+import { evaluateSalesUnitSafety, isSupplierImportProduct } from "@/lib/sales-unit-safety";
 
 export async function GET() {
   if (!(await isAdminSession())) {
@@ -44,6 +45,14 @@ export async function POST(request: Request) {
     marginPercent: pricing.marginPercent,
     profitPerUnit: pricing.profitPerUnit,
     unitCost: Number(body.unitCost || body.costPriceExVat),
+    salesUnitType: body.salesUnitType ?? "",
+    salesUnitQuantity: Number(body.salesUnitQuantity ?? 0),
+    salesUnitConfirmed: Boolean(body.salesUnitConfirmed),
+    priceBasisConfirmed: Boolean(body.priceBasisConfirmed),
+    supplierCasePrice: Number(body.supplierCasePrice || body.costPriceExVat || 0),
+    supplierUnitPrice: Number(body.supplierUnitPrice || body.unitCost || 0),
+    supplierCaseQuantity: Number(body.supplierCaseQuantity ?? 0),
+    sourcePackageText: body.sourcePackageText?.trim() ?? "",
     packageOptions: getEffectivePackageOptions(body).map((option) => ({
       label: String(option.label).trim(),
       quantity: Number(option.quantity),
@@ -68,6 +77,10 @@ export async function POST(request: Request) {
 
   if (!product.id || !product.name || !product.supplierCode) {
     return NextResponse.json({ ok: false, message: "Product code, name and supplier code are required." }, { status: 400 });
+  }
+  const safety = evaluateSalesUnitSafety(product);
+  if (isSupplierImportProduct(product) && product.isVisible && !safety.ok) {
+    return NextResponse.json({ ok: false, message: `Imported product cannot be published yet: ${safety.reason}` }, { status: 409 });
   }
 
   try {

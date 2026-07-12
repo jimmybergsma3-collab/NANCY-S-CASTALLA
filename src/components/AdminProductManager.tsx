@@ -6,6 +6,7 @@ import { Archive, Eye, EyeOff, ExternalLink, Pencil, RotateCcw } from "lucide-re
 import type { Product } from "@/types/product";
 import { calculatePricing, calculateUnitCost, formatEuro, getSupplierPackQuantity } from "@/lib/pricing";
 import { getProductCategories, productCategories as availableProductCategories, productMatchesCategory } from "@/lib/product-categories";
+import { evaluateSalesUnitSafety, isSupplierImportProduct } from "@/lib/sales-unit-safety";
 
 const defaultProduct: Product = {
   id: "",
@@ -38,6 +39,14 @@ const defaultProduct: Product = {
   supplierCode: "",
   packSize: "",
   unitCost: 0,
+  salesUnitType: "",
+  salesUnitQuantity: 0,
+  salesUnitConfirmed: false,
+  priceBasisConfirmed: false,
+  supplierCasePrice: 0,
+  supplierUnitPrice: 0,
+  supplierCaseQuantity: 0,
+  sourcePackageText: "",
   stockQuantity: 0,
   minimumStock: 0,
   trackInventory: false,
@@ -117,6 +126,7 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
   const pricing = calculatePricing(product);
   const supplierPackQuantity = getSupplierPackQuantity(product.packSize);
   const calculatedUnitCost = calculateUnitCost(product.costPriceExVat, product.packSize);
+  const salesUnitSafety = evaluateSalesUnitSafety(product);
   const isEditing = products.some((item) => item.id === product.id);
   const productCategories = useMemo(() => ["All", ...availableProductCategories], []);
   const duplicateKeys = useMemo(() => {
@@ -450,12 +460,15 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
           <Field help="How you buy it from the supplier. Example: box 12 x 1kg." label="Supplier pack size">
             <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("packSize", event.target.value)} placeholder="Box 12 x 1kg" value={product.packSize} />
           </Field>
+          <Field help="Original package from the supplier import. Keep this internally, even when public sales unit is a single item." label="Supplier case / source package">
+            <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("sourcePackageText", event.target.value)} placeholder="24 x 500ml" value={product.sourcePackageText ?? ""} />
+          </Field>
           <Field help="Total supplier invoice price excluding IVA/VAT for the complete box. Example: 31.60 for a box of 12." label="Supplier case cost ex IVA">
-            <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("costPriceExVat", Number(event.target.value))} placeholder="4.00" step="0.01" type="number" value={product.costPriceExVat} />
+            <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => { const value = Number(event.target.value); update("costPriceExVat", value); update("supplierCasePrice", value); }} placeholder="4.00" step="0.01" type="number" value={product.costPriceExVat} />
           </Field>
           <Field help="Your purchase cost for one unit sold to the customer. This is used for the profit calculation." label="Purchase cost per customer unit ex IVA">
             <div className="flex gap-2">
-              <input className="min-w-0 flex-1 rounded-lg border px-3 py-2" onChange={(event) => update("unitCost", Number(event.target.value))} placeholder="2.63" step="0.01" type="number" value={product.unitCost} />
+              <input className="min-w-0 flex-1 rounded-lg border px-3 py-2" onChange={(event) => { const value = Number(event.target.value); update("unitCost", value); update("supplierUnitPrice", value); }} placeholder="2.63" step="0.01" type="number" value={product.unitCost} />
               {supplierPackQuantity > 1 ? (
                 <button
                   className="shrink-0 rounded-lg border border-forest/20 bg-linen px-3 py-2 text-xs font-bold text-forest"
@@ -467,6 +480,31 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
                 </button>
               ) : null}
             </div>
+          </Field>
+          <Field help="Choose what the customer buys for the displayed price. Imported supplier products cannot go live until this is confirmed." label="Public sales unit">
+            <select className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("salesUnitType", event.target.value as Product["salesUnitType"])} value={product.salesUnitType ?? ""}>
+              <option value="">Needs review</option>
+              <option value="case">Whole case / tray</option>
+              <option value="single">Single item</option>
+              <option value="custom_pack">Custom pack</option>
+              <option value="per_kg">Per kg</option>
+              <option value="per_unit">Per unit</option>
+            </select>
+          </Field>
+          <Field help="For case: supplier units per case. For custom pack: number of units sold to customer." label="Sales unit quantity">
+            <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("salesUnitQuantity", Number(event.target.value))} placeholder="24" step="1" type="number" value={product.salesUnitQuantity ?? 0} />
+          </Field>
+          <Field help="Tick only after checking that the public package, sales unit and selling price all match." label="Sales unit reviewed">
+            <label className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
+              <input checked={product.salesUnitConfirmed ?? false} onChange={(event) => update("salesUnitConfirmed", event.target.checked)} type="checkbox" />
+              Sales unit confirmed
+            </label>
+          </Field>
+          <Field help="Tick only after checking that selling price is for the public sales unit, not the supplier unit price by mistake." label="Price basis reviewed">
+            <label className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
+              <input checked={product.priceBasisConfirmed ?? false} onChange={(event) => update("priceBasisConfirmed", event.target.checked)} type="checkbox" />
+              Price basis confirmed
+            </label>
           </Field>
           <Field help="Usually 10 for food, 4 for bread/basic items, 21 for non-food." label="IVA %">
             <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("vatRate", Number(event.target.value))} placeholder="10" step="1" type="number" value={product.vatRate} />
@@ -499,9 +537,10 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
           </Field>
           <Field help="Turn this on only when the product may appear on the public website." label="Show on website">
             <label className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
-              <input checked={product.isVisible ?? false} disabled={(product.lifecycleStatus ?? "active") !== "active"} onChange={(event) => update("isVisible", event.target.checked)} type="checkbox" />
+              <input checked={product.isVisible ?? false} disabled={(product.lifecycleStatus ?? "active") !== "active" || (isSupplierImportProduct(product) && !salesUnitSafety.ok)} onChange={(event) => update("isVisible", event.target.checked)} type="checkbox" />
               Visible online
             </label>
+            {isSupplierImportProduct(product) && !salesUnitSafety.ok ? <span className="mt-1 block text-xs font-bold text-red-700">{salesUnitSafety.reason}</span> : null}
           </Field>
           <Field help="Enable only when orders should automatically reduce this product's stock." label="Automatic inventory">
             <label className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">

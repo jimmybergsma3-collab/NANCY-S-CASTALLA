@@ -79,6 +79,7 @@ export function CartView({ locale }: { locale: Locale }) {
     if (code === "insufficient_stock") return copy.insufficientStock;
     if (code === "package_unavailable") return copy.packageUnavailable;
     if (code === "product_unavailable") return copy.unavailable;
+    if (code === "price_basis_review") return copy.priceBasisReview ?? copy.validationError;
     return copy.validationError;
   }
 
@@ -86,7 +87,7 @@ export function CartView({ locale }: { locale: Locale }) {
     if (code === "missing_fields") return copy.missingFields ?? "Please enter your name, email and at least one product.";
     if (code === "service_unavailable") return copy.serviceUnavailable ?? "Ordering is temporarily unavailable. Please contact us by WhatsApp.";
     if (code === "invalid_order") return copy.invalidOrder ?? "Please check your cart and details before sending again.";
-    if (code && ["coming_soon", "insufficient_stock", "package_unavailable", "product_unavailable"].includes(code)) return availabilityMessage(code as CartValidationCode);
+    if (code && ["coming_soon", "insufficient_stock", "package_unavailable", "product_unavailable", "price_basis_review"].includes(code)) return availabilityMessage(code as CartValidationCode);
     if (backendMessage) return backendMessage;
     return copy.orderError;
   }

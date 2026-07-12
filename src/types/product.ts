@@ -24,6 +24,8 @@ export type ProductPackageOption = {
   salePriceInclVat: number;
 };
 
+export type SalesUnitType = "" | "case" | "single" | "custom_pack" | "per_kg" | "per_unit";
+
 export type Product = {
   id: string;
   uuid?: string;
@@ -55,6 +57,14 @@ export type Product = {
   supplierCode: string;
   packSize: string;
   unitCost: number;
+  salesUnitType?: SalesUnitType;
+  salesUnitQuantity?: number;
+  salesUnitConfirmed?: boolean;
+  priceBasisConfirmed?: boolean;
+  supplierCasePrice?: number;
+  supplierUnitPrice?: number;
+  supplierCaseQuantity?: number;
+  sourcePackageText?: string;
   stockQuantity?: number;
   minimumStock?: number;
   trackInventory?: boolean;

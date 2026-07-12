@@ -19,6 +19,9 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Toegevoegd
 
+- Migratie `202607120002_sales_unit_price_basis_safety.sql` voor expliciete scheiding tussen leveranciersdoos, bron-eenheidsprijs en publieke verkoopeenheid bij geïmporteerde producten.
+- Productvelden voor sales-unitcontrole: `sales_unit_type`, `sales_unit_quantity`, `sales_unit_confirmed`, `price_basis_confirmed`, `supplier_case_price`, `supplier_unit_price`, `supplier_case_quantity` en `source_package_text`.
+- Gedeelde sales-unit veiligheidscontrole die geïmporteerde producten blokkeert wanneer verpakking, verkoopprijs en prijsbasis nog niet expliciet door admin zijn gecontroleerd.
 - Admin-herstelactie voor Europ Foods-importconflicten: bestaande pending conflictregels kunnen opnieuw worden geclassificeerd als `Importable variants`, `Repeated listings`, `Unresolved conflicts` of `Skipped/parse errors`.
 - Nieuwe beveiligde admin-API's `POST /api/admin/imports/{runId}/reclassify` en `POST /api/admin/imports/{runId}/import-selected-conflicts` om geldige overgeslagen Europ Foods-regels alsnog als nieuwe hidden draftproducten te importeren.
 - Backoffice-sectie `Europ Foods conflict recovery` binnen Supplier Imports met filtering, selectie en bulkimport van importeerbare varianten.
@@ -63,6 +66,9 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Verbeterd
 
+- Admin productbeheer toont nu leverancierdoos/verpakking, doosinkoopprijs, bron-eenheidsprijs, publieke verkoopeenheid, sales-unit quantity en reviewvinkjes voor sales unit en prijsbasis.
+- Nieuwe leveranciersimports blijven standaard in review: verkoopprijs wordt niet automatisch als veilige publieke prijs beschouwd en importproducten kunnen niet live zolang sales unit en prijsbasis niet bevestigd zijn.
+- Publieke productqueries en cart/order-validatie blokkeren geïmporteerde producten wanneer de publieke verpakking nog een leveranciersdoos lijkt terwijl de prijs op een eenheidsprijs lijkt.
 - Admin Customers en Orders gebruiken nu een gedeelde veilige JSON-lezer in de browser, zodat lege of niet-JSON serverresponses een nette foutmelding met diagnose-id tonen in plaats van een frontend-crash.
 - `GET/PATCH/DELETE /api/admin/customers` en `GET/PATCH/DELETE /api/admin/orders` retourneren altijd een JSON-response met `success`, `data` en `diagnosticId` of een gestructureerde fout.
 - Orders en Customers laden backwards-compatible wanneer productie nog cleanup-/factuurserievelden uit `202607110001_admin_cleanup_and_invoice_series.sql` mist; leesacties vallen terug op basisvelden en mutaties die ontbrekende kolommen nodig hebben stoppen met een duidelijke fout zonder data te wijzigen.
@@ -125,6 +131,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Opgelost
 
+- De live Magners-prijs/verpakkingsfout is veilig geneutraliseerd: `NC-03174 MAGNERS CIDER DARK FRUIT 24x440ml` en `NC-03292 MAGNERS CIDER 24x500ml` zijn teruggezet naar draft/onzichtbaar en gemarkeerd voor package review, zonder producten, afbeeldingen, orders of historische data te verwijderen.
 - Productdetailpagina's tonen in de add-to-cart sectie niet langer opnieuw dezelfde productfoto; dit voorkomt dat Android/Chrome bij producten zoals Potato Scones meerdere afbeeldingen gestapeld of overlappend lijkt te tonen.
 
 ## [0.10.0] - 2026-07-06

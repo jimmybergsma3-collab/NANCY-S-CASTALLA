@@ -3,6 +3,7 @@ import type { Product } from "@/types/product";
 import { hasSupabaseAdmin } from "./env";
 import { supabaseAdminFetch } from "./supabase-rest";
 import { getProductCategories } from "./product-categories";
+import { evaluateSalesUnitSafety } from "./sales-unit-safety";
 
 type ProductRow = {
   id: string;
@@ -35,6 +36,14 @@ type ProductRow = {
   supplier_code: string;
   pack_size: string;
   unit_cost: number;
+  sales_unit_type?: Product["salesUnitType"];
+  sales_unit_quantity?: number;
+  sales_unit_confirmed?: boolean;
+  price_basis_confirmed?: boolean;
+  supplier_case_price?: number;
+  supplier_unit_price?: number;
+  supplier_case_quantity?: number;
+  source_package_text?: string;
   stock_quantity?: number;
   minimum_stock?: number;
   track_inventory?: boolean;
@@ -78,6 +87,14 @@ export function rowToProduct(row: ProductRow): Product {
     supplierCode: row.supplier_code,
     packSize: row.pack_size,
     unitCost: row.unit_cost,
+    salesUnitType: row.sales_unit_type ?? "",
+    salesUnitQuantity: row.sales_unit_quantity ?? 0,
+    salesUnitConfirmed: row.sales_unit_confirmed ?? false,
+    priceBasisConfirmed: row.price_basis_confirmed ?? false,
+    supplierCasePrice: row.supplier_case_price ?? 0,
+    supplierUnitPrice: row.supplier_unit_price ?? 0,
+    supplierCaseQuantity: row.supplier_case_quantity ?? 0,
+    sourcePackageText: row.source_package_text ?? "",
     stockQuantity: row.stock_quantity ?? 0,
     minimumStock: row.minimum_stock ?? 0,
     trackInventory: row.track_inventory ?? false,
@@ -122,6 +139,14 @@ export function productToRow(product: Product): ProductRow {
     supplier_code: product.supplierCode,
     pack_size: product.packSize,
     unit_cost: product.unitCost,
+    sales_unit_type: product.salesUnitType ?? "",
+    sales_unit_quantity: product.salesUnitQuantity ?? 0,
+    sales_unit_confirmed: product.salesUnitConfirmed ?? false,
+    price_basis_confirmed: product.priceBasisConfirmed ?? false,
+    supplier_case_price: product.supplierCasePrice ?? 0,
+    supplier_unit_price: product.supplierUnitPrice ?? 0,
+    supplier_case_quantity: product.supplierCaseQuantity ?? 0,
+    source_package_text: product.sourcePackageText ?? "",
     stock_quantity: product.stockQuantity ?? 0,
     minimum_stock: product.minimumStock ?? 0,
     track_inventory: product.trackInventory ?? false,
@@ -156,7 +181,7 @@ async function getAllProductRows() {
 }
 
 function isActivePublicProduct(product: Product) {
-  return product.isVisible === true && (product.lifecycleStatus ?? "active") === "active";
+  return product.isVisible === true && (product.lifecycleStatus ?? "active") === "active" && evaluateSalesUnitSafety(product).ok;
 }
 
 export async function getProducts({ includeHidden = false, includeArchived = false }: { includeHidden?: boolean; includeArchived?: boolean } = {}) {
