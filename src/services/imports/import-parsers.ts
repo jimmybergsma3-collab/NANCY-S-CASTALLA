@@ -65,7 +65,7 @@ function looksLikePackageToken(value: string) {
   );
 }
 
-function parseEuropFoodsLine(line: string, currentSection: string) {
+export function parseEuropFoodsLine(line: string, currentSection: string) {
   const parts = line.split(" ").filter(Boolean);
   const storageIndex = parts.findIndex((part) => storageWords.has(part.toLowerCase()) || part === "-");
   if (storageIndex < 0) return undefined;
@@ -121,6 +121,36 @@ function parseEuropFoodsLine(line: string, currentSection: string) {
     priceExVat: unitPrice ?? casePrice,
     sourceRow: line,
   };
+}
+
+export function parseEuropFoodsConflictProduct(input: {
+  sourceRow: string;
+  sourceFilename: string;
+  sourceBatch: string;
+  fallbackSupplierCode?: string;
+  fallbackName?: string;
+  fallbackPackage?: string;
+  fallbackSection?: string;
+}): SupplierImportProduct | undefined {
+  const parsedLine = parseEuropFoodsLine(normalizeSpace(input.sourceRow), input.fallbackSection || "Recovered Europ Foods conflict");
+  if (!parsedLine && (!input.fallbackSupplierCode || !input.fallbackName)) return undefined;
+
+  return createProduct({
+    supplier: "Europ Foods",
+    supplierCode: parsedLine?.supplierCode || input.fallbackSupplierCode || "",
+    ean: "",
+    supplierProductName: parsedLine?.supplierProductName || input.fallbackName || "",
+    brand: "",
+    categorySource: parsedLine?.categorySource || input.fallbackSection || "Recovered Europ Foods conflict",
+    storageType: parsedLine?.storageType || "droog",
+    packageDescription: parsedLine?.packageDescription || input.fallbackPackage || "",
+    casePrice: parsedLine?.casePrice,
+    unitPrice: parsedLine?.unitPrice,
+    priceExVat: parsedLine?.priceExVat,
+    sourceFilename: input.sourceFilename,
+    sourceRow: input.sourceRow,
+    sourceBatch: input.sourceBatch,
+  });
 }
 
 function createProduct(input: Omit<SupplierImportProduct, "currency" | "needsTaxReview" | "needsCategoryReview" | "needsPackageReview" | "needsImageReview" | "needsTranslationReview">): SupplierImportProduct {

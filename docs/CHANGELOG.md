@@ -19,6 +19,9 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Toegevoegd
 
+- Admin-herstelactie voor Europ Foods-importconflicten: bestaande pending conflictregels kunnen opnieuw worden geclassificeerd als `Importable variants`, `Repeated listings`, `Unresolved conflicts` of `Skipped/parse errors`.
+- Nieuwe beveiligde admin-API's `POST /api/admin/imports/{runId}/reclassify` en `POST /api/admin/imports/{runId}/import-selected-conflicts` om geldige overgeslagen Europ Foods-regels alsnog als nieuwe hidden draftproducten te importeren.
+- Backoffice-sectie `Europ Foods conflict recovery` binnen Supplier Imports met filtering, selectie en bulkimport van importeerbare varianten.
 - Migratie `202607120001_supplier_import_workflow.sql` voor veilige leveranciersimports met `product_import_runs`, `supplier_product_offers`, reviewvelden, transactionele Nancy-productcode-reservering, batchpublicatie en veilige rollback zonder harde delete.
 - Server-side importlaag voor Europ Foods PDF en Tindale XLS/XLSX met dry-run preview, parsewaarschuwingen, duplicate/conflict-signalering, reviewflags en confirmed import naar veilige draftproducten.
 - Adminmodule `Supplier imports` met leverancierselectie, bestandupload, batchnaam, dry-runrapport, conflictvoorbeelden, importgeschiedenis, confirmed import to draft, publish approved batch en rollback naar draft/archive.
@@ -60,6 +63,9 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Verbeterd
 
+- Europ Foods-importidentiteit gebruikt nu leverancier + supplier code + productnaam + verpakking + doosprijs + eenheidsprijs. Daardoor worden verschillende verpakkingsvarianten, zoals `8775 MAGNERS CIDER 24x500ml` en `8780 MAGNERS CIDER 12x568ml`, niet meer samengevoegd of onterecht geblokkeerd.
+- Exacte herhalingen van dezelfde Europ Foods-bronregel worden als `repeated_source_listing` behandeld: er wordt geen tweede Nancy-product aangemaakt, maar de herhaling blijft traceerbaar in conflict-/bronmetadata.
+- Archived producten blokkeren nieuwe Europ Foods-draftproducten niet langer alleen vanwege dezelfde naam/verpakking; ze worden nog steeds nooit automatisch hersteld of gewijzigd.
 - Betaalmethoden in de klantflow zijn teruggebracht tot Bizum en bankoverschrijving. WhatsApp-klantenservice, Bizum-nummer en bankgegevens zijn centraal gescheiden in `config/business.ts`.
 - Europ Foods PDF parsing gebruikt nu een server-side externe `pdf-parse` package en compacte JSON-responses, zodat zware PDF-dry-runs geen lege/non-JSON response meer veroorzaken.
 - Import-API-fouten geven altijd geldige JSON terug met `errorCode`, `message` en `diagnosticId`.

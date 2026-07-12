@@ -44,12 +44,8 @@ function normalizePackage(value: string) {
   return normalizeText(value.replaceAll(",", "."));
 }
 
-function productNamePackageKey(product: Product) {
-  return `${normalizeText(product.name)}|${normalizePackage(product.unit || product.packSize || "")}`;
-}
-
-function importNamePackageKey(product: SupplierImportProduct) {
-  return `${normalizeText(product.supplierProductName)}|${normalizePackage(product.packageDescription)}`;
+function normalizePrice(value?: number) {
+  return value === undefined || !Number.isFinite(value) ? "" : value.toFixed(4);
 }
 
 function categoryFallback(product: SupplierImportProduct) {
@@ -65,30 +61,38 @@ function productTypeFromStorage(storageType: string) {
 }
 
 function makeDuplicateKeys(products: SupplierImportProduct[]) {
-  const supplierCodeGroups = new Map<string, number>();
-  const namePackageGroups = new Map<string, number>();
+  const sourceIdentityGroups = new Map<string, number>();
+  const supplierCodeIdentities = new Map<string, Set<string>>();
   for (const product of products) {
     const supplierKey = `${normalizeCode(product.supplier)}|${normalizeCode(product.supplierCode)}`;
-    const nameKey = importNamePackageKey(product);
-    supplierCodeGroups.set(supplierKey, (supplierCodeGroups.get(supplierKey) ?? 0) + 1);
-    namePackageGroups.set(nameKey, (namePackageGroups.get(nameKey) ?? 0) + 1);
+    const identity = importSourceIdentity(product);
+    sourceIdentityGroups.set(identity, (sourceIdentityGroups.get(identity) ?? 0) + 1);
+    const identities = supplierCodeIdentities.get(supplierKey) ?? new Set<string>();
+    identities.add(identity);
+    supplierCodeIdentities.set(supplierKey, identities);
   }
   return {
-    supplierCodeGroups,
-    namePackageGroups,
+    sourceIdentityGroups,
+    supplierCodeIdentities,
   };
 }
 
 function buildExistingIndexes(products: Product[]) {
   const activeProducts = products.filter((product) => (product.lifecycleStatus ?? "active") === "active");
-  const archivedProducts = products.filter((product) => product.lifecycleStatus === "archived");
   const activeSupplierCodes = new Set(activeProducts.map((product) => `${normalizeCode(product.supplier)}|${normalizeCode(product.supplierCode)}`).filter((key) => !key.endsWith("|")));
-  const archivedSupplierCodes = new Set(archivedProducts.map((product) => `${normalizeCode(product.supplier)}|${normalizeCode(product.supplierCode)}`).filter((key) => !key.endsWith("|")));
   const activeEans = new Set(activeProducts.map((product) => normalizeEan(product.ean ?? "")).filter(Boolean));
-  const archivedEans = new Set(archivedProducts.map((product) => normalizeEan(product.ean ?? "")).filter(Boolean));
-  const activeNames = new Set(activeProducts.map(productNamePackageKey).filter(Boolean));
-  const archivedNames = new Set(archivedProducts.map(productNamePackageKey).filter(Boolean));
-  return { activeSupplierCodes, archivedSupplierCodes, activeEans, archivedEans, activeNames, archivedNames };
+  return { activeSupplierCodes, activeEans };
+}
+
+export function importSourceIdentity(product: SupplierImportProduct) {
+  return [
+    normalizeCode(product.supplier),
+    normalizeCode(product.supplierCode),
+    normalizeText(product.supplierProductName),
+    normalizePackage(product.packageDescription),
+    normalizePrice(product.casePrice ?? product.priceExVat),
+    normalizePrice(product.unitPrice),
+  ].join("|");
 }
 
 function conflictForProduct(product: SupplierImportProduct, products: SupplierImportProduct[], existingProducts: Product[]) {
@@ -96,24 +100,23 @@ function conflictForProduct(product: SupplierImportProduct, products: SupplierIm
   const existing = buildExistingIndexes(existingProducts);
   const supplierKey = `${normalizeCode(product.supplier)}|${normalizeCode(product.supplierCode)}`;
   const eanKey = normalizeEan(product.ean);
-  const nameKey = importNamePackageKey(product);
+  const identityKey = importSourceIdentity(product);
   const reasons: Array<{ type: SupplierImportConflictSample["matches"][number]["type"]; reason: string }> = [];
 
-  if ((duplicates.supplierCodeGroups.get(supplierKey) ?? 0) > 1 || (duplicates.namePackageGroups.get(nameKey) ?? 0) > 1) {
-    reasons.push({ type: "in_file_duplicate", reason: "Possible duplicate inside the same supplier file." });
+  if ((duplicates.sourceIdentityGroups.get(identityKey) ?? 0) > 1) {
+    reasons.push({ type: "in_file_duplicate", reason: "Exact repeated source listing in the same supplier file." });
+  }
+  if ((duplicates.supplierCodeIdentities.get(supplierKey)?.size ?? 0) > 1) {
+    reasons.push({ type: "in_file_duplicate", reason: "Same supplier code has different name, package or price. Needs review." });
   }
   if (existing.activeSupplierCodes.has(supplierKey)) reasons.push({ type: "active_supplier_code", reason: "Same supplier code exists on an active product." });
-  if (existing.archivedSupplierCodes.has(supplierKey)) reasons.push({ type: "archived_supplier_code", reason: "Same supplier code exists on an archived product." });
   if (eanKey && existing.activeEans.has(eanKey)) reasons.push({ type: "active_ean", reason: "Same EAN exists on an active product." });
-  if (eanKey && existing.archivedEans.has(eanKey)) reasons.push({ type: "archived_ean", reason: "Same EAN exists on an archived product." });
-  if (existing.activeNames.has(nameKey)) reasons.push({ type: "active_name_package", reason: "Same normalized name and package exists on an active product." });
-  if (existing.archivedNames.has(nameKey)) reasons.push({ type: "archived_name_package", reason: "Same normalized name and package exists on an archived product." });
 
   if (!reasons.length) return undefined;
   return reasons;
 }
 
-async function findOrCreateSupplier(supplierName: string) {
+export async function findOrCreateSupplier(supplierName: string) {
   const existing = await supabaseAdminFetch<SupplierRow[]>(
     `suppliers?select=id,name,code&name=eq.${encodeURIComponent(supplierName)}&limit=1`,
   );
@@ -201,7 +204,7 @@ async function failImportRun(importRunId: string, message: string) {
   });
 }
 
-function buildProductRow(product: SupplierImportProduct, productCode: string) {
+export function buildProductRow(product: SupplierImportProduct, productCode: string) {
   const category = categoryFallback(product);
   const cost = product.priceExVat ?? product.unitPrice ?? product.casePrice ?? 0;
   return {
@@ -251,7 +254,7 @@ function buildProductRow(product: SupplierImportProduct, productCode: string) {
   };
 }
 
-function buildOfferRow(product: SupplierImportProduct, productCode: string, supplierId: string) {
+export function buildOfferRow(product: SupplierImportProduct, productCode: string, supplierId: string) {
   return {
     product_id: productCode,
     supplier_id: supplierId,
@@ -329,6 +332,7 @@ export async function confirmSupplierImport(input: {
   try {
     const conflictRows: Array<ReturnType<typeof buildConflictRow>> = [];
     const importable: SupplierImportProduct[] = [];
+    const importedSourceIdentities = new Set<string>();
     const warnings = input.parseResult.warnings.map((warning) => `${warning.reason}: ${warning.sourceRow}`);
     const errors = input.parseResult.errors.map((error) => ({ sourceRow: error.sourceRow, message: error.reason }));
 
@@ -340,12 +344,20 @@ export async function confirmSupplierImport(input: {
         continue;
       }
       if (conflictReasons?.length) {
+        const isExactRepeat = conflictReasons.some((reason) => reason.reason.includes("Exact repeated source listing"));
+        const identity = importSourceIdentity(product);
+        if (isExactRepeat && !importedSourceIdentities.has(identity) && conflictReasons.length === 1) {
+          importable.push(product);
+          importedSourceIdentities.add(identity);
+          continue;
+        }
         for (const reason of conflictReasons) {
           conflictRows.push(buildConflictRow({ importRunId, product, type: reason.type.includes("ean") ? "ean" : reason.type.includes("supplier") ? "supplier_code" : reason.type.includes("package") ? "packaging" : "name", reason: reason.reason }));
         }
         continue;
       }
       importable.push(product);
+      importedSourceIdentities.add(importSourceIdentity(product));
     }
 
     if (conflictRows.length) {

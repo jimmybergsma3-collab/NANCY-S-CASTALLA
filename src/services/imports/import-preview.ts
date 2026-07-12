@@ -40,8 +40,19 @@ function productNamePackageKey(product: Product) {
   return `${normalizeText(product.name)}|${normalizePackage(product.unit || product.packSize || "")}`;
 }
 
-function importNamePackageKey(product: SupplierImportProduct) {
-  return `${normalizeText(product.supplierProductName)}|${normalizePackage(product.packageDescription)}`;
+function normalizePrice(value?: number) {
+  return value === undefined || !Number.isFinite(value) ? "" : value.toFixed(4);
+}
+
+function importSourceIdentity(product: SupplierImportProduct) {
+  return [
+    normalizeCode(product.supplier),
+    normalizeCode(product.supplierCode),
+    normalizeText(product.supplierProductName),
+    normalizePackage(product.packageDescription),
+    normalizePrice(product.casePrice ?? product.priceExVat),
+    normalizePrice(product.unitPrice),
+  ].join("|");
 }
 
 export function buildImportPreview(parseResult: SupplierImportParseResult, existingProducts: Product[]): SupplierImportPreviewReport {
@@ -68,12 +79,12 @@ export function buildImportPreview(parseResult: SupplierImportParseResult, exist
   }
 
   const incomingSupplierCodeGroups = new Map<string, SupplierImportProduct[]>();
-  const incomingNamePackageGroups = new Map<string, SupplierImportProduct[]>();
+  const incomingIdentityGroups = new Map<string, SupplierImportProduct[]>();
   for (const product of parseResult.products) {
     const supplierKey = `${normalizeCode(product.supplier)}|${normalizeCode(product.supplierCode)}`;
     incomingSupplierCodeGroups.set(supplierKey, [...(incomingSupplierCodeGroups.get(supplierKey) ?? []), product]);
-    const namePackageKey = importNamePackageKey(product);
-    incomingNamePackageGroups.set(namePackageKey, [...(incomingNamePackageGroups.get(namePackageKey) ?? []), product]);
+    const identityKey = importSourceIdentity(product);
+    incomingIdentityGroups.set(identityKey, [...(incomingIdentityGroups.get(identityKey) ?? []), product]);
   }
 
   let possibleActiveMatches = 0;
@@ -85,25 +96,26 @@ export function buildImportPreview(parseResult: SupplierImportParseResult, exist
     const matches: SupplierImportConflictSample["matches"] = [];
     const supplierKey = `${normalizeCode(product.supplier)}|${normalizeCode(product.supplierCode)}`;
     const eanKey = normalizeEan(product.ean);
-    const namePackageKey = importNamePackageKey(product);
 
     const activeSupplier = activeBySupplierCode.get(supplierKey);
     const archivedSupplier = archivedBySupplierCode.get(supplierKey);
     const activeEan = eanKey ? activeByEan.get(eanKey) : undefined;
     const archivedEan = eanKey ? archivedByEan.get(eanKey) : undefined;
-    const activeName = activeByNamePackage.get(namePackageKey);
-    const archivedName = archivedByNamePackage.get(namePackageKey);
     const inFileSupplier = incomingSupplierCodeGroups.get(supplierKey);
-    const inFileName = incomingNamePackageGroups.get(namePackageKey);
+    const inFileIdentity = incomingIdentityGroups.get(importSourceIdentity(product));
+    const supplierCodeIdentityCount = new Set((inFileSupplier ?? []).map(importSourceIdentity)).size;
 
     if (activeEan?.length) matches.push({ type: "active_ean", productIds: activeEan.slice(0, 5), reason: "Exact EAN match with active product." });
     if (activeSupplier?.length) matches.push({ type: "active_supplier_code", productIds: activeSupplier.slice(0, 5), reason: "Same supplier and supplier code on active product." });
-    if (activeName?.length) matches.push({ type: "active_name_package", productIds: activeName.slice(0, 5), reason: "Same normalized name and package on active product." });
     if (archivedEan?.length) matches.push({ type: "archived_ean", productIds: archivedEan.slice(0, 5), reason: "Exact EAN match with archived product; never restore automatically." });
     if (archivedSupplier?.length) matches.push({ type: "archived_supplier_code", productIds: archivedSupplier.slice(0, 5), reason: "Same supplier and supplier code on archived product; never update automatically." });
-    if (archivedName?.length) matches.push({ type: "archived_name_package", productIds: archivedName.slice(0, 5), reason: "Same normalized name and package on archived product." });
-    if ((inFileSupplier?.length ?? 0) > 1 || (inFileName?.length ?? 0) > 1) {
-      matches.push({ type: "in_file_duplicate", reason: "Possible duplicate inside the same supplier file." });
+    if ((inFileIdentity?.length ?? 0) > 1 || supplierCodeIdentityCount > 1) {
+      matches.push({
+        type: "in_file_duplicate",
+        reason: supplierCodeIdentityCount > 1
+          ? "Same supplier code has different name, package or price."
+          : "Exact repeated source listing inside the same supplier file.",
+      });
     }
 
     if (matches.some((match) => match.type.startsWith("active"))) possibleActiveMatches += 1;
@@ -124,7 +136,7 @@ export function buildImportPreview(parseResult: SupplierImportParseResult, exist
   }
 
   const duplicateSupplierCodeGroups = Array.from(incomingSupplierCodeGroups.entries())
-    .filter(([, products]) => products.length > 1)
+    .filter(([, products]) => new Set(products.map(importSourceIdentity)).size > 1)
     .map(([key, products]) => ({
       supplierCode: key.split("|")[1],
       count: products.length,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArchiveRestore, FileSpreadsheet, RotateCcw, UploadCloud } from "lucide-react";
 import type { SupplierImportKind, SupplierImportPreviewReport } from "@/types/imports";
 
@@ -45,6 +45,48 @@ type DryRunResponse = {
     supplierOffersWritten: number;
   };
   preview?: SupplierImportPreviewReport;
+};
+
+type ReclassifiedConflict = {
+  id: string;
+  sourceRow: string;
+  supplierCode: string;
+  name: string;
+  packageDescription: string;
+  storageType: string;
+  casePrice?: number;
+  unitPrice?: number;
+  categorySource: string;
+  classification: "importable_variant" | "repeated_source_listing" | "unresolved_conflict" | "parse_error";
+  reason: string;
+  possibleMatches: Array<{ productId: string; supplierCode: string; packageDescription: string; sourceBatch: string }>;
+};
+
+type ReclassifyResponse = {
+  ok: boolean;
+  message?: string;
+  diagnosticId?: string;
+  result?: {
+    importRunId: string;
+    totalReviewed: number;
+    exactRepeatedListings: number;
+    importableVariants: number;
+    unresolvedConflicts: number;
+    errors: number;
+    items: ReclassifiedConflict[];
+  };
+};
+
+type ImportSelectedResponse = {
+  ok: boolean;
+  message?: string;
+  diagnosticId?: string;
+  result?: {
+    createdProducts: number;
+    supplierOffersCreated: number;
+    skipped: Array<{ conflictId: string; reason: string }>;
+    imported: Array<{ conflictId: string; productCode: string }>;
+  };
 };
 
 const supplierOptions: Array<{ value: SupplierImportKind; label: string; batch: string; accept: string }> = [
@@ -118,6 +160,79 @@ function ImportHistory({ runs }: { runs: ImportRun[] }) {
         </tbody>
       </table>
       {runs.length === 0 ? <p className="p-5 text-sm text-forest/60">No import history yet. Dry-runs do not write records by design.</p> : null}
+    </div>
+  );
+}
+
+function RecoveryTable({
+  items,
+  selectedIds,
+  setSelectedIds,
+}: {
+  items: ReclassifiedConflict[];
+  selectedIds: string[];
+  setSelectedIds: (ids: string[]) => void;
+}) {
+  const toggle = (id: string) => {
+    setSelectedIds(selectedIds.includes(id) ? selectedIds.filter((selected) => selected !== id) : [...selectedIds, id]);
+  };
+  return (
+    <div className="overflow-x-auto rounded-md border border-forest/10 bg-white">
+      <table className="w-full min-w-[1100px] text-left text-sm">
+        <thead className="bg-forest text-cream">
+          <tr>
+            <th className="p-3">Select</th>
+            <th className="p-3">Type</th>
+            <th className="p-3">Code</th>
+            <th className="p-3">Name</th>
+            <th className="p-3">Package</th>
+            <th className="p-3">Case price</th>
+            <th className="p-3">Unit price</th>
+            <th className="p-3">Storage</th>
+            <th className="p-3">Reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((item) => (
+            <tr className="border-t border-forest/10 align-top" key={item.id}>
+              <td className="p-3">
+                <input
+                  checked={selectedIds.includes(item.id)}
+                  disabled={item.classification !== "importable_variant"}
+                  onChange={() => toggle(item.id)}
+                  type="checkbox"
+                />
+              </td>
+              <td className="p-3">
+                <span className={`rounded-full px-2 py-1 text-xs font-bold ${
+                  item.classification === "importable_variant"
+                    ? "bg-forest text-cream"
+                    : item.classification === "repeated_source_listing"
+                      ? "bg-cream text-forest"
+                      : "bg-red-50 text-red-900"
+                }`}>
+                  {item.classification.replaceAll("_", " ")}
+                </span>
+              </td>
+              <td className="p-3 font-bold text-forest">{item.supplierCode}</td>
+              <td className="p-3">{item.name}</td>
+              <td className="p-3">{item.packageDescription || "-"}</td>
+              <td className="p-3">{item.casePrice === undefined ? "-" : `€${item.casePrice.toFixed(2)}`}</td>
+              <td className="p-3">{item.unitPrice === undefined ? "-" : `€${item.unitPrice.toFixed(2)}`}</td>
+              <td className="p-3">{item.storageType || "-"}</td>
+              <td className="p-3">
+                <p>{item.reason}</p>
+                {item.possibleMatches.length ? (
+                  <p className="mt-1 text-xs text-forest/60">
+                    Match: {item.possibleMatches.map((match) => `${match.productId} ${match.packageDescription}`).join(", ")}
+                  </p>
+                ) : null}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {items.length === 0 ? <p className="p-5 text-sm text-forest/60">No rows in this view.</p> : null}
     </div>
   );
 }
@@ -250,22 +365,28 @@ export function SupplierImportsPanel() {
   const [publishConfirmation, setPublishConfirmation] = useState("");
   const [rollbackConfirmation, setRollbackConfirmation] = useState("");
   const [rollbackTarget, setRollbackTarget] = useState<"draft" | "archived">("draft");
+  const [recoveryRunId, setRecoveryRunId] = useState("");
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [recoveryFilter, setRecoveryFilter] = useState<"importable_variant" | "repeated_source_listing" | "unresolved_conflict" | "parse_error">("importable_variant");
+  const [recoveryResult, setRecoveryResult] = useState<ReclassifyResponse["result"]>();
+  const [selectedConflictIds, setSelectedConflictIds] = useState<string[]>([]);
 
   const selectedSupplier = useMemo(() => supplierOptions.find((option) => option.value === supplier) ?? supplierOptions[0], [supplier]);
 
-  async function loadHistory() {
+  const loadHistory = useCallback(async () => {
     const response = await fetch("/api/admin/imports", { cache: "no-store" });
     const data = await response.json() as { ok: boolean; runs?: ImportRun[]; message?: string };
     setRuns(data.runs ?? []);
+    if (!recoveryRunId && data.runs?.[0]) setRecoveryRunId(data.runs[0].id);
     if (data.message) setMessage(data.message);
-  }
+  }, [recoveryRunId]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void loadHistory();
     }, 0);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [loadHistory]);
 
   function changeSupplier(value: SupplierImportKind) {
     const next = supplierOptions.find((option) => option.value === value) ?? supplierOptions[0];
@@ -368,6 +489,65 @@ export function SupplierImportsPanel() {
     }
   }
 
+  async function reclassifyConflicts() {
+    if (!recoveryRunId) {
+      setMessage("Choose an import run first.");
+      return;
+    }
+    setRecoveryLoading(true);
+    setMessage("");
+    setSelectedConflictIds([]);
+    try {
+      const response = await fetch(`/api/admin/imports/${recoveryRunId}/reclassify`, { method: "POST" });
+      const data = await readJsonResponse<ReclassifyResponse>(response);
+      if (!response.ok || !data.ok || !data.result) {
+        setMessage(`${data.message ?? "Reclassification failed."}${data.diagnosticId ? ` Diagnostic ID: ${data.diagnosticId}` : ""}`);
+        return;
+      }
+      setRecoveryResult(data.result);
+      setMessage(`Reclassified ${data.result.totalReviewed} rows. Importable variants: ${data.result.importableVariants}. Repeated listings: ${data.result.exactRepeatedListings}. Unresolved conflicts: ${data.result.unresolvedConflicts}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Reclassification failed.");
+    } finally {
+      setRecoveryLoading(false);
+    }
+  }
+
+  async function importSelectedConflicts(importAllImportable = false) {
+    if (!recoveryRunId) {
+      setMessage("Choose an import run first.");
+      return;
+    }
+    if (!importAllImportable && selectedConflictIds.length === 0) {
+      setMessage("Select one or more importable variants first.");
+      return;
+    }
+    setRecoveryLoading(true);
+    setMessage("");
+    try {
+      const response = await fetch(`/api/admin/imports/${recoveryRunId}/import-selected-conflicts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conflictIds: selectedConflictIds, importAllImportable }),
+      });
+      const data = await readJsonResponse<ImportSelectedResponse>(response);
+      if (!response.ok || !data.ok || !data.result) {
+        setMessage(`${data.message ?? "Conflict import failed."}${data.diagnosticId ? ` Diagnostic ID: ${data.diagnosticId}` : ""}`);
+        return;
+      }
+      setSelectedConflictIds([]);
+      setMessage(`Recovered draft products: ${data.result.createdProducts}. Supplier offers: ${data.result.supplierOffersCreated}. Skipped: ${data.result.skipped.length}.`);
+      await loadHistory();
+      await reclassifyConflicts();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Conflict import failed.");
+    } finally {
+      setRecoveryLoading(false);
+    }
+  }
+
+  const recoveryItems = recoveryResult?.items.filter((item) => item.classification === recoveryFilter) ?? [];
+
   return (
     <div className="mt-6 space-y-6">
       <div className="rounded-md border border-brass/30 bg-cream p-4 text-sm leading-6 text-forest">
@@ -448,6 +628,64 @@ export function SupplierImportsPanel() {
           </button>
         </div>
         <ImportHistory runs={runs} />
+      </div>
+
+      <div className="rounded-md border border-forest/10 bg-white p-5">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <h3 className="font-serif text-2xl font-bold text-forest">Europ Foods conflict recovery</h3>
+            <p className="mt-1 text-sm text-forest/60">
+              Reclassify skipped Europ Foods rows after the improved variant logic. Importable variants become new hidden draft products with fresh NC codes.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <select className="rounded-md border border-forest/15 px-3 py-2 text-sm" onChange={(event) => setRecoveryRunId(event.target.value)} value={recoveryRunId}>
+              <option value="">Choose import run</option>
+              {runs.filter((run) => run.supplier_name === "Europ Foods").map((run) => (
+                <option key={run.id} value={run.id}>{run.import_batch} - {new Date(run.created_at).toLocaleString()}</option>
+              ))}
+            </select>
+            <button className="rounded-full bg-forest px-5 py-2 text-sm font-bold text-cream disabled:bg-forest/45" disabled={recoveryLoading || !recoveryRunId} onClick={() => void reclassifyConflicts()} type="button">
+              Reclassify
+            </button>
+          </div>
+        </div>
+
+        {recoveryResult ? (
+          <div className="mt-5 space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              <MetricCard label="Reviewed" value={recoveryResult.totalReviewed} />
+              <MetricCard label="Importable variants" value={recoveryResult.importableVariants} tone="good" />
+              <MetricCard label="Repeated listings" value={recoveryResult.exactRepeatedListings} tone={recoveryResult.exactRepeatedListings ? "warning" : "normal"} />
+              <MetricCard label="Unresolved conflicts" value={recoveryResult.unresolvedConflicts} tone={recoveryResult.unresolvedConflicts ? "danger" : "normal"} />
+              <MetricCard label="Parse errors" value={recoveryResult.errors} tone={recoveryResult.errors ? "danger" : "normal"} />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {(["importable_variant", "repeated_source_listing", "unresolved_conflict", "parse_error"] as const).map((filter) => (
+                <button
+                  className={`rounded-full border px-4 py-2 text-sm font-bold ${recoveryFilter === filter ? "border-forest bg-forest text-cream" : "border-forest/15 text-forest"}`}
+                  key={filter}
+                  onClick={() => setRecoveryFilter(filter)}
+                  type="button"
+                >
+                  {filter.replaceAll("_", " ")}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button className="rounded-full bg-forest px-5 py-2 text-sm font-bold text-cream disabled:bg-forest/45" disabled={recoveryLoading || selectedConflictIds.length === 0} onClick={() => void importSelectedConflicts(false)} type="button">
+                Bulk import selected as drafts ({selectedConflictIds.length})
+              </button>
+              <button className="rounded-full border border-forest/20 px-5 py-2 text-sm font-bold text-forest disabled:opacity-50" disabled={recoveryLoading || recoveryResult.importableVariants === 0} onClick={() => void importSelectedConflicts(true)} type="button">
+                Import all importable variants
+              </button>
+            </div>
+
+            <RecoveryTable items={recoveryItems} selectedIds={selectedConflictIds} setSelectedIds={setSelectedConflictIds} />
+          </div>
+        ) : null}
       </div>
     </div>
   );

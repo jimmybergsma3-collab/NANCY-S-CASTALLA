@@ -151,6 +151,8 @@ Producten hebben naast voorraadstatus (`available`, `preorder`, `coming-soon`) o
 
 Nieuwe leveranciersimports gebruiken migratie `202607120001_supplier_import_workflow.sql`. Deze staat in productie en voegt import runs, supplier offers, reviewvelden en veilige batch-RPC's toe. De adminroute `/{locale}/admin/imports` ondersteunt dry-run previews en confirmed import naar draft voor Europ Foods PDF en Tindale XLS/XLSX. Dry-runs schrijven niets. Confirmed import maakt uitsluitend `product_status='draft'`, `is_visible=false`, `featured=false`, `stock_quantity=0` en nieuwe unieke `NC-xxxxx`-codes aan. Bestanden van leveranciers mogen niet in Git worden gezet. Op 12 juli 2026 zijn `IMPORT_2026_LIVE_TINDALE_JULY` en `IMPORT_2026_LIVE_EUROPFOODS_JULY` naar draft geÃ¯mporteerd; er zijn geen producten automatisch gepubliceerd.
 
+Europ Foods-conflictherstel staat in de Supplier Imports-module. De bronidentiteit is leverancier + supplier code + productnaam + verpakking + doosprijs + eenheidsprijs. Daardoor mogen varianten zoals `8775 MAGNERS CIDER 24x500ml` en `8780 MAGNERS CIDER 12x568ml` naast elkaar als aparte draftproducten bestaan. Exacte herhalingen worden niet dubbel aangemaakt, dezelfde supplier code met afwijkende inhoud blijft conflict-review, en archived producten worden nooit automatisch gewijzigd of hersteld.
+
 ## 6. Orderflow
 
 Er zijn twee orderkanalen:

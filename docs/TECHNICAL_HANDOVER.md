@@ -288,6 +288,8 @@ Vanaf migratie `202607110002_product_catalogue_archiving.sql` heeft elk product 
 
 Importveiligheid: `products.id` is de unieke Nancy-productcode en de publieke URL-sleutel. `sku` is eveneens uniek en wordt standaard gelijk aan `id` gezet. `supplier_code` en `ean` zijn bewust niet uniek; ze signaleren mogelijke dubbelen, maar mogen nooit stilzwijgend een archived record overschrijven. Vervolg-migratie `202607110003_product_catalogue_conflict_protection.sql` bevat daarom een trigger die gewone updates op `product_status='archived'` blokkeert. Alleen `restore_archived_product` zet tijdelijk de interne allow-flag. Mogelijke importconflicten kunnen worden vastgelegd in `product_import_conflicts` met een handmatige keuze: nieuw importeren, overslaan, of bewust herstellen/koppelen.
 
+Europ Foods-specifiek: de stabiele bronidentiteit is leverancier + genormaliseerde supplier code + genormaliseerde productnaam + genormaliseerde verpakking + doosprijs + eenheidsprijs. Een exact herhaalde bronvermelding in een andere PDF-sectie wordt `repeated_source_listing` en mag niet tot een tweede Nancy-product leiden. Dezelfde productnaam met een andere supplier code of verpakking is een geldige variant en mag als apart draftproduct bestaan. Dezelfde supplier code met een andere naam, verpakking of prijs blijft een echt conflict voor handmatige review. Archived producten worden nooit automatisch hersteld of gewijzigd en blokkeren een nieuwe draftvariant niet alleen op basis van naam/verpakking.
+
 ## 4.3 `customers`
 
 **Doel:** bedrijfsprofiel van een klant, los van de technische Auth-identiteit.
@@ -424,6 +426,13 @@ Er is geen globale unieke constraint op `supplier_code`. Een partiele unieke ind
 **Doel:** mogelijke importmatches en conflicten vastleggen voor handmatige beslissing.
 
 Migratie `202607110003_product_catalogue_conflict_protection.sql` introduceert deze tabel; migratie `202607120001_supplier_import_workflow.sql` breidt haar uit met koppeling naar import run, bronnaam, bronverpakking, matching product, reden, beschikbare keuzes en resolver. Mogelijke resoluties zijn onder meer `import_as_new`, `skip`, `link_supplier_offer` en `restore_archived_product`. Archived producten mogen nooit automatisch worden hersteld of gewijzigd.
+
+De admin-importmodule heeft daarnaast een recovery-flow voor bestaande Europ Foods-conflicten:
+
+- `POST /api/admin/imports/{runId}/reclassify` leest bestaande pending conflictregels, parseert de opgeslagen bronregel opnieuw en classificeert ze als importeerbare variant, exacte herhaling, echt conflict of parse-fout.
+- `POST /api/admin/imports/{runId}/import-selected-conflicts` maakt geselecteerde importeerbare varianten alsnog aan als nieuwe draftproducten met nieuwe `NC-xxxxx`-codes, `is_visible=false`, `featured=false`, `stock_quantity=0`, alle reviewflags open en zonder verkoopprijs op inkoopprijs te zetten.
+- De flow maakt `supplier_product_offers` aan, markeert de opgeloste conflictregel als `import_as_new`, logt een admin-auditactie en past de import-run tellingen aan.
+- Er zijn geen voorraadmutaties, geen automatische publicatie en geen mutaties op archived producten.
 
 ## 4.15 Functies en triggers
 
