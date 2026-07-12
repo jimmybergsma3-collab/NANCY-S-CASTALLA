@@ -6,6 +6,7 @@ import { businessConfig } from "@/config/business";
 import { invoiceLabel } from "@/lib/invoice-format";
 import { paymentMethodLabel } from "@/lib/payment";
 import { formatEuro } from "@/lib/pricing";
+import { readSafeJson } from "@/lib/safe-json";
 import type { BackofficeOrder, BackofficeOrderItem, OrderStatus, PaymentStatus } from "@/types/backoffice";
 
 const statuses: OrderStatus[] = ["new", "confirmed", "processing", "ready_for_collection", "shipped", "delivered", "cancelled"];
@@ -49,7 +50,11 @@ export function OrdersPanel() {
 
   useEffect(() => {
     fetch("/api/admin/orders")
-      .then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.message); return data.orders ?? []; })
+      .then(async (response) => {
+        const { data, message, diagnosticId } = await readSafeJson<{ orders?: BackofficeOrder[]; data?: { orders?: BackofficeOrder[] } }>(response);
+        if (!response.ok || !data) throw new Error(`${message || "Orders could not be loaded."}${diagnosticId ? ` Diagnostic ID: ${diagnosticId}` : ""}`);
+        return data.orders ?? data.data?.orders ?? [];
+      })
       .then((loadedOrders: BackofficeOrder[]) => {
         setOrders(loadedOrders);
         setSelectedId(loadedOrders[0]?.id || "");
@@ -86,11 +91,13 @@ export function OrdersPanel() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: next.id, status: next.status, paymentStatus: next.payment_status }),
     });
-    const data = await response.json();
+    const { data, message, diagnosticId } = await readSafeJson<{ order?: BackofficeOrder; email?: { sent?: boolean; skipped?: boolean }; data?: { order?: BackofficeOrder; email?: { sent?: boolean; skipped?: boolean } } }>(response);
     setSaving("");
-    if (!response.ok) { setMessage(data.message ?? "Order could not be updated."); return; }
-    mergeOrder({ ...next, ...(data.order ?? {}) });
-    if (data.email && !data.email.sent && !data.email.skipped) setMessage("Status saved, but the customer email could not be sent.");
+    if (!response.ok || !data) { setMessage(`${message || "Order could not be updated."}${diagnosticId ? ` Diagnostic ID: ${diagnosticId}` : ""}`); return; }
+    const updatedOrder = data.order ?? data.data?.order;
+    const email = data.email ?? data.data?.email;
+    mergeOrder({ ...next, ...(updatedOrder ?? {}) });
+    if (email && !email.sent && !email.skipped) setMessage("Status saved, but the customer email could not be sent.");
   }
 
   async function invoiceAction(order: BackofficeOrder, action: "create" | "email", invoiceId?: string) {
@@ -101,13 +108,15 @@ export function OrdersPanel() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(action === "create" ? { action, orderId: order.id } : { action, invoiceId }),
     });
-    const data = await response.json();
+    const { data, message, diagnosticId } = await readSafeJson<{ invoice?: BackofficeOrder["invoices"] extends Array<infer T> ? T : never; email?: { sent?: boolean }; data?: { invoice?: BackofficeOrder["invoices"] extends Array<infer T> ? T : never; email?: { sent?: boolean } } }>(response);
     setInvoiceBusy("");
-    if (!response.ok) { setMessage(data.message ?? "Invoice action failed."); return; }
-    if (data.invoice) {
-      setOrders((current) => current.map((item) => item.id === order.id ? { ...item, invoices: [data.invoice] } : item));
+    if (!response.ok || !data) { setMessage(`${message || "Invoice action failed."}${diagnosticId ? ` Diagnostic ID: ${diagnosticId}` : ""}`); return; }
+    const invoice = data.invoice ?? data.data?.invoice;
+    const email = data.email ?? data.data?.email;
+    if (invoice) {
+      setOrders((current) => current.map((item) => item.id === order.id ? { ...item, invoices: [invoice] } : item));
     }
-    setMessage(action === "create" ? "Invoice created." : data.email?.sent ? "Invoice emailed to the customer." : "Invoice saved, but email is not configured.");
+    setMessage(action === "create" ? "Invoice created." : email?.sent ? "Invoice emailed to the customer." : "Invoice saved, but email is not configured.");
   }
 
   async function saveNotes(order: BackofficeOrder) {
@@ -118,10 +127,11 @@ export function OrdersPanel() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: order.id, action: "notes", notes: notesDraft }),
     });
-    const data = await response.json();
+    const { data, message, diagnosticId } = await readSafeJson<{ order?: BackofficeOrder; data?: { order?: BackofficeOrder } }>(response);
     setSaving("");
-    if (!response.ok) { setMessage(data.message ?? "Notes could not be saved."); return; }
-    mergeOrder({ id: order.id, notes: data.order?.notes ?? notesDraft });
+    if (!response.ok || !data) { setMessage(`${message || "Notes could not be saved."}${diagnosticId ? ` Diagnostic ID: ${diagnosticId}` : ""}`); return; }
+    const updatedOrder = data.order ?? data.data?.order;
+    mergeOrder({ id: order.id, notes: updatedOrder?.notes ?? notesDraft });
     setMessage("Notes saved.");
   }
 
@@ -132,9 +142,9 @@ export function OrdersPanel() {
       const confirmation = window.prompt(`Type DELETE TEST ORDER to permanently delete ${orderLabel(order)}.`);
       if (confirmation !== "DELETE TEST ORDER") { setSaving(""); return; }
       const response = await fetch("/api/admin/orders", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: order.id, confirmation }) });
-      const data = await response.json();
+      const { message, diagnosticId } = await readSafeJson<{ ok?: boolean }>(response);
       setSaving("");
-      if (!response.ok) { setMessage(data.message ?? "Test order could not be deleted safely."); return; }
+      if (!response.ok) { setMessage(`${message || "Test order could not be deleted safely."}${diagnosticId ? ` Diagnostic ID: ${diagnosticId}` : ""}`); return; }
       setOrders((current) => current.filter((item) => item.id !== order.id));
       setSelectedId((current) => current === order.id ? orders.find((item) => item.id !== order.id)?.id ?? "" : current);
       setMessage("Test order deleted.");
@@ -144,10 +154,12 @@ export function OrdersPanel() {
       ? { id: order.id, action: "mark_test", isTest: action === "mark-test", reason: action === "mark-test" ? "Marked from admin cleanup" : "" }
       : { id: order.id, action: "archive", archived: action === "archive" };
     const response = await fetch("/api/admin/orders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const data = await response.json();
+    const { data, message, diagnosticId } = await readSafeJson<{ order?: BackofficeOrder; data?: { order?: BackofficeOrder } }>(response);
     setSaving("");
-    if (!response.ok) { setMessage(data.message ?? "Order action failed."); return; }
-    mergeOrder(data.order);
+    if (!response.ok || !data) { setMessage(`${message || "Order action failed."}${diagnosticId ? ` Diagnostic ID: ${diagnosticId}` : ""}`); return; }
+    const updatedOrder = data.order ?? data.data?.order;
+    if (!updatedOrder) { setMessage("Order action returned no order record."); return; }
+    mergeOrder(updatedOrder);
     setMessage("Order updated.");
   }
 

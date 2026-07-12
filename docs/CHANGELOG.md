@@ -63,6 +63,11 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Verbeterd
 
+- Admin Customers en Orders gebruiken nu een gedeelde veilige JSON-lezer in de browser, zodat lege of niet-JSON serverresponses een nette foutmelding met diagnose-id tonen in plaats van een frontend-crash.
+- `GET/PATCH/DELETE /api/admin/customers` en `GET/PATCH/DELETE /api/admin/orders` retourneren altijd een JSON-response met `success`, `data` en `diagnosticId` of een gestructureerde fout.
+- Orders en Customers laden backwards-compatible wanneer productie nog cleanup-/factuurserievelden uit `202607110001_admin_cleanup_and_invoice_series.sql` mist; leesacties vallen terug op basisvelden en mutaties die ontbrekende kolommen nodig hebben stoppen met een duidelijke fout zonder data te wijzigen.
+- `businessMode` valt nu standaard terug op `live`; alleen een expliciete environmentwaarde `BUSINESS_MODE=prelaunch` activeert nog de prelaunchmodus. Bestaande facturen worden niet aangepast.
+- Duitse juridische en WhatsApp-betaalteksten noemen geen contante betaling meer; klantgerichte betaalcommunicatie blijft beperkt tot Bizum en bankoverschrijving.
 - Europ Foods-importidentiteit gebruikt nu leverancier + supplier code + productnaam + verpakking + doosprijs + eenheidsprijs. Daardoor worden verschillende verpakkingsvarianten, zoals `8775 MAGNERS CIDER 24x500ml` en `8780 MAGNERS CIDER 12x568ml`, niet meer samengevoegd of onterecht geblokkeerd.
 - Exacte herhalingen van dezelfde Europ Foods-bronregel worden als `repeated_source_listing` behandeld: er wordt geen tweede Nancy-product aangemaakt, maar de herhaling blijft traceerbaar in conflict-/bronmetadata.
 - Archived producten blokkeren nieuwe Europ Foods-draftproducten niet langer alleen vanwege dezelfde naam/verpakking; ze worden nog steeds nooit automatisch hersteld of gewijzigd.

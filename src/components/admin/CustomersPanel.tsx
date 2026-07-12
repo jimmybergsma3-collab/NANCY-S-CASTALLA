@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Archive, RotateCcw, Search, ShieldAlert, Trash2, UserRound } from "lucide-react";
 import type { BackofficeCustomer } from "@/types/backoffice";
+import { readSafeJson } from "@/lib/safe-json";
 
 type CustomerFilter = "active" | "archived" | "test" | "without-account" | "with-account";
 
@@ -29,7 +30,11 @@ export function CustomersPanel() {
 
   useEffect(() => {
     fetch("/api/admin/customers")
-      .then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.message); return data.customers ?? []; })
+      .then(async (response) => {
+        const { data, message, diagnosticId } = await readSafeJson<{ customers?: BackofficeCustomer[]; data?: { customers?: BackofficeCustomer[] } }>(response);
+        if (!response.ok || !data) throw new Error(`${message || "Customers could not be loaded."}${diagnosticId ? ` Diagnostic ID: ${diagnosticId}` : ""}`);
+        return data.customers ?? data.data?.customers ?? [];
+      })
       .then((rows: BackofficeCustomer[]) => { setCustomers(rows); setSelectedId(rows[0]?.id ?? ""); setMessage(""); })
       .catch((error) => setMessage(error instanceof Error ? error.message : "Customers could not be loaded."));
   }, []);
@@ -61,10 +66,12 @@ export function CustomersPanel() {
       ? { id: customer.id, action: "archive", archived: action === "archive" }
       : { id: customer.id, action: "mark_test", isTest: action === "mark-test", reason: action === "mark-test" ? "Marked from admin cleanup" : "" };
     const response = await fetch("/api/admin/customers", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-    const data = await response.json();
+    const { data, message, diagnosticId } = await readSafeJson<{ customer?: BackofficeCustomer; data?: { customer?: BackofficeCustomer } }>(response);
     setBusy("");
-    if (!response.ok) { setMessage(data.message ?? "Customer action failed."); return; }
-    updateCustomer(data.customer);
+    if (!response.ok || !data) { setMessage(`${message || "Customer action failed."}${diagnosticId ? ` Diagnostic ID: ${diagnosticId}` : ""}`); return; }
+    const updated = data.customer ?? data.data?.customer;
+    if (!updated) { setMessage("Customer action returned no customer record."); return; }
+    updateCustomer(updated);
     setMessage("Customer updated.");
   }
 
@@ -74,9 +81,9 @@ export function CustomersPanel() {
     setBusy(`${customer.id}:delete`);
     setMessage("");
     const response = await fetch("/api/admin/customers", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: customer.id, confirmation }) });
-    const data = await response.json();
+    const { message, diagnosticId } = await readSafeJson<{ ok?: boolean }>(response);
     setBusy("");
-    if (!response.ok) { setMessage(data.message ?? "Customer could not be deleted."); return; }
+    if (!response.ok) { setMessage(`${message || "Customer could not be deleted."}${diagnosticId ? ` Diagnostic ID: ${diagnosticId}` : ""}`); return; }
     setCustomers((current) => current.filter((item) => item.id !== customer.id));
     setSelectedId((current) => current === customer.id ? customers.find((item) => item.id !== customer.id)?.id ?? "" : current);
     setMessage("Customer deleted.");

@@ -341,6 +341,18 @@ Dit document legt belangrijke technische beslissingen en hun motivatie vast. Het
 
 **Waarom:** de go-livefase werkt zonder online betaalprovider en zonder contante betaling. Duidelijke scheiding van WhatsApp en Bizum voorkomt dat klanten naar het verkeerde nummer betalen of appen.
 
+### Admin-API's blijven JSON-safe bij productieschema-drift
+
+**Besluit:** adminroutes voor Customers en Orders retourneren altijd gestructureerde JSON met een `diagnosticId`. Services vallen voor leesacties terug op basisselecties wanneer productie nog cleanup-/factuurserievelden uit `202607110001_admin_cleanup_and_invoice_series.sql` mist. Mutaties die ontbrekende kolommen nodig hebben stoppen met een duidelijke fout en wijzigen geen data.
+
+**Waarom:** een productie-database kan tijdelijk achterlopen op de repositorymigraties. De backoffice moet dan nog steeds klanten en orders kunnen lezen zonder `Unexpected end of JSON input`, terwijl risicovolle gedeeltelijke updates worden voorkomen.
+
+### Live businessmode als veilige standaard
+
+**Besluit:** de applicatie gebruikt `live` als standaard `businessMode`. Alleen een expliciete environmentwaarde `BUSINESS_MODE=prelaunch` zet prelaunchgedrag aan. Bestaande facturen worden nooit automatisch hernummerd.
+
+**Waarom:** Nancy's Castalla beweegt naar livegang. Een ontbrekende Vercel-env mag toekomstige facturen niet per ongeluk in de testserie houden, maar Preview/staging kan nog bewust prelaunch blijven.
+
 ## Beslisregel voor toekomstige wijzigingen
 
 Leg een besluit hier vast wanneer het een architectuurgrens, datamodel, beveiligingsmodel, externe provider, kernworkflow of blijvende ontwikkelconventie verandert. Vermeld altijd datum, besluit, motivatie, gevolgen en eventueel het vervangen besluit.

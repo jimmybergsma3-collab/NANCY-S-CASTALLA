@@ -173,7 +173,7 @@ const copies: Record<Locale, UiCopy> = {
       "Non-food & packaging": "Non-Food & Verpackungen",
     },
     statuses: { available: "Verfügbar", preorder: "Vorbestellung", "coming-soon": "Demnächst" },
-    whatsappMessage: { address: "Lieferadresse, falls erforderlich:", availability: "Ich möchte nach der aktuellen Verfügbarkeit fragen.", collection: "Abholung", greeting: "Hallo", localDelivery: "Lokale Lieferung", name: "Name:", payment: "Zahlungswunsch: Bizum / Überweisung / bar", preOrder: "Ich möchte eine Vorbestellung aufgeben:", preferredOption: "Gewünschte Option", preferredTime: "Gewünschte Abhol- oder Lieferzeit:", total: "Geschätzte Produktsumme" },
+    whatsappMessage: { address: "Lieferadresse, falls erforderlich:", availability: "Ich möchte nach der aktuellen Verfügbarkeit fragen.", collection: "Abholung", greeting: "Hallo", localDelivery: "Lokale Lieferung", name: "Name:", payment: "Zahlungswunsch: Bizum / Überweisung", preOrder: "Ich möchte eine Vorbestellung aufgeben:", preferredOption: "Gewünschte Option", preferredTime: "Gewünschte Abhol- oder Lieferzeit:", total: "Geschätzte Produktsumme" },
   },
   es: {
     header: { closeMenu: "Cerrar menú", home: "Inicio de Nancy's Castalla", openMenu: "Abrir menú", orderSupport: "Ayuda con pedidos", switchLanguage: "Cambiar idioma a" },

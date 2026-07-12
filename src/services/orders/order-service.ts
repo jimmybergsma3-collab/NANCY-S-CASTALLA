@@ -32,6 +32,10 @@ function isRecoverableRpcError(error: unknown) {
   return /create_validated_order|PGRST202|PGRST301|permission denied|schema cache|Could not find the function|function .* does not exist|p_payment_method|orders.*payment_method|column .*payment_method/i.test(message);
 }
 
+function isMissingColumnError(error: unknown) {
+  return error instanceof SupabaseRestError && /42703|column .* does not exist/i.test(error.message);
+}
+
 export type CartValidationCode = "available" | "product_unavailable" | "coming_soon" | "invalid_quantity" | "package_unavailable" | "insufficient_stock";
 
 export type ValidatedCartLine = {
@@ -270,17 +274,37 @@ async function createOrderDirect(
 async function enrichOrdersWithCustomers(orders: BackofficeOrder[]) {
   const customerIds = Array.from(new Set(orders.map((order) => order.customer_id).filter((id): id is string => Boolean(id))));
   if (customerIds.length === 0) return orders;
-  const customers = await supabaseAdminFetch<BackofficeCustomer[]>(
-    `customers?select=id,name,email,phone,address,language,auth_user_id,created_at,archived_at,is_test,test_reason&id=in.(${customerIds.map(encodeURIComponent).join(",")})`,
-  );
-  const customerMap = new Map(customers.map((customer) => [customer.id, customer]));
+  let customers: BackofficeCustomer[];
+  try {
+    customers = await supabaseAdminFetch<BackofficeCustomer[]>(
+      `customers?select=id,name,email,phone,address,language,auth_user_id,created_at,archived_at,is_test,test_reason&id=in.(${customerIds.map(encodeURIComponent).join(",")})`,
+    );
+  } catch (error) {
+    if (!isMissingColumnError(error)) throw error;
+    customers = await supabaseAdminFetch<BackofficeCustomer[]>(
+      `customers?select=id,name,email,phone,address,language,auth_user_id,created_at&id=in.(${customerIds.map(encodeURIComponent).join(",")})`,
+    );
+  }
+  const customerMap = new Map(customers.map((customer) => [customer.id, { ...customer, archived_at: customer.archived_at ?? null, is_test: Boolean(customer.is_test), test_reason: customer.test_reason ?? "" }]));
   return orders.map((order) => ({ ...order, order_items: order.order_items ?? [], customer: order.customer_id ? customerMap.get(order.customer_id) : undefined }));
 }
 
 export async function listOrders() {
   if (!hasSupabaseAdmin()) return [];
-  const orders = await supabaseAdminFetch<BackofficeOrder[]>("orders?select=*,order_items(*),invoices(id,invoice_number,invoice_series,invoice_series_year,invoice_series_number,is_test,archived_at,status,email_sent_at,issued_at,created_at)&order=created_at.desc&limit=500");
-  return enrichOrdersWithCustomers(orders);
+  try {
+    const orders = await supabaseAdminFetch<BackofficeOrder[]>("orders?select=*,order_items(*),invoices(id,invoice_number,invoice_series,invoice_series_year,invoice_series_number,is_test,archived_at,status,email_sent_at,issued_at,created_at)&order=created_at.desc&limit=500");
+    return enrichOrdersWithCustomers(orders);
+  } catch (error) {
+    if (!isMissingColumnError(error)) throw error;
+    const orders = await supabaseAdminFetch<BackofficeOrder[]>("orders?select=*,order_items(*),invoices(id,invoice_number,status,email_sent_at,issued_at,created_at)&order=created_at.desc&limit=500");
+    return enrichOrdersWithCustomers(orders.map((order) => ({
+      ...order,
+      archived_at: order.archived_at ?? "",
+      is_test: Boolean(order.is_test),
+      test_reason: order.test_reason ?? "",
+      invoices: (order.invoices ?? []).map((invoice) => ({ ...invoice, is_test: Boolean(invoice.is_test), archived_at: invoice.archived_at ?? "" })),
+    })));
+  }
 }
 
 export async function updateOrder(id: string, status: OrderStatus, paymentStatus: PaymentStatus) {
@@ -302,19 +326,29 @@ export async function updateOrderNotes(id: string, notes: string) {
 }
 
 export async function markOrderTest(id: string, isTest: boolean, reason: string) {
-  const rows = await supabaseAdminFetch<BackofficeOrder[]>(`orders?id=eq.${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    body: { is_test: isTest, test_reason: isTest ? reason.slice(0, 500) : "", updated_at: new Date().toISOString() },
-  });
-  return rows[0];
+  try {
+    const rows = await supabaseAdminFetch<BackofficeOrder[]>(`orders?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: { is_test: isTest, test_reason: isTest ? reason.slice(0, 500) : "", updated_at: new Date().toISOString() },
+    });
+    return rows[0];
+  } catch (error) {
+    if (isMissingColumnError(error)) throw new Error("Order test marking requires the admin cleanup migration. No order data was changed.");
+    throw error;
+  }
 }
 
 export async function archiveOrder(id: string, archived: boolean) {
-  const rows = await supabaseAdminFetch<BackofficeOrder[]>(`orders?id=eq.${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    body: { archived_at: archived ? new Date().toISOString() : null, updated_at: new Date().toISOString() },
-  });
-  return rows[0];
+  try {
+    const rows = await supabaseAdminFetch<BackofficeOrder[]>(`orders?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: { archived_at: archived ? new Date().toISOString() : null, updated_at: new Date().toISOString() },
+    });
+    return rows[0];
+  } catch (error) {
+    if (isMissingColumnError(error)) throw new Error("Order archiving requires the admin cleanup migration. No order data was changed.");
+    throw error;
+  }
 }
 
 export async function deleteTestOrder(id: string) {
@@ -322,8 +356,14 @@ export async function deleteTestOrder(id: string) {
 }
 
 export async function getOrderById(id: string) {
-  const rows = await supabaseAdminFetch<BackofficeOrder[]>(`orders?select=*,order_items(*),invoices(id,invoice_number,invoice_series,invoice_series_year,invoice_series_number,is_test,archived_at,status,email_sent_at,issued_at,created_at)&id=eq.${encodeURIComponent(id)}&limit=1`);
-  return (await enrichOrdersWithCustomers(rows))[0];
+  try {
+    const rows = await supabaseAdminFetch<BackofficeOrder[]>(`orders?select=*,order_items(*),invoices(id,invoice_number,invoice_series,invoice_series_year,invoice_series_number,is_test,archived_at,status,email_sent_at,issued_at,created_at)&id=eq.${encodeURIComponent(id)}&limit=1`);
+    return (await enrichOrdersWithCustomers(rows))[0];
+  } catch (error) {
+    if (!isMissingColumnError(error)) throw error;
+    const rows = await supabaseAdminFetch<BackofficeOrder[]>(`orders?select=*,order_items(*),invoices(id,invoice_number,status,email_sent_at,issued_at,created_at)&id=eq.${encodeURIComponent(id)}&limit=1`);
+    return (await enrichOrdersWithCustomers(rows.map((order) => ({ ...order, invoices: (order.invoices ?? []).map((invoice) => ({ ...invoice, is_test: Boolean(invoice.is_test), archived_at: invoice.archived_at ?? "" })) }))))[0];
+  }
 }
 
 export async function markOrderEmailSent(id: string, field: "admin_email_sent_at" | "customer_email_sent_at" | "status_email_sent_at") {

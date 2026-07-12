@@ -1,4 +1,4 @@
-import { supabaseAdminFetch } from "@/lib/supabase-rest";
+import { SupabaseRestError, supabaseAdminFetch } from "@/lib/supabase-rest";
 import type { BackofficeCustomer } from "@/types/backoffice";
 
 export type CustomerDeleteCheck = {
@@ -27,29 +27,53 @@ function isDiagnosticCustomer(customer: BackofficeCustomer) {
   );
 }
 
+function isMissingColumnError(error: unknown) {
+  return error instanceof SupabaseRestError && /42703|column .* does not exist/i.test(error.message);
+}
+
+function withCustomerDefaults(customer: BackofficeCustomer): BackofficeCustomer {
+  return {
+    ...customer,
+    archived_at: customer.archived_at ?? null,
+    is_test: Boolean(customer.is_test),
+    test_reason: customer.test_reason ?? "",
+  };
+}
+
+async function fetchCustomers(pathSuffix = "") {
+  const fullSelect = `customers?select=id,name,email,phone,address,language,auth_user_id,created_at,archived_at,is_test,test_reason${pathSuffix}`;
+  try {
+    return await supabaseAdminFetch<BackofficeCustomer[]>(fullSelect);
+  } catch (error) {
+    if (!isMissingColumnError(error)) throw error;
+    return supabaseAdminFetch<BackofficeCustomer[]>(
+      `customers?select=id,name,email,phone,address,language,auth_user_id,created_at${pathSuffix}`,
+    );
+  }
+}
+
 export async function listAdminCustomers() {
   const [customers, orders, invoices] = await Promise.all([
-    supabaseAdminFetch<BackofficeCustomer[]>(
-      "customers?select=id,name,email,phone,address,language,auth_user_id,created_at,archived_at,is_test,test_reason&order=created_at.desc&limit=5000",
-    ),
+    fetchCustomers("&order=created_at.desc&limit=5000"),
     supabaseAdminFetch<Array<{ customer_id?: string | null }>>("orders?select=customer_id&limit=5000"),
     supabaseAdminFetch<Array<{ customer_id?: string | null }>>("invoices?select=customer_id&limit=5000"),
   ]);
   const orderCounts = countByCustomerId(orders);
   const invoiceCounts = countByCustomerId(invoices);
-  return customers.map((customer) => ({
-    ...customer,
+  return customers.map((customer) => {
+    const normalized = withCustomerDefaults(customer);
+    return {
+    ...normalized,
     is_test: isDiagnosticCustomer(customer),
     order_count: orderCounts.get(customer.id) ?? 0,
     invoice_count: invoiceCounts.get(customer.id) ?? 0,
-  }));
+  };
+  });
 }
 
 export async function getCustomerDeleteCheck(id: string): Promise<CustomerDeleteCheck> {
-  const customers = await supabaseAdminFetch<BackofficeCustomer[]>(
-    `customers?select=id,name,email,phone,address,language,auth_user_id,created_at,archived_at,is_test,test_reason&id=eq.${encodeURIComponent(id)}&limit=1`,
-  );
-  const customer = customers[0];
+  const customers = await fetchCustomers(`&id=eq.${encodeURIComponent(id)}&limit=1`);
+  const customer = customers[0] ? withCustomerDefaults(customers[0]) : undefined;
   if (!customer) return { canDelete: false, reason: "Customer not found." };
   const [orders, invoices] = await Promise.all([
     supabaseAdminFetch<Array<{ id: string }>>(`orders?select=id&customer_id=eq.${encodeURIComponent(id)}&limit=1`),
@@ -65,19 +89,29 @@ export async function getCustomerDeleteCheck(id: string): Promise<CustomerDelete
 }
 
 export async function archiveCustomer(id: string, archived: boolean) {
-  const rows = await supabaseAdminFetch<BackofficeCustomer[]>(`customers?id=eq.${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    body: { archived_at: archived ? new Date().toISOString() : null },
-  });
-  return rows[0];
+  try {
+    const rows = await supabaseAdminFetch<BackofficeCustomer[]>(`customers?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: { archived_at: archived ? new Date().toISOString() : null },
+    });
+    return withCustomerDefaults(rows[0]);
+  } catch (error) {
+    if (isMissingColumnError(error)) throw new Error("Customer archiving requires the admin cleanup migration. No customer data was changed.");
+    throw error;
+  }
 }
 
 export async function markCustomerTest(id: string, isTest: boolean, reason: string) {
-  const rows = await supabaseAdminFetch<BackofficeCustomer[]>(`customers?id=eq.${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    body: { is_test: isTest, test_reason: isTest ? reason.slice(0, 500) : "" },
-  });
-  return rows[0];
+  try {
+    const rows = await supabaseAdminFetch<BackofficeCustomer[]>(`customers?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: { is_test: isTest, test_reason: isTest ? reason.slice(0, 500) : "" },
+    });
+    return withCustomerDefaults(rows[0]);
+  } catch (error) {
+    if (isMissingColumnError(error)) throw new Error("Customer test marking requires the admin cleanup migration. No customer data was changed.");
+    throw error;
+  }
 }
 
 export async function deleteCustomerIfSafe(id: string, confirmation: string) {

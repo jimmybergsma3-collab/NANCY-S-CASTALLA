@@ -4,7 +4,7 @@ export const businessEmails = {
   account: "account@nancys.es",
 } as const;
 
-const configuredBusinessMode = process.env.BUSINESS_MODE === "live" ? "live" : "prelaunch";
+const configuredBusinessMode = process.env.BUSINESS_MODE === "prelaunch" ? "prelaunch" : "live";
 const configuredInvoiceSeries = process.env.INVOICE_SERIES?.trim() || "NC";
 const configuredInvoiceTestSeries = process.env.INVOICE_TEST_SERIES?.trim() || "TEST";
 

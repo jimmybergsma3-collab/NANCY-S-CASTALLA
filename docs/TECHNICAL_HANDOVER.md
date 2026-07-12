@@ -580,6 +580,8 @@ Ordernotities zijn in het detailpaneel bewerkbaar en worden via een afzonderlijk
 
 De orderservice haalt orderregels genest op en verrijkt de resultaten in een gebundelde tweede query met de profielen uit `customers`. Omdat oudere orders nog geen afzonderlijk adressnapshot hebben, gebruikt de weergave eerst het klantprofiel en kan zij daarnaast een gelokaliseerde `Address`/`Adres`/`Adresse`/`DirecciÃ³n`/`Adress`-regel uit de ordernotitie herkennen. Het orderpaneel is compact gemaakt met zoeken op ordernummer/klant/e-mail, filters voor status, betaalstatus, datum en real/test/archived, bulkselectie voor testorders, archiveren, testmarkering en een streng geblokkeerde deleteactie voor testorders.
 
+De admin-API voor orders retourneert altijd JSON met `success`, `data` en `diagnosticId` of een JSON-foutvorm. Wanneer productie nog cleanup-/factuurserievelden uit `202607110001_admin_cleanup_and_invoice_series.sql` mist, valt de orderservice terug op een basisselectie zonder die kolommen en vult zij veilige standaardwaarden in. Leesacties blijven dan bruikbaar; test-/archiefacties die die kolommen nodig hebben geven een duidelijke beheerfout terug en wijzigen geen data.
+
 Belangrijke statussen zijn:
 
 - `new`
@@ -606,6 +608,8 @@ Een handmatige correctie bestaat uit een productupdate en een movementregistrati
 ## 6.5 Klanten
 
 Het klantenscherm toont klantgegevens uit `customers` met detailpaneel, zoekfunctie en filters voor actief, gearchiveerd, test/diagnostic, zonder account en met account. Beheer kan klanten archiveren/herstellen en als test markeren. Definitief verwijderen is server-side geblokkeerd wanneer `auth_user_id`, orders of facturen bestaan; in die gevallen is archiveren de veilige actie. Alleen records zonder account, orders en facturen kunnen na exacte naam/e-mailbevestiging worden verwijderd. Volwaardige profielbewerking, segmentatie, GDPR-export, adresbeheer en klantnotities ontbreken nog.
+
+De admin-API voor klanten gebruikt dezelfde veilige JSON-vorm als Orders. Als productie nog geen `archived_at`, `is_test` of `test_reason` op `customers` heeft, laadt de lijst met basisvelden en standaardwaarden. Archiveren of testmarkeren meldt dan expliciet dat de cleanup-migratie nodig is en voert geen gedeeltelijke update uit.
 
 ## 6.6 Leveranciers en inkoop
 
@@ -640,7 +644,7 @@ Beschikbare rapportage is beperkt tot eenvoudige tellingen en omzetaggregaties, 
 
 ## 6.9 Instellingen en integraties
 
-Het instellingenscherm toont centrale bedrijfs-/e-mailgegevens plus de actuele `businessMode`, `invoiceSeries` en `invoiceTestSeries`. De feitelijke bron is deels `config/business.ts` en deels environmentvariabelen; er is nog geen veilige admineditor. Omschakelen van `prelaunch` naar `live` verandert alleen toekomstige facturen.
+Het instellingenscherm toont centrale bedrijfs-/e-mailgegevens plus de actuele `businessMode`, `invoiceSeries` en `invoiceTestSeries`. De feitelijke bron is deels `config/business.ts` en deels environmentvariabelen; er is nog geen veilige admineditor. De applicatie valt standaard terug op `live`; alleen wanneer `BUSINESS_MODE=prelaunch` expliciet is gezet draait zij in prelaunchmodus. Omschakelen tussen `prelaunch` en `live` verandert alleen toekomstige facturen en hernummert bestaande facturen niet.
 
 Het integratieregister noemt toekomstige providers voor POS/kassa, SumUp, kaartterminals, facturatie, boekhouding, leveranciers, verzending, WhatsApp Business, e-mail, mobiele app en eigen API. Dit is architectuurvoorbereiding, geen actieve koppeling.
 
@@ -1115,11 +1119,8 @@ Aanbevolen model:
 
 - Bizum.
 - Bankoverschrijving.
-- Contant bij afhalen.
-- Contant bij bezorgen.
-- Kaartbetaling later.
 
-`bankAccount` is nog een placeholder. Het Bizum-nummer in de config moet worden gecontroleerd: het kan nog naar het eerdere telefoonnummer verwijzen terwijl WhatsApp inmiddels is gewijzigd.
+Contant, kaart, Stripe, iDEAL en PayPal zijn niet zichtbaar of selecteerbaar in de klantflow. Bizum gebruikt `+34 644 21 22 57`; WhatsApp-klantenservice gebruikt apart `+34 644 05 97 69`. Bankoverschrijving gebruikt rekeninghouder `NANCYS CASTALLA`, IBAN `ES89 2100 1460 6002 0010 3972` en BIC `CAIXESBBXXX`. Deze waarden staan centraal in `config/business.ts` en mogen niet door elkaar worden gebruikt.
 
 ## 14.2 Payment providerarchitectuur
 
