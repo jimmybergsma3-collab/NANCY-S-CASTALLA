@@ -1,7 +1,7 @@
-# Technisch overdrachtsrapport: Nancy's Castalla
+﻿# Technisch overdrachtsrapport: Nancy's Castalla
 
 **Documentstatus:** actuele technische situatie  
-**Peildatum:** 8 juli 2026
+**Peildatum:** 12 juli 2026
 **Productiedomein:** `https://www.nancys.es`  
 **Repository:** `jimmybergsma3-collab/NANCY-S-CASTALLA`  
 **Doelgroep:** ontwikkelaars, beheerders en technische partners die het project zonder voorafgaande broncodekennis moeten kunnen overnemen.
@@ -39,7 +39,7 @@
 
 ## 1.1 Doel
 
-Nancy's Castalla is een meertalige webwinkel en operationele backoffice voor een kleinschalige internationale food-market in Castalla, Spanje. De eerste commerciële fase werkt met kleine voorraad, pre-orders, afhalen in Castalla, lokale bezorging wanneer mogelijk en klantcontact via WhatsApp.
+Nancy's Castalla is een meertalige webwinkel en operationele backoffice voor een kleinschalige internationale food-market in Castalla, Spanje. De eerste commerciÃ«le fase werkt met kleine voorraad, pre-orders, afhalen in Castalla, lokale bezorging wanneer mogelijk en klantcontact via WhatsApp.
 
 Het assortiment richt zich op Nederlandse, Britse, Ierse, Duitse, Scandinavische, Aziatische/Indonesische, Zuid-Amerikaanse en overige internationale producten. Producten kunnen per stuk, per verpakking of via meerdere klantverpakkingen worden verkocht. Brood wordt hoofdzakelijk op voorbestelling aangeboden.
 
@@ -49,7 +49,7 @@ De applicatie is online als productie-implementatie op Vercel, maar functioneel 
 
 | Onderdeel | Status | Toelichting |
 |---|---|---|
-| Publieke catalogus | Werkend | Categorieën, zoeken, productkaarten en detailpagina's |
+| Publieke catalogus | Werkend | CategorieÃ«n, zoeken, productkaarten en detailpagina's |
 | Productbeheer | Werkend | Toevoegen, wijzigen, verwijderen, foto's uploaden en zichtbaarheid beheren |
 | Klantregistratie en login | Werkend | Supabase Auth, e-mailbevestiging en wachtwoordherstel |
 | Klantprofiel | Werkend | Naam, e-mail, telefoon, adres en taal; account toont uitklapbare orderdetails en eigen factuurdownload |
@@ -99,6 +99,8 @@ De applicatie is online als productie-implementatie op Vercel, maar functioneel 
 | Vercel | Externe dienst | Hosting, serverless runtime, domein en environmentvariabelen |
 | Resend | Externe dienst | Transactionele ordermail en SMTP voor Supabase Auth |
 | Lucide React | 0.468.0 | Interface-iconen |
+| pdf-parse | ^2.4.5 | Server-side tekstextractie voor Europ Foods PDF-importpreview |
+| xlsx | ^0.18.5 | Server-side XLS/XLSX parsing voor Tindale-importpreview |
 | ESLint | 9.17.0 | Statische codecontrole |
 | Stripe | Niet geinstalleerd | Alleen providerarchitectuur voorbereid; geen checkout of sleutelgebruik |
 
@@ -115,8 +117,8 @@ Webpack is gekozen nadat Turbopack tijdens ontwikkeling instabiele chunk- en wor
 
 ## 2.2 Motivatie
 
-- **Next.js App Router:** combineert publieke pagina's, dynamische metadata, servercomponenten en server-side API's in één deploybaar project.
-- **TypeScript:** verlaagt het risico bij een rijk productmodel met prijzen, btw, verpakkingen, categorieën en voorraad.
+- **Next.js App Router:** combineert publieke pagina's, dynamische metadata, servercomponenten en server-side API's in Ã©Ã©n deploybaar project.
+- **TypeScript:** verlaagt het risico bij een rijk productmodel met prijzen, btw, verpakkingen, categorieÃ«n en voorraad.
 - **Tailwind:** ondersteunt snelle, consistente responsive styling zonder een zware componentenbibliotheek.
 - **Supabase:** levert PostgreSQL, Auth, Storage en RPC's met weinig operationeel beheer. Het project kan daardoor klein starten en later uitbreiden.
 - **Vercel:** sluit direct aan op Next.js en GitHub-deployments.
@@ -162,7 +164,9 @@ De publieke frontend en serverbackend staan in dezelfde Next.js-repository, maar
 |-- config/
 |   `-- business.ts
 |-- public/
-|   `-- nancys-castalla-logo.jpg
+|   |-- nancys-castalla-logo.jpg
+|   |-- favicon.ico, favicon-16x16.png, favicon-32x32.png
+|   `-- apple-touch-icon.png, icon-192.png, icon-512.png, site.webmanifest
 |-- src/
 |   |-- app/
 |   |   |-- [locale]/
@@ -189,6 +193,7 @@ De publieke frontend en serverbackend staan in dezelfde Next.js-repository, maar
 |   |-- services/
 |   |   |-- integrations/
 |   |   |-- inventory/
+|   |   |-- imports/
 |   |   `-- orders/
 |   `-- types/
 |-- supabase/
@@ -228,7 +233,7 @@ De publieke frontend en serverbackend staan in dezelfde Next.js-repository, maar
 ## 3.4 Belangrijke ontwerpgrenzen
 
 - Publieke productdata wordt server-side uit Supabase geladen.
-- Klantauth werkt rechtstreeks met Supabase Auth in de browser; beveiligde account-API's verifiëren vervolgens het bearer-token server-side.
+- Klantauth werkt rechtstreeks met Supabase Auth in de browser; beveiligde account-API's verifiÃ«ren vervolgens het bearer-token server-side.
 - Adminauth is bewust apart en gebruikt geen Supabase-gebruiker, maar een server-side gedeeld credential uit Vercel-environmentvariabelen.
 - De browser is nooit de bron van waarheid voor orderprijzen, btw of voorraad.
 - Productinhoud kan uit de database komen en bij een fout terugvallen op lokale data. Dit verhoogt beschikbaarheid, maar kan databaseproblemen maskeren.
@@ -279,7 +284,7 @@ Relaties:
 
 RLS: ingeschakeld, geen expliciete tabelpolicies in de repository.
 
-Vanaf migratie `202607110002_product_catalogue_archiving.sql` heeft elk product een lifecycle-status: `active`, `archived`, `disabled` of `draft`. Alleen `active` plus `is_visible=true` mag publiek worden getoond of besteld. `archived` producten blijven inclusief productcode, afbeeldingen, categorieën, voorraadvelden en relaties in de database staan. `import_batch` bewaart de herkomstbatch, zoals `IMPORT_2026_PRELAUNCH` voor de oude prijslijstcatalogus en later bijvoorbeeld `IMPORT_2026_LIVE_JULY`.
+Vanaf migratie `202607110002_product_catalogue_archiving.sql` heeft elk product een lifecycle-status: `active`, `archived`, `disabled` of `draft`. Alleen `active` plus `is_visible=true` mag publiek worden getoond of besteld. `archived` producten blijven inclusief productcode, afbeeldingen, categorieÃ«n, voorraadvelden en relaties in de database staan. `import_batch` bewaart de herkomstbatch, zoals `IMPORT_2026_PRELAUNCH` voor de oude prijslijstcatalogus en later bijvoorbeeld `IMPORT_2026_LIVE_JULY`.
 
 Importveiligheid: `products.id` is de unieke Nancy-productcode en de publieke URL-sleutel. `sku` is eveneens uniek en wordt standaard gelijk aan `id` gezet. `supplier_code` en `ean` zijn bewust niet uniek; ze signaleren mogelijke dubbelen, maar mogen nooit stilzwijgend een archived record overschrijven. Vervolg-migratie `202607110003_product_catalogue_conflict_protection.sql` bevat daarom een trigger die gewone updates op `product_status='archived'` blokkeert. Alleen `restore_archived_product` zet tijdelijk de interne allow-flag. Mogelijke importconflicten kunnen worden vastgelegd in `product_import_conflicts` met een handmatige keuze: nieuw importeren, overslaan, of bewust herstellen/koppelen.
 
@@ -376,7 +381,7 @@ RLS: ingeschakeld.
 
 **Doel:** onveranderlijke verkoopfactuurkop gekoppeld aan een order en klant.
 
-Kolommen omvatten UUID, oplopend uniek factuurnummer, order/ordernummer, klant, klant-/adres-/taalsnapshot, optioneel klant-NIF/CIF/NIE, bedrijfsnaam en fiscaal adres, status, betaalmethode, totalen excl. btw/btw/incl. btw, uitgiftedatum, e-mailtijdstip en timestamps. Een partiele unieke index op `order_id` staat maximaal één normale factuur per order toe.
+Kolommen omvatten UUID, oplopend uniek factuurnummer, order/ordernummer, klant, klant-/adres-/taalsnapshot, optioneel klant-NIF/CIF/NIE, bedrijfsnaam en fiscaal adres, status, betaalmethode, totalen excl. btw/btw/incl. btw, uitgiftedatum, e-mailtijdstip en timestamps. Een partiele unieke index op `order_id` staat maximaal Ã©Ã©n normale factuur per order toe.
 
 ## 4.10 `invoice_items`
 
@@ -398,7 +403,29 @@ Geheimen horen niet in het JSON-veld maar in environmentvariabelen of een secret
 
 RLS: ingeschakeld.
 
-## 4.12 Functies en triggers
+## 4.12 `product_import_runs`
+
+**Doel:** importgeschiedenis en rapportage per leveranciersbestand.
+
+Deze tabel wordt toegevoegd door de nieuwe, nog handmatig uit te voeren migratie `202607120001_supplier_import_workflow.sql`. Velden omvatten leverancier, bronbestand, importbatch, bestandstype, status, dry-run vlag, start/eindtijden, aantallen voor bronregels/geparseerde producten/aangemaakte producten/updated offers/skips/conflicten/waarschuwingen/fouten en `report_json`.
+
+Statuswaarden zijn `pending`, `analysing`, `preview_ready`, `importing`, `completed`, `failed` en `rolled_back`. RLS staat aan. Dry-runs in de huidige API schrijven bewust geen import run; import runs worden relevant zodra confirmed import later expliciet wordt geactiveerd.
+
+## 4.13 `supplier_product_offers`
+
+**Doel:** meerdere leveranciersaanbiedingen per Nancy-product bewaren zonder het publieke productrecord te overschrijven.
+
+Belangrijke velden: `product_id`, `supplier_id`, `supplier_code`, `supplier_product_name`, `ean`, `brand`, `category_source`, `storage_type`, `package_description`, `units_per_case`, `unit_weight_or_volume`, `case_price`, `unit_price`, `price_ex_vat`, `currency`, bronbestand, bronregel, source batch, prijsdatum, actief-vlag, reviewvelden en JSON metadata.
+
+Er is geen globale unieke constraint op `supplier_code`. Een partiele unieke index is beperkt tot leverancier, bronbatch en verpakking wanneer `active=true`, zodat dezelfde leveranciercode in oude en nieuwe contexten als mogelijk conflict kan worden behandeld zonder archived producten te overschrijven. RLS staat aan.
+
+## 4.14 `product_import_conflicts`
+
+**Doel:** mogelijke importmatches en conflicten vastleggen voor handmatige beslissing.
+
+Migratie `202607110003_product_catalogue_conflict_protection.sql` introduceert deze tabel; migratie `202607120001_supplier_import_workflow.sql` breidt haar uit met koppeling naar import run, bronnaam, bronverpakking, matching product, reden, beschikbare keuzes en resolver. Mogelijke resoluties zijn onder meer `import_as_new`, `skip`, `link_supplier_offer` en `restore_archived_product`. Archived producten mogen nooit automatisch worden hersteld of gewijzigd.
+
+## 4.15 Functies en triggers
 
 | Functie/trigger | Doel |
 |---|---|
@@ -408,12 +435,15 @@ RLS: ingeschakeld.
 | `next_invoice_series_number` | Geeft atomair het volgende nummer binnen een factuurserie en jaar |
 | `safe_delete_test_order` | Verwijdert uitsluitend expliciete testorders zonder voorraadmutatie en zonder officiele livefactuur |
 | `archive_current_catalogue` | Archiveert de actieve prelaunch-catalogus onder een importbatch zonder producten te verwijderen |
-| `restore_archived_product` | Herstelt één archived product naar active en zichtbaar |
+| `restore_archived_product` | Herstelt Ã©Ã©n archived product naar active en zichtbaar |
+| `reserve_nancy_product_codes` | Reserveert transactioneel nieuwe `NC-xxxxx`-codes op basis van de hoogste bestaande productcode |
+| `publish_approved_import_batch` | Publiceert alleen draftproducten uit een batch wanneer alle reviewvelden schoon zijn en basisdata compleet is |
+| `rollback_import_batch_to_draft` | Zet batchproducten veilig terug naar draft/archive en deactiveert supplier offers zonder harde delete |
 | `create_order_with_inventory` | Oudere functie; niet meer de primaire applicatieroute en kandidaat voor deprecatie |
 
 `transition_order_status` gebruikt row locks op order en producten. Daardoor kunnen twee bevestigingen niet tegelijk dezelfde voorraad overschrijven.
 
-## 4.13 Toekomstige database-uitbreidingen
+## 4.16 Toekomstige database-uitbreidingen
 
 - `addresses` als aparte tabel met meerdere klantadressen.
 - `order_status_history` en `payment_status_history`.
@@ -451,7 +481,7 @@ sequenceDiagram
     K->>S: signInWithPassword
     S-->>K: access token en refresh token
     K->>N: Bearer access token
-    N->>S: token verifiëren via /auth/v1/user
+    N->>S: token verifiÃ«ren via /auth/v1/user
     N->>D: profiel/orders via service-role
 ```
 
@@ -465,7 +495,7 @@ Registratie gebruikt momenteel de Supabase JS-client rechtstreeks in de browser.
 - De profieltaal is voor ingelogde klanten leidend. Een client-side synchronisatie leest `customers.language` en vervangt een afwijkende niet-admin-localeroute door de voorkeurslocale.
 - Taalkeuze wordt tegelijk opgeslagen in `customers.language`, cookie `nancys_locale` en localStorage onder dezelfde sleutel.
 - Adminroutes zijn uitgesloten van profielgestuurde localeredirects.
-- Beveiligde API-routes vertrouwen niet alleen op de UI, maar verifiëren het bearer-token bij Supabase.
+- Beveiligde API-routes vertrouwen niet alleen op de UI, maar verifiÃ«ren het bearer-token bij Supabase.
 - Uitloggen roept `supabase.auth.signOut()` aan.
 - Wachtwoordherstel gebruikt Supabase `resetPasswordForEmail`; een herstelsessie kan op de accountpagina een nieuw wachtwoord instellen.
 
@@ -489,7 +519,7 @@ Adminpagina's gebruiken `requireAdmin`; admin-API's gebruiken `isAdminSession`. 
 ## 5.5 Autorisatiemodel
 
 - Klant: toegang tot eigen profiel en eigen orderhistorie via geverifieerd Auth-token.
-- Admin: volledige backoffice via één gedeeld credential.
+- Admin: volledige backoffice via Ã©Ã©n gedeeld credential.
 - Publiek: alleen zichtbare producten en openbare content.
 - Service-role: uitsluitend server-side voor databasehandelingen.
 
@@ -507,7 +537,7 @@ Er zijn nog geen adminrollen, individuele medewerkers, MFA, permissions, sessieo
 - Prijshelper: `/{locale}/admin/pricing`
 - Modules: `/{locale}/admin/{module}`
 
-De `AdminShell` biedt modules voor Dashboard, Producten, Categorieën, Klanten, Orders, Voorraad, Leveranciers, Inkoop, Facturatie, BTW, Rapportages, Instellingen en API-integraties.
+De `AdminShell` biedt modules voor Dashboard, Producten, CategorieÃ«n, Klanten, Orders, Voorraad, Leveranciers, Supplier imports, Inkoop, Facturatie, BTW, Rapportages, Instellingen en API-integraties.
 
 ## 6.2 Productbeheer
 
@@ -517,7 +547,7 @@ Aanwezige functies:
 - Product toevoegen, selecteren, wijzigen en veilig archiveren. De admin delete-actie voert geen fysieke database-delete meer uit.
 - Zoeken, filteren, statusoverzicht en paginering voor grote catalogi.
 - Standaardfilter op actieve producten, plus filters voor `active`, `archived`, `disabled`, `draft` en `all`.
-- Meerdere categorieën per product.
+- Meerdere categorieÃ«n per product.
 - SKU/leverancierscode, EAN, leverancier en herkomst.
 - Kostprijs excl. btw, btw-percentage, eenheidskosten en verkoopprijs incl. btw.
 - Leveranciersverpakking en klantverpakkingen op meerdere regels.
@@ -527,11 +557,11 @@ Aanwezige functies:
 - Importbatchtracking, met bulkarchivering van de oude catalogus onder `IMPORT_2026_PRELAUNCH`.
 - Actief/verborgen, featured en nieuw.
 - Afbeeldings-URL of bestand uploaden naar Supabase Storage.
-- Ingrediënten, gebruiksaanwijzing, bewaring en extra informatie.
+- IngrediÃ«nten, gebruiksaanwijzing, bewaring en extra informatie.
 
 De prijshelper kan btw, winst en marge tonen. De oude automatische 50%-regel is geen verplichte verkoopprijs meer; de beheerder bepaalt de verkoopprijs.
 
-De bulkactie `Archive current catalogue` zet de huidige catalogus op `archived`, maakt producten onzichtbaar, schakelt featured uit en bewaart de batchnaam. Dit verwijdert geen producten, afbeeldingen, categorieën, productcodes, relaties of voorraadhistorie. Individuele archived producten kunnen via `restore_archived_product` worden hersteld.
+De bulkactie `Archive current catalogue` zet de huidige catalogus op `archived`, maakt producten onzichtbaar, schakelt featured uit en bewaart de batchnaam. Dit verwijdert geen producten, afbeeldingen, categorieÃ«n, productcodes, relaties of voorraadhistorie. Individuele archived producten kunnen via `restore_archived_product` worden hersteld.
 
 ## 6.3 Orders
 
@@ -539,7 +569,7 @@ Het orderpaneel toont een aanklikbare, responsieve orderlijst. De detailweergave
 
 Ordernotities zijn in het detailpaneel bewerkbaar en worden via een afzonderlijke adminactie opgeslagen met een limiet van 5000 tekens. Dit voorkomt dat een notitiewijziging onbedoeld een status- of voorraadtransitie start.
 
-De orderservice haalt orderregels genest op en verrijkt de resultaten in een gebundelde tweede query met de profielen uit `customers`. Omdat oudere orders nog geen afzonderlijk adressnapshot hebben, gebruikt de weergave eerst het klantprofiel en kan zij daarnaast een gelokaliseerde `Address`/`Adres`/`Adresse`/`Dirección`/`Adress`-regel uit de ordernotitie herkennen. Het orderpaneel is compact gemaakt met zoeken op ordernummer/klant/e-mail, filters voor status, betaalstatus, datum en real/test/archived, bulkselectie voor testorders, archiveren, testmarkering en een streng geblokkeerde deleteactie voor testorders.
+De orderservice haalt orderregels genest op en verrijkt de resultaten in een gebundelde tweede query met de profielen uit `customers`. Omdat oudere orders nog geen afzonderlijk adressnapshot hebben, gebruikt de weergave eerst het klantprofiel en kan zij daarnaast een gelokaliseerde `Address`/`Adres`/`Adresse`/`DirecciÃ³n`/`Adress`-regel uit de ordernotitie herkennen. Het orderpaneel is compact gemaakt met zoeken op ordernummer/klant/e-mail, filters voor status, betaalstatus, datum en real/test/archived, bulkselectie voor testorders, archiveren, testmarkering en een streng geblokkeerde deleteactie voor testorders.
 
 Belangrijke statussen zijn:
 
@@ -562,7 +592,7 @@ Beperking: niet alle overgangspaden zijn formeel afgedwongen. Bijvoorbeeld direc
 - Handmatige correcties met voorraadbeweging.
 - Ordergerelateerde bewegingen.
 
-Een handmatige correctie bestaat uit een productupdate en een movementregistratie. Als deze niet in één database-RPC/transactie gebeurt, bestaat een klein risico op afwijking bij een gedeeltelijke fout.
+Een handmatige correctie bestaat uit een productupdate en een movementregistratie. Als deze niet in Ã©Ã©n database-RPC/transactie gebeurt, bestaat een klein risico op afwijking bij een gedeeltelijke fout.
 
 ## 6.5 Klanten
 
@@ -572,13 +602,28 @@ Het klantenscherm toont klantgegevens uit `customers` met detailpaneel, zoekfunc
 
 Leveranciers worden uit de database getoond. Inkooporders hebben een voorbereid datamodel en overzicht, maar nog geen volledige create/edit/receive-flow. Ontvangst kan nog niet per regel automatisch voorraad verhogen omdat inkoopregels ontbreken.
 
+## 6.6a Supplier imports
+
+De module `/{locale}/admin/imports` is bedoeld voor de nieuwe livecatalogus en werkt veilig-first:
+
+- Leverancier kiezen: Europ Foods of Tindale.
+- Bestand kiezen: Europ Foods PDF, Tindale XLS/XLSX.
+- Batchnaam invullen, bijvoorbeeld `IMPORT_2026_LIVE_EUROPFOODS_JULY`.
+- Dry-run preview draaien. Deze preview schrijft niets naar `products`, `supplier_product_offers`, voorraad of orders.
+- Previewrapport toont bronregels, herkende producten, secties, dubbele leveranciercodes, ontbrekende EAN, onduidelijke verpakking, ontbrekende prijs, mogelijke active/archived matches, in-file duplicates, reviewflags en parseproblemen.
+- Confirm import-knop bestaat voor de workflow, maar de API weigert confirmed import bewust totdat deze fase expliciet wordt vrijgegeven.
+- Publish approved batch roept `publish_approved_import_batch` aan en publiceert alleen review-schone draftproducten.
+- Rollback roept `rollback_import_batch_to_draft` aan en zet batchproducten naar draft/archive plus supplier offers inactive, zonder harde delete.
+
+Deze module stuurt geen service-role sleutel naar de browser en verandert geen orders, facturen, klanten, auth of voorraadmutaties.
+
 ## 6.7 Facturatie en btw
 
 De orderdetailweergave maakt een factuur wanneer de order `confirmed`, `ready_for_collection` of `delivered` is, of wanneer de betaling `paid` is. De database-RPC maakt kop en regels transactioneel en retourneert bij herhaling dezelfde bestaande factuur. De facturatielijst toont nummer, klant, order, datum, totaal, status en e-mailstatus, met download- en verzendacties.
 
 PDF's worden server-side met `pdf-lib` opgebouwd uit de factuursnapshot en centrale bedrijfsconfiguratie. Ze zijn Spaans/Engels, gebruiken Spaanse euro-notatie, tonen verkoper- en klantgegevens, productregels, betaalmethode en een IVA-uitsplitsing per aanwezig tarief. De PDF-presentatie heeft een prominenter logo, duidelijk factuurnummer, meer witruimte en een sterker totalenblok. Resend verstuurt de PDF als bijlage. Klantdownloads controleren eerst Supabase Auth en daarna dat `invoice.customer_id` bij de ingelogde gebruiker hoort. Admin waarschuwt wanneer `businessConfig.fiscalName` of `fiscalId` ontbreekt.
 
-Nog niet aanwezig: creditnota's, formele btw-aangifte, boekhoudexport en betalingsmatching. De factuur toont `NANCY'S CASTALLA` prominent als handelsnaam en `JIMMY BERGSMA` kleiner als titular/autónomo, met NIF/NIE `Y8875740P` en Calle Murcia 111. Dezelfde titular staat in Terms. Laat deze keuze en de fiscale inhoud vóór officieel gebruik controleren door een gestor/boekhouder.
+Nog niet aanwezig: creditnota's, formele btw-aangifte, boekhoudexport en betalingsmatching. De factuur toont `NANCY'S CASTALLA` prominent als handelsnaam en `JIMMY BERGSMA` kleiner als titular/autÃ³nomo, met NIF/NIE `Y8875740P` en Calle Murcia 111. Dezelfde titular staat in Terms. Laat deze keuze en de fiscale inhoud vÃ³Ã³r officieel gebruik controleren door een gestor/boekhouder.
 
 ## 6.8 Rapportages
 
@@ -634,7 +679,7 @@ Routes zonder locale worden door `src/proxy.ts` gestuurd naar de beste taal. De 
 
 De homepage toont:
 
-- Duidelijk “Starting soon / pre-order phase”.
+- Duidelijk â€œStarting soon / pre-order phaseâ€.
 - Nancy's Castalla als merk en het aangeleverde logo.
 - Kleine voorraad, pre-orders, WhatsApp, afhalen en lokale bezorging.
 - CTA's naar producten en brood.
@@ -645,13 +690,13 @@ Homepage-productfoto's zijn begrensd en gebruiken een 4:3-presentatie om de eerd
 
 ## 7.4 Catalogus en productdetail
 
-Het hoofdoverzicht toont categoriekaarten in plaats van duizenden producten op één pagina. Een categoriepagina bevat zoeken op naam/productcode, filters en productkaarten. Alleen `is_visible` producten verschijnen publiek.
+Het hoofdoverzicht toont categoriekaarten in plaats van duizenden producten op Ã©Ã©n pagina. Een categoriepagina bevat zoeken op naam/productcode, filters en productkaarten. Alleen `is_visible` producten verschijnen publiek.
 
 Een productdetailpagina gebruikt de productcode als stabiele URL-identificatie. De pagina kan tonen:
 
-- Foto en categorieën.
+- Foto en categorieÃ«n.
 - Naam, beschrijving, prijs, btw-verwerkte klantverpakking en voorraadstatus.
-- Ingrediënten, bereidings-/gebruiksaanwijzing, bewaring en extra informatie als beschikbaar.
+- IngrediÃ«nten, bereidings-/gebruiksaanwijzing, bewaring en extra informatie als beschikbaar.
 - Sociale deelknop.
 - Bestelaantallen en verpakkingskeuze.
 
@@ -659,9 +704,9 @@ Ontbrekende leveranciersinformatie wordt niet geforceerd: secties kunnen leeg bl
 
 ## 7.5 Header en footer
 
-De header bevat hoofdmenu, taalkeuze, register/login of accountstatus en een WhatsApp “Order support”-CTA. Het mobiele menu is compact en moet bij toekomstige wijzigingen regressievrij blijven.
+De header bevat hoofdmenu, taalkeuze, register/login of accountstatus en een WhatsApp â€œOrder supportâ€-CTA. Het mobiele menu is compact en moet bij toekomstige wijzigingen regressievrij blijven.
 
-De footer toont bedrijfsgegevens, bezoekadres, WhatsApp, betaalmethoden, privacy/voorwaarden en copyright met logo: `© NANCY'S CASTALLA 2026`.
+De footer toont bedrijfsgegevens, bezoekadres, WhatsApp, betaalmethoden, privacy/voorwaarden en copyright met logo: `Â© NANCY'S CASTALLA 2026`.
 
 ## 7.6 Contact en checkout
 
@@ -678,7 +723,7 @@ Er is geen klassiek contactformulier. Contact loopt via `info@nancys.es`, WhatsA
 - Productcatalogus uit Supabase, lokale fallbackdata en categoriepagina's.
 - Productdetails op productcode.
 - Productfoto-upload naar Supabase Storage.
-- Meerdere categorieën en klantverpakkingen.
+- Meerdere categorieÃ«n en klantverpakkingen.
 - Productzichtbaarheid, featured en nieuw.
 - Klantregistratie, e-mailbevestiging, login, logout en wachtwoordreset.
 - Klantprofiel en vooraf invullen van bestelgegevens.
@@ -802,6 +847,10 @@ Ondersteunt productcreatie/upsert, wijziging, veilige archivering en restore. In
 **Actie:** upload naar de publieke Supabase-bucket, standaard `product-images`.  
 **Output:** publieke URL.
 
+### `/api/admin/imports`
+
+`GET` leest recente import runs uit `product_import_runs` wanneer de nieuwe migratie beschikbaar is. `POST` accepteert multipart dry-runs voor Europ Foods PDF en Tindale XLS/XLSX, valideert bestandstype en grootte, parseert server-side en bouwt een preview tegen de bestaande productcatalogus. De dry-run schrijft niets naar `products`, `supplier_product_offers` of voorraad. `POST action=confirm-import` retourneert bewust een guard-error totdat confirmed import expliciet wordt vrijgegeven. `PATCH` ondersteunt `publish-batch` en `rollback-batch` met exacte bevestigingstekst en roept de bijbehorende database-RPC's aan. Alle acties vereisen adminsessie; service-role credentials blijven server-side.
+
 ## 9.6 Adminorders
 
 ### `/api/admin/orders`
@@ -899,7 +948,7 @@ Beperkingen:
 
 - Geen queue, cron-retry of dead-letter overzicht.
 - API-response kan wachten op Resend.
-- Eén generiek statusmailtijdstip is onvoldoende om iedere status afzonderlijk te auditen.
+- EÃ©n generiek statusmailtijdstip is onvoldoende om iedere status afzonderlijk te auditen.
 - Geen expliciete `Reply-To` in de huidige ordermailflow.
 - Templates en teksten zijn grotendeels Engels.
 - Resend domeinverificatie, SPF, DKIM en DMARC zijn externe DNS-verantwoordelijkheden.
@@ -1000,7 +1049,7 @@ Deze velden zijn bewust gescheiden. `preorder` is commercieel altijd bestelbaar 
 - Twee `new` orders kunnen dezelfde laatste voorraad claimen. De eerste bevestiging slaagt; de tweede krijgt bij bevestiging onvoldoende voorraad.
 - Pre-orders worden bewust niet aan fysieke voorraad gealloceerd; toekomstige inkoopkoppeling en vraagaggregatie ontbreken nog.
 - Geen lotnummer, houdbaarheidsdatum, locatie of beschadigde voorraad.
-- Handmatige correcties verdienen één atomische RPC.
+- Handmatige correcties verdienen Ã©Ã©n atomische RPC.
 
 ## 12.4 Aanbevolen uitbreiding
 
@@ -1091,6 +1140,7 @@ De integratielaag kan later providers implementeren voor facturatie, POS, SumUp 
 - Dynamische productmetadata met productnaam, omschrijving en afbeelding.
 - `robots.ts` dat admin- en API-routes uitsluit.
 - `sitemap.ts` voor statische routes en locales.
+- Faviconset uit het officiële logo: `favicon.ico`, 16/32px PNG, Apple touch icon, Android 192/512px icons, `site.webmanifest` en donkergroene `themeColor`.
 
 ## 15.2 Ontbreekt of is onvolledig
 
@@ -1140,7 +1190,7 @@ Eerdere problemen met extreem brede mobiele productkaarten en foto's zijn gerich
 ## 16.3 Tablet en desktop
 
 - Max-width containers voorkomen uitgerekte content.
-- Productcategorieën schalen van een naar twee en vier kolommen.
+- ProductcategorieÃ«n schalen van een naar twee en vier kolommen.
 - Backofficetabellen mogen intern horizontaal scrollen in plaats van de hele pagina te verbreden.
 - De sticky header en taalkeuze blijven bereikbaar.
 
@@ -1188,7 +1238,7 @@ De homepage heeft een geoptimaliseerde query die maximaal acht zichtbare product
 1. Query productdetail direct op `id`.
 2. Filter categorie, zichtbaarheid en zoekterm in SQL.
 3. Voeg cursor- of serverpaginering toe.
-4. Indexeer `is_visible`, categorieën en zoekvelden.
+4. Indexeer `is_visible`, categorieÃ«n en zoekvelden.
 5. Gebruik Next Image met toegestane Supabase-host en thumbnails.
 6. Introduceer cachetags met invalidatie na adminwijzigingen.
 7. Meet Web Vitals en serverfunctieduur voordat verder wordt geoptimaliseerd.
@@ -1202,7 +1252,7 @@ De homepage heeft een geoptimaliseerde query die maximaal acht zichtbare product
 - Supabase service-role staat uitsluitend server-side.
 - `.env.local` en productiesecrets horen niet in Git.
 - RLS staat op bedrijfsdatatabellen aan en heeft default-deny zonder policies.
-- Klant-API's verifiëren Supabase access tokens server-side.
+- Klant-API's verifiÃ«ren Supabase access tokens server-side.
 - Admincookie is HttpOnly, SameSite en production-secure.
 - Adminwachtwoord wordt timing-safe vergeleken.
 - Orderprijzen, btw, producten, verpakkingen en voorraad worden server-side opnieuw gevalideerd.
@@ -1313,7 +1363,7 @@ Klantnaam, e-mail, telefoon, adres en orderhistorie zijn persoonsgegevens. Bij v
 
 # 20. Roadmap
 
-De operationele samenvatting met **Afgeronde mijlpalen** en **TODO vóór livegang** staat in `../PROJECT_STATUS.md`. Onderstaande roadmap bevat alleen vervolgwerk en mag geen reeds opgeleverde orderdetail- of normale factuurfunctionaliteit opnieuw als open werk noemen.
+De operationele samenvatting met **Afgeronde mijlpalen** en **TODO vÃ³Ã³r livegang** staat in `../PROJECT_STATUS.md`. Onderstaande roadmap bevat alleen vervolgwerk en mag geen reeds opgeleverde orderdetail- of normale factuurfunctionaliteit opnieuw als open werk noemen.
 
 ## 20.1 Korte termijn: productiebetrouwbaarheid
 
@@ -1366,7 +1416,7 @@ Mijn aanbevolen volgorde is:
 ## 21.2 Aanbevolen refactors
 
 - Introduceer schema-validatie voor alle request/responsemodellen.
-- Maak één `ProductRepository`, `OrderRepository` en `CustomerRepository` in plaats van verspreide REST-aanroepen.
+- Maak Ã©Ã©n `ProductRepository`, `OrderRepository` en `CustomerRepository` in plaats van verspreide REST-aanroepen.
 - Verwijder of depreceer legacy order- en registratieroutes na migratie.
 - Normaliseer productverpakkingen naar een eigen tabel met hoeveelheid, label, barcode en prijs.
 - Maak `OrderStateMachine` met toegestane overgangen en side effects.
@@ -1376,7 +1426,7 @@ Mijn aanbevolen volgorde is:
 
 ## 21.3 Extra aandacht
 
-- **Food data:** ingrediënten, allergenen, bewaring en THT verdienen juridische en inhoudelijke controle. Ontbrekende leveranciersdata niet zelf verzinnen.
+- **Food data:** ingrediÃ«nten, allergenen, bewaring en THT verdienen juridische en inhoudelijke controle. Ontbrekende leveranciersdata niet zelf verzinnen.
 - **Prijsmodel:** leg vast of inkoopprijs per doos of verkoopeenheid is en bewaar conversie expliciet.
 - **Privacy:** documenteer retentie, accountverwijdering, export en toestemming.
 - **Spaanse fiscaliteit:** laat factuur- en IVA-vereisten voor productie juridisch/boekhoudkundig controleren.
@@ -1389,11 +1439,11 @@ Mijn aanbevolen volgorde is:
 
 Nancy's Castalla is een Next.js 16/React 19 webwinkel op Vercel met Supabase als PostgreSQL-, Auth- en Storagebackend. De website is gebouwd voor een internationale expatdoelgroep rond Castalla en ondersteunt Engels, Nederlands, Duits, Spaans en een Zweedse/Scandinavische locale. Het ontwerp gebruikt donkergroen, creme, koffie- en messingkleuren uit het logo. De publieke ervaring is mobielgericht, met categorieoverzichten, zoeken, productdetail op stabiele Nancy-productcode, verpakkingskeuzes, sociale deelmogelijkheid en duidelijke WhatsApp-CTA's.
 
-Producten worden primair uit Supabase geladen. De catalogus bevat rijke commerciële en operationele velden: identificatie, meerdere categorieën, herkomst, afbeelding, zichtbaarheid, voorraadstatus, kostprijs, btw, verkoopprijs, leverancier, verpakkingen, voorraad, ingrediënten en bewaar-/bereidingsinformatie. Een lokale TypeScriptdataset fungeert als fallback, maar kan bij storingen verouderde data tonen. Grote leverancierslijsten zijn via SQL-imports ingebracht en standaard verborgen, waarna de beheerder producten handmatig kan verrijken en publiceren.
+Producten worden primair uit Supabase geladen. De catalogus bevat rijke commerciÃ«le en operationele velden: identificatie, meerdere categorieÃ«n, herkomst, afbeelding, zichtbaarheid, voorraadstatus, kostprijs, btw, verkoopprijs, leverancier, verpakkingen, voorraad, ingrediÃ«nten en bewaar-/bereidingsinformatie. Een lokale TypeScriptdataset fungeert als fallback, maar kan bij storingen verouderde data tonen. Grote leverancierslijsten zijn via SQL-imports ingebracht en standaard verborgen, waarna de beheerder producten handmatig kan verrijken en publiceren.
 
-De backoffice is bereikbaar via een verborgen adminlogin. Adminauth gebruikt een gedeelde e-mail en wachtwoord uit Vercel-environmentvariabelen en een beveiligde HttpOnly-cookie. Productbeheer is het meest volwassen onderdeel: toevoegen, wijzigen, verwijderen, foto's uploaden, meerdere categorieën, prijzen, btw, klantverpakkingen en online zichtbaarheid. Orders, voorraad en normale facturatie zijn operationeel bruikbaar. Klanten, leveranciers en eenvoudige rapportages zijn zichtbaar. Inkoop, creditnota's, boekhoudexport, uitgebreide btw-rapportage en externe integraties zijn vooral voorbereid en nog niet volledig uitvoerbaar.
+De backoffice is bereikbaar via een verborgen adminlogin. Adminauth gebruikt een gedeelde e-mail en wachtwoord uit Vercel-environmentvariabelen en een beveiligde HttpOnly-cookie. Productbeheer is het meest volwassen onderdeel: toevoegen, wijzigen, verwijderen, foto's uploaden, meerdere categorieÃ«n, prijzen, btw, klantverpakkingen en online zichtbaarheid. Orders, voorraad en normale facturatie zijn operationeel bruikbaar. Klanten, leveranciers en eenvoudige rapportages zijn zichtbaar. Inkoop, creditnota's, boekhoudexport, uitgebreide btw-rapportage en externe integraties zijn vooral voorbereid en nog niet volledig uitvoerbaar.
 
-Klantaccounts gebruiken Supabase Auth. Registratie verstuurt via Supabase en Resend SMTP een branded bevestigingsmail van `account@nancys.es`. Na bevestiging kan de klant inloggen, het profiel met naam, telefoon, adres en taal beheren, het wachtwoord herstellen en orderhistorie bekijken. Een database-trigger koppelt de Auth-user aan de `customers`-tabel. De Supabase-sessie leeft in browserstorage; account-API's verifiëren ieder bearer-token opnieuw en gebruiken daarna server-side service-role toegang.
+Klantaccounts gebruiken Supabase Auth. Registratie verstuurt via Supabase en Resend SMTP een branded bevestigingsmail van `account@nancys.es`. Na bevestiging kan de klant inloggen, het profiel met naam, telefoon, adres en taal beheren, het wachtwoord herstellen en orderhistorie bekijken. Een database-trigger koppelt de Auth-user aan de `customers`-tabel. De Supabase-sessie leeft in browserstorage; account-API's verifiÃ«ren ieder bearer-token opnieuw en gebruiken daarna server-side service-role toegang.
 
 Het registratieformulier heeft aparte wachtwoord- en bevestigingsvelden, vergelijkt deze voor signup, ondersteunt gegenereerde browserwachtwoorden via `new-password` en biedt per veld toon/verbergbediening. Login gebruikt `current-password`.
 
@@ -1410,3 +1460,4 @@ Afhalen is in Castalla; bezorging wordt gecommuniceerd met een minimum van EUR 2
 De securitybasis is verstandig voor een MVP: service-role alleen op de server, RLS default-deny, geverifieerde klanttokens, HttpOnly admincookie, server-authoritatieve prijzen, idempotente orders en transactionele voorraad. Voor duurzame productie ontbreken nog rate limiting, botbescherming, individuele admins/MFA, auditlogs, security headers, geautomatiseerde tests en monitoring. Persoonsgegevens en foodinformatie vereisen bovendien formeel retentie-, verwijderings- en compliancebeleid.
 
 De eerstvolgende ontwikkelfase moet daarom niet beginnen met extra commerciele features, maar met productiebetrouwbaarheid: end-to-end tests, externe configuratiecontrole, logging, rate limiting, correcte bezorgberekening, voorraadreservering en snellere databasequeries. Daarna kunnen inkoop, facturatie, POS, SumUp, WhatsApp Business, boekhouding en een eigen API veilig op de bestaande servicearchitectuur worden aangesloten.
+

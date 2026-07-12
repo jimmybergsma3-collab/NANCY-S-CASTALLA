@@ -11,3 +11,6 @@ tsconfig.tsbuildinfo
 .env*
 !.env.example
 *.log
+import/incoming/
+imports/incoming/
+supplier-files/

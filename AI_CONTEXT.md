@@ -1,7 +1,7 @@
 # AI Context: Nancy's Castalla
 
 **Doel:** snelle, zelfstandige projectcontext voor ChatGPT, Codex en andere AI-assistenten.  
-**Laatst bijgewerkt:** 11 juli 2026
+**Laatst bijgewerkt:** 12 juli 2026
 **Productie:** `https://www.nancys.es`
 
 Lees dit bestand voordat je een wijziging plant of uitvoert. Gebruik voor diepere details de documenten in `/docs`:
@@ -103,6 +103,7 @@ Alle publieke hoofdroutes hebben een locale-prefix.
 | `/{locale}/admin/login` | Verborgen adminlogin |
 | `/{locale}/admin` | Backoffice |
 | `/{locale}/admin/products` | Productbeheer |
+| `/{locale}/admin/imports` | Leveranciersimport dry-run, batchpublicatie en rollback |
 | `/{locale}/admin/invoicing` | Facturenlijst, PDF-download en e-mail |
 
 Belangrijke API's:
@@ -112,6 +113,7 @@ Belangrijke API's:
 - `GET/PATCH /api/account/profile`
 - `GET /api/account/orders`
 - `/api/admin/products`
+- `/api/admin/imports`
 - `/api/admin/orders`
 - `/api/admin/invoices`
 - `/api/admin/invoices/{id}/pdf`
@@ -135,6 +137,9 @@ Belangrijke API's:
 | `invoices` | Verkoopfactuurkop, klant-/adres-snapshot, nummering en verzendstatus |
 | `invoice_items` | Onveranderlijke product-, prijs- en btw-snapshot per factuurregel |
 | `integration_settings` | Niet-geheime providerinstellingen |
+| `product_import_runs` | Importgeschiedenis en preview-/importrapporten per leveranciersbestand |
+| `supplier_product_offers` | Meerdere leveranciersaanbiedingen per Nancy-product, inclusief bronprijs en verpakking |
+| `product_import_conflicts` | Mogelijke importmatches/conflicten die handmatig opgelost moeten worden |
 
 Row Level Security staat aan. De applicatie gebruikt server-side service-role toegang voor bedrijfsdata. Plaats de service-role key nooit in browsercode of documentatie.
 
@@ -143,6 +148,8 @@ Productcodes volgen `NC-00001`, `NC-00002`, enzovoort. Productdetail-URL's gebru
 Producten hebben naast voorraadstatus (`available`, `preorder`, `coming-soon`) ook een admin lifecycle-status: `active`, `archived`, `disabled` of `draft`. Alleen `active` plus `is_visible=true` mag publiek verschijnen. Archived producten blijven volledig in de database met productcode, afbeeldingen, categorieën, voorraadhistorie en relaties, maar verdwijnen uit de publieke webshop en standaard uit productbeheer. De livegang-opschoning gebruikt migratie `202607110002_product_catalogue_archiving.sql` en batch `IMPORT_2026_PRELAUNCH`. Nieuwe imports mogen archived producten niet automatisch reactiveren of wijzigen; gebruik een nieuwe productcode of herstel bewust één product via `restore_archived_product`.
 
 `products.id`/de Nancy-productcode is de enige publieke unieke productsleutel en blijft de URL-basis. `supplier_code` en `ean` zijn bewust niet uniek, omdat dezelfde leveranciercode of barcode in oude en nieuwe batches kan terugkomen. Gebruik deze velden alleen om mogelijke duplicaten te signaleren. Vervolg-migratie `202607110003_product_catalogue_conflict_protection.sql` beschermt archived producten op database-niveau tegen gewone updates, ook als een oud `on conflict (id) do update` importbestand per ongeluk opnieuw wordt uitgevoerd. Toekomstige imports moeten nieuwe records met een nieuwe Nancy-productcode aanmaken of expliciet overslaan/herstellen na handmatige keuze.
+
+Nieuwe leveranciersimports worden voorbereid via migratie `202607120001_supplier_import_workflow.sql`. Deze voegt import runs, supplier offers, reviewvelden en veilige batch-RPC's toe. De adminroute `/{locale}/admin/imports` ondersteunt nu dry-run previews voor Europ Foods PDF en Tindale XLS/XLSX, maar confirmed import is bewust geblokkeerd totdat een preview handmatig is goedgekeurd. Dry-runs mogen geen producten, supplier offers of voorraadmutaties schrijven. Nieuwe producten uit toekomstige confirmed imports moeten standaard `product_status='draft'`, `is_visible=false`, `featured=false`, `stock_quantity=0` en een nieuwe unieke `NC-xxxxx`-code krijgen. Bestanden van leveranciers mogen niet in Git worden gezet.
 
 ## 6. Orderflow
 
@@ -227,6 +234,7 @@ Productbeheer ondersteunt onder meer:
 - Online/verborgen, featured en nieuw.
 - Lifecycle-status `active`, `archived`, `disabled` en `draft`, met bulkactie `Archive current catalogue`.
 - Importbatchtracking zoals `IMPORT_2026_PRELAUNCH` en toekomstige batches zoals `IMPORT_2026_LIVE_JULY`.
+- Leveranciersimportpreview via de module Supplier imports: leverancier selecteren, bestand uploaden, dry-runrapport bekijken, importgeschiedenis controleren, approved batch publiceren en batch veilig terugzetten naar draft/archive.
 - Afbeeldingsupload naar Supabase Storage.
 - Ingrediënten, instructies, bewaring en extra informatie.
 
@@ -330,15 +338,16 @@ Verwijder geen bestaande functionaliteit, migratie of data-import omdat deze ver
 Actuele prioriteit:
 
 1. Productieconfiguratie en kernflows end-to-end controleren.
-2. Klantprofiel en orderhistorie verder afmaken.
-3. Rate limiting, botbescherming, individuele admins en auditlogging.
-4. Strikte orderstatussen en voorraadreservering.
-5. Server-side bezorging en adressnapshots.
-6. Directe/gepagineerde productqueries en afbeeldingsoptimalisatie.
-7. Inkoopontvangst en volledig voorraadbeheer.
-8. Creditnota's, boekhoudexport en online kaartbetaling boven op de interne factuurflow.
-9. Volledige vertalingen, SEO en compliance.
-10. POS, WhatsApp Business en overige integraties.
+2. Migratie `202607120001_supplier_import_workflow.sql` handmatig beoordelen/uitvoeren en daarna een echte preview in admin draaien.
+3. Nieuwe livecatalogus per batch controleren, reviewflags oplossen en pas daarna publiceren.
+4. Rate limiting, botbescherming, individuele admins en auditlogging.
+5. Strikte orderstatussen en voorraadreservering.
+6. Server-side bezorging en adressnapshots.
+7. Directe/gepagineerde productqueries en afbeeldingsoptimalisatie.
+8. Inkoopontvangst en volledig voorraadbeheer.
+9. Creditnota's, boekhoudexport en online kaartbetaling boven op de interne factuurflow.
+10. Volledige vertalingen, SEO en compliance.
+11. POS, WhatsApp Business en overige integraties.
 
 Gebruik `docs/ROADMAP.md` als gezaghebbende levende roadmap. Verplaats gereed werk naar `docs/CHANGELOG.md`.
 

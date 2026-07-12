@@ -16,6 +16,7 @@ import {
   ReceiptText,
   Settings,
   ShoppingCart,
+  UploadCloud,
   Users,
 } from "lucide-react";
 import type { Locale } from "@/i18n/config";
@@ -28,6 +29,7 @@ const modules = [
   { slug: "orders", label: "Orders", icon: ShoppingCart },
   { slug: "inventory", label: "Inventory", icon: Boxes },
   { slug: "suppliers", label: "Suppliers", icon: Building2 },
+  { slug: "imports", label: "Supplier imports", icon: UploadCloud },
   { slug: "purchasing", label: "Purchasing", icon: ClipboardList },
   { slug: "invoicing", label: "Invoicing", icon: FileText },
   { slug: "vat", label: "VAT", icon: ReceiptText },

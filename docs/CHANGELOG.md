@@ -19,6 +19,10 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Toegevoegd
 
+- Migratie `202607120001_supplier_import_workflow.sql` voor veilige leveranciersimports met `product_import_runs`, `supplier_product_offers`, reviewvelden, transactionele Nancy-productcode-reservering, batchpublicatie en veilige rollback zonder harde delete.
+- Server-side importlaag voor Europ Foods PDF en Tindale XLS/XLSX met dry-run preview, parsewaarschuwingen, duplicate/conflict-signalering en reviewflags. Confirmed import is bewust nog geblokkeerd.
+- Adminmodule `Supplier imports` met leverancierselectie, bestandupload, batchnaam, dry-runrapport, conflictvoorbeelden, importgeschiedenis, guarded confirm import, publish approved batch en rollback naar draft/archive.
+- Complete faviconset op basis van het bestaande Nancy's Castalla-logo: `favicon.ico`, 16/32px iconen, Apple touch icon, Android iconen, webmanifest en donkergroene theme-color.
 - Migratie `202607110002_product_catalogue_archiving.sql` met product lifecycle-status, importbatchtracking, archive-current-catalogue RPC en restore-archived-product RPC.
 - Vervolg-migratie `202607110003_product_catalogue_conflict_protection.sql` met lookup-indexen voor leveranciercode/EAN/naam, een `product_import_conflicts`-logtabel en databasebescherming tegen gewone updates op archived producten.
 - Admin bulkactie `Archive current catalogue`, waarmee de huidige catalogus onder `IMPORT_2026_PRELAUNCH` wordt gearchiveerd en publiek onzichtbaar gemaakt zonder databaseverwijdering.

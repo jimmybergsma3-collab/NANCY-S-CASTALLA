@@ -303,6 +303,32 @@ Dit document legt belangrijke technische beslissingen en hun motivatie vast. Het
 
 **Waarom:** echte klanten moeten professionele, herkenbare mails ontvangen in Gmail, Outlook, Apple Mail en mobiele mailapps. Transactionele mails mogen niet lijken op losse tekstberichten en moeten duidelijk maken dat betaling pas na beschikbaarheidscontrole volgt. Een unsubscribe-header is zinvol voor marketing, maar niet standaard passend voor noodzakelijke order-, status- en factuurcommunicatie.
 
+## 2026-07-12
+
+### Leveranciersimports starten altijd als dry-run en draft
+
+**Besluit:** actuele leverancierslijsten van Europ Foods en Tindale worden niet rechtstreeks in de livecatalogus geschreven. De nieuwe workflow gebruikt eerst een server-side dry-run met previewrapport. Confirmed import is in de API bewust geblokkeerd totdat de preview handmatig is beoordeeld en de nieuwe migratie bewust in Supabase is uitgevoerd. Nieuwe producten uit een toekomstige import worden standaard `draft`, `is_visible=false`, `featured=false`, zonder voorraadmutatie en met een nieuwe unieke Nancy-productcode.
+
+**Waarom:** de oude prelaunchcatalogus moet bewaard blijven, maar mag de nieuwe livecatalogus niet vervuilen. Prijzen, verpakkingen, btw, categorieën en afbeeldingen vragen handmatige controle voordat producten zichtbaar mogen worden voor klanten.
+
+### Supplier offers apart van Nancy-producten
+
+**Besluit:** leveranciersdata wordt voorbereid in `supplier_product_offers` naast `products`. Een offer bewaart leverancier, leveranciercode, EAN, originele naam, broncategorie, verpakking, prijsvelden, bronbestand, importbatch en reviewstatus.
+
+**Waarom:** hetzelfde Nancy-product kan later meerdere leveranciers of prijzen hebben. Leveranciercodes zijn alleen binnen leverancier en broncontext betekenisvol en mogen archived producten niet overschrijven. Producthistorie en publieke productcodes blijven daardoor stabiel.
+
+### Importconflicten zijn handmatige beslissingen
+
+**Besluit:** EAN, leveranciercode en genormaliseerde naam/verpakking worden gebruikt als duplicaatsignalen, niet als automatische merge-sleutel. Matches met active of archived producten worden als conflict of waarschuwing getoond. Mogelijke keuzes zijn nieuw importeren, overslaan, supplier offer koppelen of archived product expliciet herstellen.
+
+**Waarom:** automatische samenvoeging kan oude producten reactiveren, verkeerde verpakkingen mengen of historische data wijzigen. Een menselijke keuze is verplicht bij onzekerheid.
+
+### Faviconset uit officieel logo
+
+**Besluit:** de favicon-, Apple- en Android-iconen worden gegenereerd uit het bestaande Nancy's Castalla-logo en geregistreerd via Next.js metadata en `site.webmanifest`.
+
+**Waarom:** de webshop moet professioneel ogen in browser-tabs, iOS en Android zonder extra brandingassets of redesign.
+
 ## Beslisregel voor toekomstige wijzigingen
 
 Leg een besluit hier vast wanneer het een architectuurgrens, datamodel, beveiligingsmodel, externe provider, kernworkflow of blijvende ontwikkelconventie verandert. Vermeld altijd datum, besluit, motivatie, gevolgen en eventueel het vervangen besluit.
