@@ -5,7 +5,36 @@ import { archiveCurrentCatalogue, createProduct, deleteProduct, getProducts, res
 import { hasSupabaseAdmin } from "@/lib/env";
 import type { Product } from "@/types/product";
 import { getEffectivePackageOptions } from "@/lib/product-packaging";
-import { evaluateSalesUnitSafety, isSupplierImportProduct } from "@/lib/sales-unit-safety";
+import { evaluateSalesUnitSafety, isCaseLikePackage, isSupplierImportProduct } from "@/lib/sales-unit-safety";
+
+function diagnosticId() {
+  return `admin_product_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+async function getNextProductId() {
+  const products = await getProducts({ includeHidden: true, includeArchived: true });
+  const highest = products.reduce((max, product) => {
+    const match = /^NC-(\d{5})$/i.exec(product.id);
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 0);
+  return `NC-${String(Math.min(highest + 1, 99999)).padStart(5, "0")}`;
+}
+
+function validateOnlineProduct(product: Product) {
+  if (!product.isVisible || (product.lifecycleStatus ?? "active") !== "active") return "";
+  if (!product.name.trim()) return "Product name is required before publishing.";
+  if (!product.unit.trim()) return "Package / sales unit is required before publishing.";
+  if (Number(product.salePriceInclVat) <= 0) return "Sale price incl IVA must be greater than 0 before publishing.";
+  if (![4, 10, 21].includes(Number(product.vatRate))) return "IVA must be 4%, 10% or 21% before publishing.";
+  if (!product.category) return "Category is required before publishing.";
+  if (!product.imageUrl?.trim()) return "A product photo is required before publishing.";
+  if (!product.salesUnitType) return "Public sales unit type must be confirmed before publishing.";
+  if (!product.salesUnitConfirmed || !product.priceBasisConfirmed) return "Sales unit and price basis must be confirmed before publishing.";
+  if (isCaseLikePackage(product.unit) && product.salesUnitType === "per_unit") {
+    return "Package looks like a case. Choose case or custom pack as public sales unit.";
+  }
+  return "";
+}
 
 export async function GET() {
   if (!(await isAdminSession())) {
@@ -17,24 +46,31 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const id = diagnosticId();
   if (!(await isAdminSession())) {
-    return NextResponse.json({ ok: false, message: "Admin login required." }, { status: 401 });
+    return NextResponse.json({ ok: false, message: "Admin login required.", diagnosticId: id }, { status: 401 });
   }
 
   if (!hasSupabaseAdmin()) {
     return NextResponse.json(
-      { ok: false, message: "Supabase is required before products can be saved from admin." },
+      { ok: false, message: "Supabase is required before products can be saved from admin.", diagnosticId: id },
       { status: 503 },
     );
   }
 
-  const body = (await request.json()) as Product;
+  let body: Product;
+  try {
+    body = (await request.json()) as Product;
+  } catch {
+    return NextResponse.json({ ok: false, message: "Invalid product JSON.", diagnosticId: id }, { status: 400 });
+  }
   const pricing = calculatePricing(body);
   const categories = Array.from(new Set(body.categories?.length ? body.categories : [body.category]));
+  const productId = body.id?.trim() || await getNextProductId();
   const product: Product = {
     ...body,
-    id: body.id.trim(),
-    sku: (body.sku || body.id).trim(),
+    id: productId,
+    sku: (body.sku || productId).trim(),
     ean: body.ean?.trim() ?? "",
     category: categories.includes(body.category) ? body.category : categories[0],
     categories,
@@ -75,19 +111,23 @@ export async function POST(request: Request) {
     images: (body.images ?? []).map((image) => image.trim()).filter(Boolean),
   };
 
-  if (!product.id || !product.name || !product.supplierCode) {
-    return NextResponse.json({ ok: false, message: "Product code, name and supplier code are required." }, { status: 400 });
+  if (!product.id || !product.name) {
+    return NextResponse.json({ ok: false, message: "Product code and name are required.", diagnosticId: id }, { status: 400 });
+  }
+  const onlineValidation = validateOnlineProduct(product);
+  if (onlineValidation) {
+    return NextResponse.json({ ok: false, message: onlineValidation, diagnosticId: id }, { status: 400 });
   }
   const safety = evaluateSalesUnitSafety(product);
   if (isSupplierImportProduct(product) && product.isVisible && !safety.ok) {
-    return NextResponse.json({ ok: false, message: `Imported product cannot be published yet: ${safety.reason}` }, { status: 409 });
+    return NextResponse.json({ ok: false, message: `Imported product cannot be published yet: ${safety.reason}`, diagnosticId: id }, { status: 409 });
   }
 
   try {
     const saved = await createProduct(product);
-    return NextResponse.json({ ok: true, product: saved });
+    return NextResponse.json({ ok: true, product: saved, diagnosticId: id });
   } catch (error) {
-    return NextResponse.json({ ok: false, message: error instanceof Error ? error.message : "Product could not be saved." }, { status: 409 });
+    return NextResponse.json({ ok: false, message: error instanceof Error ? error.message : "Product could not be saved.", diagnosticId: id }, { status: 409 });
   }
 }
 

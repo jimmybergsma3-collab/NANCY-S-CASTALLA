@@ -251,6 +251,7 @@ Productbeheer ondersteunt onder meer:
 - Leveranciersimport via de module Supplier imports: leverancier selecteren, bestand uploaden, dry-runrapport bekijken, confirmed import naar draft uitvoeren, importgeschiedenis controleren, approved batch publiceren en batch veilig terugzetten naar draft/archive.
 - Afbeeldingsupload naar Supabase Storage.
 - IngrediÃ«nten, instructies, bewaring en extra informatie.
+- Mobiele snelle productinvoer op `/{locale}/admin/products`: compacte drawer binnen dezelfde backoffice, gebruikt dezelfde products-tabel en `/api/admin/products`, maakt geen supplier offer of voorraadmutatie, en kan opslaan als `draft` of direct `active/is_visible=true` wanneer verplichte velden, foto, sales unit en prijsbasis compleet zijn.
 
 ## 9. Betaalmethodes
 
