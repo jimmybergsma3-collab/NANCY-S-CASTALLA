@@ -19,7 +19,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Toegevoegd
 
-- Mobiele snelle productinvoer op `/{locale}/admin/products` met compacte drawer, camera/fotobibliotheek-upload, verplichte naam/verpakking/prijs/IVA/categorie/foto en acties `Opslaan als concept` of `Opslaan en direct online`.
+- Mobiele snelle productinvoer op `/{locale}/admin/products` gebruikt nu standaard `Uit leverancierslijst`: admin zoekt server-side bestaande geïmporteerde draft/disabled/active producten met supplier offer, werkt het bestaande product af en behoudt Nancy-code, supplier, supplier code, supplier offer, importbatch en bronprijsmetadata. `Nieuw handmatig product` blijft als secundaire optie bestaan.
 - Migratie `202607120002_sales_unit_price_basis_safety.sql` voor expliciete scheiding tussen leveranciersdoos, bron-eenheidsprijs en publieke verkoopeenheid bij geïmporteerde producten.
 - Productvelden voor sales-unitcontrole: `sales_unit_type`, `sales_unit_quantity`, `sales_unit_confirmed`, `price_basis_confirmed`, `supplier_case_price`, `supplier_unit_price`, `supplier_case_quantity` en `source_package_text`.
 - Gedeelde sales-unit veiligheidscontrole die geïmporteerde producten blokkeert wanneer verpakking, verkoopprijs en prijsbasis nog niet expliciet door admin zijn gecontroleerd.
@@ -67,7 +67,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Verbeterd
 
-- `POST /api/admin/products` staat handmatige producten zonder supplier code toe, genereert indien nodig server-side een nieuwe `NC-xxxxx`-code, retourneert altijd JSON met `diagnosticId` bij fouten en blokkeert publicatie wanneer verplichte verkoopvelden ontbreken.
+- `POST /api/admin/products` staat handmatige producten zonder supplier code toe, genereert indien nodig server-side een nieuwe `NC-xxxxx`-code, retourneert altijd JSON met `diagnosticId` bij fouten, blokkeert publicatie wanneer verplichte verkoopvelden ontbreken en beschermt bestaande imported products tegen wijziging van supplier/importmetadata.
 - Admin productbeheer toont nu leverancierdoos/verpakking, doosinkoopprijs, bron-eenheidsprijs, publieke verkoopeenheid, sales-unit quantity en reviewvinkjes voor sales unit en prijsbasis.
 - Nieuwe leveranciersimports blijven standaard in review: verkoopprijs wordt niet automatisch als veilige publieke prijs beschouwd en importproducten kunnen niet live zolang sales unit en prijsbasis niet bevestigd zijn.
 - Publieke productqueries en cart/order-validatie blokkeren geïmporteerde producten wanneer de publieke verpakking nog een leveranciersdoos lijkt terwijl de prijs op een eenheidsprijs lijkt.

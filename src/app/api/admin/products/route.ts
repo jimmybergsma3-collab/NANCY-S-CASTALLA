@@ -6,6 +6,8 @@ import { hasSupabaseAdmin } from "@/lib/env";
 import type { Product } from "@/types/product";
 import { getEffectivePackageOptions } from "@/lib/product-packaging";
 import { evaluateSalesUnitSafety, isCaseLikePackage, isSupplierImportProduct } from "@/lib/sales-unit-safety";
+import { supabaseAdminFetch } from "@/lib/supabase-rest";
+import { logAdminAction } from "@/services/admin/audit-service";
 
 function diagnosticId() {
   return `admin_product_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -36,12 +38,70 @@ function validateOnlineProduct(product: Product) {
   return "";
 }
 
-export async function GET() {
+function productMatchesQuickQuery(product: Product, query: string) {
+  if (!query) return true;
+  return [
+    product.id,
+    product.name,
+    product.supplierCode,
+    product.ean,
+    product.sourcePackageText,
+    product.packSize,
+    product.unit,
+    product.importBatch,
+  ].join(" ").toLowerCase().includes(query);
+}
+
+async function hasActiveSupplierOffer(product: Product) {
+  if (!product.id || !product.importBatch || !product.supplierCode) return false;
+  try {
+    const rows = await supabaseAdminFetch<Array<{ id: string }>>(
+      `supplier_product_offers?select=id&product_id=eq.${encodeURIComponent(product.id)}&active=eq.true&limit=1`,
+    );
+    return rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+async function activeSupplierOfferProductIds(products: Product[]) {
+  const ids = products.map((product) => product.id).filter(Boolean);
+  if (!ids.length) return new Set<string>();
+  try {
+    const escaped = ids.map((id) => `"${id.replaceAll('"', "")}"`).join(",");
+    const rows = await supabaseAdminFetch<Array<{ product_id: string }>>(
+      `supplier_product_offers?select=product_id&product_id=in.(${encodeURIComponent(escaped)})&active=eq.true&limit=500`,
+    );
+    return new Set(rows.map((row) => row.product_id));
+  } catch {
+    return new Set<string>();
+  }
+}
+
+export async function GET(request: Request) {
   if (!(await isAdminSession())) {
     return NextResponse.json({ ok: false, message: "Admin login required." }, { status: 401 });
   }
 
   const products = await getProducts({ includeHidden: true, includeArchived: true });
+  const { searchParams } = new URL(request.url);
+  if (searchParams.get("mode") === "quick-supplier") {
+    const supplier = searchParams.get("supplier")?.trim().toLowerCase() ?? "";
+    const query = searchParams.get("q")?.trim().toLowerCase() ?? "";
+    const candidates = products
+      .filter((product) => product.lifecycleStatus !== "archived")
+      .filter((product) => product.importBatch?.trim() && product.supplierCode?.trim())
+      .filter((product) => !supplier || product.supplier.toLowerCase() === supplier)
+      .filter((product) => productMatchesQuickQuery(product, query))
+      .slice(0, 50);
+    const offerProductIds = await activeSupplierOfferProductIds(candidates);
+    const quickProducts = candidates.filter((product) => offerProductIds.has(product.id));
+    const suppliers = Array.from(new Set(products
+      .filter((product) => product.lifecycleStatus !== "archived" && product.importBatch?.trim() && product.supplierCode?.trim())
+      .map((product) => product.supplier)
+      .filter(Boolean))).sort();
+    return NextResponse.json({ ok: true, products: quickProducts, suppliers, databaseEnabled: hasSupabaseAdmin() });
+  }
   return NextResponse.json({ ok: true, products, databaseEnabled: hasSupabaseAdmin() });
 }
 
@@ -67,6 +127,22 @@ export async function POST(request: Request) {
   const pricing = calculatePricing(body);
   const categories = Array.from(new Set(body.categories?.length ? body.categories : [body.category]));
   const productId = body.id?.trim() || await getNextProductId();
+  const existing = body.id?.trim()
+    ? (await getProducts({ includeHidden: true, includeArchived: true })).find((item) => item.id.toLowerCase() === body.id.trim().toLowerCase())
+    : undefined;
+  if (existing?.lifecycleStatus === "archived") {
+    return NextResponse.json({ ok: false, message: "Archived products are protected. Restore first before editing.", diagnosticId: id }, { status: 409 });
+  }
+  const isExistingSupplierImport = Boolean(existing?.importBatch && existing.supplierCode);
+  if (isExistingSupplierImport) {
+    const offerExists = await hasActiveSupplierOffer(existing as Product);
+    if (!offerExists) {
+      return NextResponse.json({ ok: false, message: "Supplier offer link is missing. Product cannot be quick-published until the link is checked.", diagnosticId: id }, { status: 409 });
+    }
+    if ((body.supplier ?? "") !== existing?.supplier || (body.supplierCode ?? "") !== existing?.supplierCode || (body.importBatch ?? "") !== existing?.importBatch) {
+      return NextResponse.json({ ok: false, message: "Supplier metadata cannot be changed from quick product editing.", diagnosticId: id }, { status: 409 });
+    }
+  }
   const product: Product = {
     ...body,
     id: productId,
@@ -125,6 +201,17 @@ export async function POST(request: Request) {
 
   try {
     const saved = await createProduct(product);
+    await logAdminAction({
+      recordType: "product",
+      recordId: saved.id,
+      action: product.isVisible ? "product_quick_saved_online" : "product_quick_saved_draft",
+      metadata: {
+        importBatch: saved.importBatch ?? "",
+        supplier: saved.supplier ?? "",
+        supplierCode: saved.supplierCode ?? "",
+        lifecycleStatus: saved.lifecycleStatus ?? "",
+      },
+    });
     return NextResponse.json({ ok: true, product: saved, diagnosticId: id });
   } catch (error) {
     return NextResponse.json({ ok: false, message: error instanceof Error ? error.message : "Product could not be saved.", diagnosticId: id }, { status: 409 });

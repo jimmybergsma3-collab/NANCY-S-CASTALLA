@@ -558,7 +558,7 @@ Aanwezige functies:
 
 - Automatisch volgend productnummer in formaat `NC-00001`.
 - Product toevoegen, selecteren, wijzigen en veilig archiveren. De admin delete-actie voert geen fysieke database-delete meer uit.
-- Mobiele snelle productinvoer via `Snel product toevoegen` op dezelfde pagina. Deze compacte drawer gebruikt dezelfde `products`-tabel, Supabase Storage-upload en `/api/admin/products` route, zonder nieuwe tabellen of voorraadmutaties. Concepten blijven `draft` en onzichtbaar; direct online vereist naam, verkoopeenheid, verkoopprijs incl. IVA, IVA-keuze, categorie, foto, sales-unitreview en prijsbasisreview.
+- Mobiele snelle productinvoer via `Snel product toevoegen` op dezelfde pagina. De primaire flow zoekt server-side bestaande imported products met actieve `supplier_product_offers` en werkt het bestaande product af zonder nieuwe NC-code, supplier offer, import batch of bronmetadata te maken. De secundaire flow `Nieuw handmatig product` maakt alleen voor producten buiten leverancierslijsten een nieuw handmatig product. De drawer gebruikt dezelfde `products`-tabel, Supabase Storage-upload en `/api/admin/products` route, zonder nieuwe tabellen of voorraadmutaties. Concepten blijven `draft` en onzichtbaar; direct online vereist naam, verkoopeenheid, verkoopprijs incl. IVA, IVA-keuze, categorie, foto, sales-unitreview en prijsbasisreview.
 - Zoeken, filteren, statusoverzicht en paginering voor grote catalogi.
 - Standaardfilter op actieve producten, plus filters voor `active`, `archived`, `disabled`, `draft` en `all`.
 - Meerdere categorieÃ«n per product.

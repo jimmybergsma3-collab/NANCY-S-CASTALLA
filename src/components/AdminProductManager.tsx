@@ -83,6 +83,8 @@ type QuickProductForm = {
   stockStatus: Extract<Product["stockStatus"], "available" | "preorder">;
 };
 
+type QuickMode = "supplier" | "manual";
+
 function createBlankQuickProduct(products: Product[]): QuickProductForm {
   return {
     id: getNextProductId(products),
@@ -102,6 +104,12 @@ function inferSalesUnitType(unit: string): Product["salesUnitType"] {
   if (/^\d+\s*[x×]\s*\d+/.test(normalized) || /\b\d+\s*(stuks|pcs|units)\b/.test(normalized)) return "case";
   if (/\bkg\b/.test(normalized)) return "per_kg";
   return "per_unit";
+}
+
+function inferSalesUnitQuantity(unit: string, salesUnitType: Product["salesUnitType"]) {
+  if (salesUnitType !== "case" && salesUnitType !== "custom_pack") return 0;
+  const match = unit.trim().toLowerCase().match(/^(\d+)\s*[x×]|\b(\d+)\s*(stuks|pcs|units)\b/);
+  return Number(match?.[1] || match?.[2] || 1);
 }
 
 function packageOptionsToText(product: Product) {
@@ -157,17 +165,30 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
   const [uploading, setUploading] = useState(false);
   const [packageOptionsText, setPackageOptionsText] = useState("");
   const [quickOpen, setQuickOpen] = useState(false);
+  const [quickMode, setQuickMode] = useState<QuickMode>("supplier");
   const [quickProduct, setQuickProduct] = useState<QuickProductForm>(() => createBlankQuickProduct(initialProducts));
   const [quickImage, setQuickImage] = useState<File | null>(null);
   const [quickSaving, setQuickSaving] = useState(false);
   const [quickMessage, setQuickMessage] = useState("");
   const [quickSavedProduct, setQuickSavedProduct] = useState<Product | null>(null);
+  const [quickSupplier, setQuickSupplier] = useState("");
+  const [quickSupplierQuery, setQuickSupplierQuery] = useState("");
+  const [quickSupplierResults, setQuickSupplierResults] = useState<Product[]>([]);
+  const [quickSupplierLoading, setQuickSupplierLoading] = useState(false);
+  const [quickSelectedProduct, setQuickSelectedProduct] = useState<Product | null>(null);
   const pricing = calculatePricing(product);
   const supplierPackQuantity = getSupplierPackQuantity(product.packSize);
   const calculatedUnitCost = calculateUnitCost(product.costPriceExVat, product.packSize);
   const salesUnitSafety = evaluateSalesUnitSafety(product);
   const isEditing = products.some((item) => item.id === product.id);
   const productCategories = useMemo(() => ["All", ...availableProductCategories], []);
+  const supplierNames = useMemo(() => {
+    const names = products
+      .filter((item) => item.lifecycleStatus !== "archived" && item.importBatch?.trim() && item.supplierCode?.trim())
+      .map((item) => item.supplier)
+      .filter(Boolean);
+    return Array.from(new Set(names)).sort();
+  }, [products]);
   const duplicateKeys = useMemo(() => {
     const counts = new Map<string, number>();
     for (const item of products) {
@@ -388,6 +409,7 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
     setQuickProduct(createBlankQuickProduct(nextProducts));
     setQuickImage(null);
     setQuickSavedProduct(null);
+    setQuickSelectedProduct(null);
     setQuickMessage("");
   }
 
@@ -415,6 +437,56 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
     return result.imageUrl;
   }
 
+  async function searchQuickSupplierProducts() {
+    setQuickSupplierLoading(true);
+    setQuickMessage("");
+    try {
+      const params = new URLSearchParams({ mode: "quick-supplier", q: quickSupplierQuery });
+      if (quickSupplier) params.set("supplier", quickSupplier);
+      const response = await fetch(`/api/admin/products?${params.toString()}`);
+      const result = (await response.json()) as { ok: boolean; products?: Product[]; message?: string };
+      if (!response.ok || !result.ok) {
+        throw new Error(result.message || "Supplier products could not be loaded.");
+      }
+      setQuickSupplierResults(result.products ?? []);
+    } catch (error) {
+      setQuickMessage(error instanceof Error ? error.message : "Supplier products could not be loaded.");
+    } finally {
+      setQuickSupplierLoading(false);
+    }
+  }
+
+  function selectQuickSupplierProduct(item: Product) {
+    setQuickSelectedProduct(item);
+    setQuickSavedProduct(null);
+    setQuickImage(null);
+    setQuickMessage(item.isVisible ? "Dit product is al online. Je kunt het bestaande product bewerken." : "");
+    setQuickProduct({
+      id: item.id,
+      name: item.name,
+      unit: item.unit || item.sourcePackageText || item.packSize || "",
+      salePriceInclVat: item.salePriceInclVat ? String(item.salePriceInclVat) : "",
+      vatRate: ([4, 10, 21].includes(Number(item.vatRate)) ? Number(item.vatRate) : 10) as 4 | 10 | 21,
+      category: item.category,
+      description: item.description ?? "",
+      type: item.type,
+      stockStatus: item.stockStatus === "available" ? "available" : "preorder",
+    });
+  }
+
+  function selectNextQuickSupplierProduct() {
+    const currentIndex = quickSelectedProduct ? quickSupplierResults.findIndex((item) => item.id === quickSelectedProduct.id) : -1;
+    const next = quickSupplierResults.slice(currentIndex + 1).find((item) => item.lifecycleStatus !== "active" || item.isVisible === false)
+      ?? quickSupplierResults.find((item) => item.lifecycleStatus !== "active" || item.isVisible === false);
+    if (next) {
+      selectQuickSupplierProduct(next);
+    } else {
+      resetQuickProduct();
+      setQuickMode("supplier");
+      setQuickMessage("Geen volgend leverancierproduct gevonden in deze zoeklijst.");
+    }
+  }
+
   async function saveQuickProduct(mode: "draft" | "online") {
     setQuickSaving(true);
     setQuickMessage("");
@@ -425,17 +497,21 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
       if (!quickProduct.unit.trim()) throw new Error("Package / sales unit is required.");
       if (Number(quickProduct.salePriceInclVat) <= 0) throw new Error("Sale price incl IVA must be greater than 0.");
       if (!quickProduct.category) throw new Error("Choose a category.");
-      if (!quickImage) throw new Error("Choose or take a product photo first.");
 
-      const imageUrl = await uploadQuickImage(quickProduct.id);
+      const existing = quickMode === "supplier" ? quickSelectedProduct : null;
+      if (quickMode === "supplier" && !existing) throw new Error("Choose a supplier product first.");
+      const imageUrl = quickImage ? await uploadQuickImage(quickProduct.id) : existing?.imageUrl ?? "";
+      if (!imageUrl) throw new Error("Choose or take a product photo first.");
       const salesUnitType = inferSalesUnitType(quickProduct.unit);
+      const salesUnitQuantity = inferSalesUnitQuantity(quickProduct.unit, salesUnitType);
+      const baseProduct = existing ?? defaultProduct;
       const payload: Product = {
-        ...defaultProduct,
+        ...baseProduct,
         id: quickProduct.id,
-        sku: quickProduct.id,
+        sku: baseProduct.sku || quickProduct.id,
         name: quickProduct.name.trim(),
         imageUrl,
-        images: [imageUrl],
+        images: Array.from(new Set([imageUrl, ...(baseProduct.images ?? [])].filter(Boolean))),
         isVisible: mode === "online",
         lifecycleStatus: mode === "online" ? "active" : "draft",
         category: quickProduct.category,
@@ -446,27 +522,29 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
         stockStatus: quickProduct.stockStatus,
         type: quickProduct.type,
         featured: false,
-        costPriceExVat: 0,
+        costPriceExVat: baseProduct.costPriceExVat ?? 0,
         vatRate: quickProduct.vatRate,
         salePriceInclVat: Number(quickProduct.salePriceInclVat),
-        marginPercent: 0,
-        profitPerUnit: 0,
-        supplier: "",
-        supplierCode: "",
-        packSize: "",
-        unitCost: 0,
+        marginPercent: baseProduct.marginPercent ?? 0,
+        profitPerUnit: baseProduct.profitPerUnit ?? 0,
+        supplier: baseProduct.supplier ?? "",
+        supplierCode: baseProduct.supplierCode ?? "",
+        packSize: baseProduct.packSize ?? "",
+        unitCost: baseProduct.unitCost ?? 0,
         salesUnitType,
-        salesUnitQuantity: salesUnitType === "case" ? 1 : 0,
+        salesUnitQuantity,
         salesUnitConfirmed: true,
         priceBasisConfirmed: true,
-        supplierCasePrice: 0,
-        supplierUnitPrice: 0,
-        supplierCaseQuantity: 0,
-        sourcePackageText: "",
+        supplierCasePrice: baseProduct.supplierCasePrice ?? 0,
+        supplierUnitPrice: baseProduct.supplierUnitPrice ?? 0,
+        supplierCaseQuantity: baseProduct.supplierCaseQuantity ?? 0,
+        sourcePackageText: baseProduct.sourcePackageText ?? "",
         stockQuantity: 0,
-        minimumStock: 0,
+        minimumStock: baseProduct.minimumStock ?? 0,
         trackInventory: false,
-        packageOptions: [],
+        packageOptions: baseProduct.packageOptions ?? [],
+        importBatch: baseProduct.importBatch ?? "",
+        ean: baseProduct.ean ?? "",
       };
 
       const result = await saveProductPayload(payload);
@@ -481,9 +559,27 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
       setStatusFilter(mode === "online" ? "active" : "draft");
       setVisibilityFilter("All");
       setQuickImage(null);
-      setQuickProduct(createBlankQuickProduct(refreshedProducts));
+      if (quickMode === "manual") {
+        setQuickProduct(createBlankQuickProduct(refreshedProducts));
+      } else {
+        setQuickSelectedProduct(result.product);
+        setQuickProduct({
+          id: result.product.id,
+          name: result.product.name,
+          unit: result.product.unit,
+          salePriceInclVat: String(result.product.salePriceInclVat || ""),
+          vatRate: ([4, 10, 21].includes(Number(result.product.vatRate)) ? Number(result.product.vatRate) : 10) as 4 | 10 | 21,
+          category: result.product.category,
+          description: result.product.description,
+          type: result.product.type,
+          stockStatus: result.product.stockStatus === "available" ? "available" : "preorder",
+        });
+        setQuickSupplierResults((current) => current.map((item) => item.id === result.product?.id ? result.product : item));
+      }
+      return true;
     } catch (error) {
       setQuickMessage(error instanceof Error ? error.message : "Product could not be saved.");
+      return false;
     } finally {
       setQuickSaving(false);
     }
@@ -516,11 +612,12 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
       <div className="mt-6 rounded-lg border border-forest/10 bg-cream p-4 shadow-soft sm:flex sm:items-center sm:justify-between">
         <div>
           <h2 className="font-serif text-2xl font-bold text-forest">Snel product toevoegen</h2>
-          <p className="mt-1 text-sm text-forest/65">Mobiele invoer voor een nieuw product met foto, prijs, IVA en categorie.</p>
+          <p className="mt-1 text-sm text-forest/65">Werk onderweg snel een bestaand leveranciersproduct af, of voeg apart een handmatig product toe.</p>
         </div>
         <button
           className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-forest px-5 py-3 text-base font-bold text-cream shadow-soft sm:mt-0 sm:w-auto"
           onClick={() => {
+            setQuickMode("supplier");
             resetQuickProduct();
             setQuickOpen(true);
           }}
@@ -537,7 +634,7 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
             <div className="flex items-center justify-between border-b border-forest/10 bg-cream px-4 py-3">
               <div>
                 <h2 className="font-serif text-2xl font-bold text-forest">Snel product toevoegen</h2>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-coffee">{quickProduct.id}</p>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-coffee">{quickMode === "supplier" ? "Leverancierslijst" : quickProduct.id}</p>
               </div>
               <button className="grid h-11 w-11 place-items-center rounded-full border border-forest/15 bg-white text-forest" onClick={() => setQuickOpen(false)} type="button">
                 <X size={20} />
@@ -545,68 +642,124 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
             </div>
 
             <div className="flex-1 space-y-4 overflow-y-auto px-4 py-5">
-              <Field label="Productnaam">
-                <input className="h-12 w-full rounded-lg border border-forest/15 bg-white px-4 text-base" onChange={(event) => updateQuick("name", event.target.value)} placeholder="Magners Cider" value={quickProduct.name} />
-              </Field>
-              <Field help="De prijs geldt exact voor deze verkoopeenheid. Bijvoorbeeld: 1 blik 500 ml, 6 stuks of 24 x 330 ml." label="Verpakking / verkoopeenheid">
-                <input className="h-12 w-full rounded-lg border border-forest/15 bg-white px-4 text-base" onChange={(event) => updateQuick("unit", event.target.value)} placeholder="1 blik 500 ml" value={quickProduct.unit} />
-              </Field>
-              <Field label="Verkoopprijs incl. IVA">
-                <input className="h-12 w-full rounded-lg border border-forest/15 bg-white px-4 text-base" inputMode="decimal" min="0" onChange={(event) => updateQuick("salePriceInclVat", event.target.value)} placeholder="2.25" step="0.01" type="number" value={quickProduct.salePriceInclVat} />
-              </Field>
-              <Field label="IVA">
-                <div className="grid grid-cols-3 gap-2">
-                  {([4, 10, 21] as const).map((rate) => (
-                    <button
-                      className={`h-12 rounded-lg border text-base font-bold ${quickProduct.vatRate === rate ? "border-forest bg-forest text-cream" : "border-forest/15 bg-white text-forest"}`}
-                      key={rate}
-                      onClick={() => updateQuick("vatRate", rate)}
-                      type="button"
-                    >
-                      {rate}%
-                    </button>
-                  ))}
-                </div>
-              </Field>
-              <Field label="Foto uploaden">
-                <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-forest/20 bg-white px-4 py-5 text-center text-forest">
-                  <Camera size={28} />
-                  <span className="mt-2 text-sm font-bold">{quickImage ? quickImage.name : "Camera of fotobibliotheek openen"}</span>
-                  <span className="mt-1 text-xs text-forest/55">JPG, PNG of WebP, maximaal 5MB</span>
-                  <input accept="image/*" capture="environment" className="sr-only" onChange={(event) => setQuickImage(event.target.files?.[0] ?? null)} type="file" />
-                </label>
-              </Field>
-              <Field label="Categorie">
-                <select className="h-12 w-full rounded-lg border border-forest/15 bg-white px-4 text-base" onChange={(event) => updateQuick("category", event.target.value as Product["category"])} value={quickProduct.category}>
-                  {availableProductCategories.map((category) => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field help="Optioneel. Kort en klantvriendelijk." label="Korte beschrijving">
-                <textarea className="min-h-24 w-full rounded-lg border border-forest/15 bg-white px-4 py-3 text-base" onChange={(event) => updateQuick("description", event.target.value)} placeholder="Korte tekst voor de productkaart." value={quickProduct.description} />
-              </Field>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Producttype">
-                  <select className="h-12 w-full rounded-lg border border-forest/15 bg-white px-4 text-base" onChange={(event) => updateQuick("type", event.target.value as Product["type"])} value={quickProduct.type}>
-                    <option value="ambient">ambient</option>
-                    <option value="fresh">fresh</option>
-                    <option value="frozen">frozen</option>
-                  </select>
-                </Field>
-                <Field label="Beschikbaarheid">
-                  <select className="h-12 w-full rounded-lg border border-forest/15 bg-white px-4 text-base" onChange={(event) => updateQuick("stockStatus", event.target.value as QuickProductForm["stockStatus"])} value={quickProduct.stockStatus}>
-                    <option value="preorder">preorder</option>
-                    <option value="available">available</option>
-                  </select>
-                </Field>
+              <div className="grid grid-cols-2 gap-2">
+                <button className={`rounded-lg px-3 py-3 text-sm font-bold ${quickMode === "supplier" ? "bg-forest text-cream" : "bg-white text-forest"}`} onClick={() => { setQuickMode("supplier"); resetQuickProduct(); }} type="button">
+                  Uit leverancierslijst
+                </button>
+                <button className={`rounded-lg px-3 py-3 text-sm font-bold ${quickMode === "manual" ? "bg-forest text-cream" : "bg-white text-forest"}`} onClick={() => { setQuickMode("manual"); resetQuickProduct(); }} type="button">
+                  Nieuw handmatig product
+                </button>
               </div>
+
+              {quickMode === "supplier" ? (
+                <div className="space-y-4 rounded-lg border border-forest/10 bg-cream p-3">
+                  <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                    <select className="h-12 rounded-lg border border-forest/15 bg-white px-3 text-base" onChange={(event) => setQuickSupplier(event.target.value)} value={quickSupplier}>
+                      <option value="">Alle leveranciers</option>
+                      {supplierNames.map((supplier) => <option key={supplier} value={supplier}>{supplier}</option>)}
+                    </select>
+                    <button className="h-12 rounded-full bg-forest px-5 font-bold text-cream disabled:opacity-50" disabled={quickSupplierLoading} onClick={() => void searchQuickSupplierProducts()} type="button">
+                      {quickSupplierLoading ? "Zoeken..." : "Zoeken"}
+                    </button>
+                  </div>
+                  <input className="h-12 w-full rounded-lg border border-forest/15 bg-white px-3 text-base" onChange={(event) => setQuickSupplierQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void searchQuickSupplierProducts(); }} placeholder="Zoek naam, supplier code, EAN, verpakking of NC-code" value={quickSupplierQuery} />
+                  {quickSupplierResults.length ? (
+                    <div className="max-h-72 space-y-2 overflow-y-auto">
+                      {quickSupplierResults.map((item) => (
+                        <button className={`w-full rounded-lg border p-3 text-left ${quickSelectedProduct?.id === item.id ? "border-forest bg-white" : "border-forest/10 bg-white/80"}`} key={item.id} onClick={() => selectQuickSupplierProduct(item)} type="button">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="font-bold text-forest">{item.name}</div>
+                              <div className="text-xs text-forest/60">{item.supplier} · {item.supplierCode || "no supplier code"} · {item.id}</div>
+                            </div>
+                            <span className={`rounded-full px-2 py-1 text-xs font-bold ${item.isVisible ? "bg-leaf/10 text-leaf" : "bg-coffee/10 text-coffee"}`}>{item.isVisible ? "Online" : item.lifecycleStatus ?? "draft"}</span>
+                          </div>
+                          <div className="mt-2 grid gap-1 text-xs text-forest/70">
+                            <span>Bronverpakking: {item.sourcePackageText || item.packSize || item.unit || "-"}</span>
+                            <span>Doosprijs: {formatEuro(item.supplierCasePrice || item.costPriceExVat || 0)} · Bronstukprijs: {formatEuro(item.supplierUnitPrice || item.unitCost || 0)}</span>
+                            <span>Batch: {item.importBatch || "-"}</span>
+                            <span>Review: tax/category/image/package/translation controleren</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-forest/65">Kies een leverancier en zoek een bestaand geïmporteerd product.</p>
+                  )}
+                </div>
+              ) : null}
+
+              {quickMode === "manual" || quickSelectedProduct ? (
+                <>
+                  {quickSelectedProduct ? (
+                    <div className="rounded-lg border border-forest/10 bg-white p-3 text-sm text-forest">
+                      <div className="font-bold">{quickSelectedProduct.name}</div>
+                      <div className="mt-2 grid gap-1 text-xs text-forest/70">
+                        <span>Nancy-code: {quickSelectedProduct.id}</span>
+                        <span>Leverancier: {quickSelectedProduct.supplier}</span>
+                        <span>Supplier code: {quickSelectedProduct.supplierCode}</span>
+                        <span>Bronverpakking: {quickSelectedProduct.sourcePackageText || quickSelectedProduct.packSize || "-"}</span>
+                        <span>Doosprijs: {formatEuro(quickSelectedProduct.supplierCasePrice || quickSelectedProduct.costPriceExVat || 0)}</span>
+                        <span>Bronstukprijs: {formatEuro(quickSelectedProduct.supplierUnitPrice || quickSelectedProduct.unitCost || 0)}</span>
+                        <span>Import batch: {quickSelectedProduct.importBatch}</span>
+                      </div>
+                    </div>
+                  ) : null}
+                  <Field label="Productnaam">
+                    <input className="h-12 w-full rounded-lg border border-forest/15 bg-white px-4 text-base" onChange={(event) => updateQuick("name", event.target.value)} placeholder="Magners Cider" value={quickProduct.name} />
+                  </Field>
+                  <Field help="De prijs geldt exact voor deze verkoopeenheid. Bijvoorbeeld: 1 blik 500 ml, 6 stuks of 24 x 330 ml." label="Publieke verpakking / verkoopeenheid">
+                    <input className="h-12 w-full rounded-lg border border-forest/15 bg-white px-4 text-base" onChange={(event) => updateQuick("unit", event.target.value)} placeholder="1 blik 500 ml" value={quickProduct.unit} />
+                  </Field>
+                  <Field label="Verkoopprijs incl. IVA">
+                    <input className="h-12 w-full rounded-lg border border-forest/15 bg-white px-4 text-base" inputMode="decimal" min="0" onChange={(event) => updateQuick("salePriceInclVat", event.target.value)} placeholder="2.25" step="0.01" type="number" value={quickProduct.salePriceInclVat} />
+                  </Field>
+                  <Field label="IVA">
+                    <div className="grid grid-cols-3 gap-2">
+                      {([4, 10, 21] as const).map((rate) => (
+                        <button className={`h-12 rounded-lg border text-base font-bold ${quickProduct.vatRate === rate ? "border-forest bg-forest text-cream" : "border-forest/15 bg-white text-forest"}`} key={rate} onClick={() => updateQuick("vatRate", rate)} type="button">{rate}%</button>
+                      ))}
+                    </div>
+                  </Field>
+                  <Field label="Foto uploaden">
+                    <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-forest/20 bg-white px-4 py-5 text-center text-forest">
+                      <Camera size={28} />
+                      <span className="mt-2 text-sm font-bold">{quickImage ? quickImage.name : quickSelectedProduct?.imageUrl ? "Bestaande foto behouden of nieuwe kiezen" : "Camera of fotobibliotheek openen"}</span>
+                      <span className="mt-1 text-xs text-forest/55">JPG, PNG of WebP, maximaal 5MB</span>
+                      <input accept="image/*" capture="environment" className="sr-only" onChange={(event) => setQuickImage(event.target.files?.[0] ?? null)} type="file" />
+                    </label>
+                  </Field>
+                  <Field label="Categorie">
+                    <select className="h-12 w-full rounded-lg border border-forest/15 bg-white px-4 text-base" onChange={(event) => updateQuick("category", event.target.value as Product["category"])} value={quickProduct.category}>
+                      {availableProductCategories.map((category) => <option key={category} value={category}>{category}</option>)}
+                    </select>
+                  </Field>
+                  <Field help="Optioneel. Kort en klantvriendelijk." label="Korte beschrijving">
+                    <textarea className="min-h-24 w-full rounded-lg border border-forest/15 bg-white px-4 py-3 text-base" onChange={(event) => updateQuick("description", event.target.value)} placeholder="Korte tekst voor de productkaart." value={quickProduct.description} />
+                  </Field>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Producttype">
+                      <select className="h-12 w-full rounded-lg border border-forest/15 bg-white px-4 text-base" onChange={(event) => updateQuick("type", event.target.value as Product["type"])} value={quickProduct.type}>
+                        <option value="ambient">ambient</option>
+                        <option value="fresh">fresh</option>
+                        <option value="frozen">frozen</option>
+                      </select>
+                    </Field>
+                    <Field label="Beschikbaarheid">
+                      <select className="h-12 w-full rounded-lg border border-forest/15 bg-white px-4 text-base" onChange={(event) => updateQuick("stockStatus", event.target.value as QuickProductForm["stockStatus"])} value={quickProduct.stockStatus}>
+                        <option value="preorder">preorder</option>
+                        <option value="available">available</option>
+                      </select>
+                    </Field>
+                  </div>
+                </>
+              ) : null}
               {quickMessage ? (
                 <div className="rounded-lg border border-forest/10 bg-white p-3 text-sm font-bold text-forest">
                   {quickMessage}
                   {quickSavedProduct ? (
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <button className="rounded-full border border-forest/20 px-3 py-2 text-xs font-bold" onClick={() => resetQuickProduct()} type="button">Volgend product toevoegen</button>
+                      <button className="rounded-full border border-forest/20 px-3 py-2 text-xs font-bold" onClick={() => { if (quickMode === "supplier") selectNextQuickSupplierProduct(); else resetQuickProduct(); }} type="button">{quickMode === "supplier" ? "Volgend leverancierproduct" : "Volgend product toevoegen"}</button>
                       <button className="rounded-full border border-forest/20 px-3 py-2 text-xs font-bold" onClick={() => { setActiveProduct({ ...defaultProduct, ...quickSavedProduct }); setQuickOpen(false); }} type="button">Volledig bewerken</button>
                       {quickSavedProduct.isVisible ? (
                         <Link className="rounded-full bg-forest px-3 py-2 text-xs font-bold text-cream" href={`/en/products/${encodeURIComponent(quickSavedProduct.id)}`} target="_blank">Bekijk online</Link>
@@ -618,12 +771,17 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
             </div>
 
             <div className="sticky bottom-0 grid gap-2 border-t border-forest/10 bg-cream p-4">
-              <button className="h-12 rounded-full border border-forest/20 bg-white font-bold text-forest disabled:opacity-50" disabled={quickSaving} onClick={() => void saveQuickProduct("draft")} type="button">
+              <button className="h-12 rounded-full border border-forest/20 bg-white font-bold text-forest disabled:opacity-50" disabled={quickSaving || (quickMode === "supplier" && !quickSelectedProduct)} onClick={() => void saveQuickProduct("draft")} type="button">
                 {quickSaving ? "Opslaan..." : "Opslaan als concept"}
               </button>
-              <button className="h-12 rounded-full bg-forest font-bold text-cream disabled:opacity-50" disabled={quickSaving} onClick={() => void saveQuickProduct("online")} type="button">
+              <button className="h-12 rounded-full bg-forest font-bold text-cream disabled:opacity-50" disabled={quickSaving || (quickMode === "supplier" && !quickSelectedProduct)} onClick={() => void saveQuickProduct("online")} type="button">
                 {quickSaving ? "Opslaan..." : "Opslaan en direct online"}
               </button>
+              {quickMode === "supplier" ? (
+                <button className="h-12 rounded-full border border-forest/20 bg-white font-bold text-forest disabled:opacity-50" disabled={quickSaving || !quickSelectedProduct} onClick={async () => { if (await saveQuickProduct("draft")) selectNextQuickSupplierProduct(); }} type="button">
+                  Opslaan & volgend leverancierproduct
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
