@@ -726,7 +726,7 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
                       <Camera size={28} />
                       <span className="mt-2 text-sm font-bold">{quickImage ? quickImage.name : quickSelectedProduct?.imageUrl ? "Bestaande foto behouden of nieuwe kiezen" : "Camera of fotobibliotheek openen"}</span>
                       <span className="mt-1 text-xs text-forest/55">JPG, PNG of WebP, maximaal 5MB</span>
-                      <input accept="image/*" capture="environment" className="sr-only" onChange={(event) => setQuickImage(event.target.files?.[0] ?? null)} type="file" />
+                      <input accept="image/*" className="sr-only" onChange={(event) => setQuickImage(event.target.files?.[0] ?? null)} type="file" />
                     </label>
                   </Field>
                   <Field label="Categorie">
