@@ -9,7 +9,7 @@ export function Footer({ locale = defaultLocale }: { locale?: Locale }) {
   const dictionary = getDictionary(locale);
   const ui = getUiCopy(locale);
   const paymentLabels: Record<string, string> = {
-    bizum: "Bizum",
+    bizum: ui.footer.bizum,
     "bank-transfer": ui.footer.bankTransfer,
   };
 

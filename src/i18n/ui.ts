@@ -51,9 +51,7 @@ type UiCopy = {
   };
   footer: {
     bankTransfer: string;
-    cardLater: string;
-    cashCollection: string;
-    cashDelivery: string;
+    bizum: string;
     payment: string;
     privacy: string;
     tagline: string;
@@ -78,6 +76,22 @@ type UiCopy = {
   };
 };
 
+const categoriesEn: Record<ProductCategory, string> = {
+  "Dutch products": "Dutch products",
+  "British & Irish products": "British & Irish products",
+  "German products": "German products",
+  "Scandinavian products": "Scandinavian products",
+  "Asian & Indonesian products": "Asian & Indonesian products",
+  "South American products": "South American products",
+  "Vegan & vegetarian": "Vegan & vegetarian",
+  "Frozen snacks": "Frozen snacks",
+  "Bread & bakery": "Bread & bakery",
+  "Breakfast products": "Breakfast products",
+  "Coffee & drinks": "Coffee & drinks",
+  "Sauces & condiments": "Sauces & condiments",
+  "Non-food & packaging": "Non-food & packaging",
+};
+
 const copies: Record<Locale, UiCopy> = {
   en: {
     header: { closeMenu: "Close menu", home: "Nancy's Castalla home", openMenu: "Open menu", orderSupport: "Order support", switchLanguage: "Switch language to" },
@@ -99,15 +113,9 @@ const copies: Record<Locale, UiCopy> = {
       name: "Name", notes: "Notes or preferred time", orderError: "Order could not be sent.", orderReceived: "received", orderSent: "sent. Please check your email.",
       phone: "Phone / WhatsApp", send: "Send order request", sending: "Sending...", title: "Your order request", withinRadius: "within around {km} km when possible.",
     },
-    footer: { bankTransfer: "Bank transfer", cardLater: "Card payment later", cashCollection: "Cash on collection", cashDelivery: "Cash on delivery", payment: "Payment V1", privacy: "Privacy", tagline: "International foods, coffee, empanadas and drinks", terms: "Terms", visit: "Visit" },
+    footer: { bankTransfer: "Bank transfer", bizum: "Bizum", payment: "Payment V1", privacy: "Privacy", tagline: "International foods, coffee, empanadas and drinks", terms: "Terms", visit: "Visit" },
     infoPoints: ["Small stock", "Pre-orders", "WhatsApp ordering", "Collection in Castalla", "Local delivery when possible"],
-    categories: {
-      "Dutch products": "Dutch products", "British & Irish products": "British & Irish products", "German products": "German products",
-      "Scandinavian products": "Scandinavian products", "Asian & Indonesian products": "Asian & Indonesian products", "South American products": "South American products",
-      "Vegan & vegetarian": "Vegan & vegetarian", "Frozen snacks": "Frozen snacks", "Bread & bakery": "Bread & bakery",
-      "Breakfast products": "Breakfast products", "Coffee & drinks": "Coffee & drinks", "Sauces & condiments": "Sauces & condiments",
-      "Non-food & packaging": "Non-food & packaging",
-    },
+    categories: categoriesEn,
     statuses: { available: "Available", preorder: "Pre-order", "coming-soon": "Coming soon" },
     whatsappMessage: { address: "Delivery address, if needed:", availability: "I would like to ask about current availability.", collection: "Collection", greeting: "Hello", localDelivery: "Local delivery", name: "Name:", payment: "Payment preference: Bizum / bank transfer", preOrder: "I would like to place a pre-order:", preferredOption: "Preferred option", preferredTime: "Preferred collection or delivery time:", total: "Estimated product total" },
   },
@@ -131,7 +139,7 @@ const copies: Record<Locale, UiCopy> = {
       name: "Naam", notes: "Opmerkingen of gewenst tijdstip", orderError: "De bestelling kon niet worden verzonden.", orderReceived: "ontvangen", orderSent: "verzonden. Controleer je e-mail.",
       phone: "Telefoon / WhatsApp", send: "Bestelaanvraag versturen", sending: "Versturen...", title: "Je bestelaanvraag", withinRadius: "binnen ongeveer {km} km wanneer mogelijk.",
     },
-    footer: { bankTransfer: "Bankoverschrijving", cardLater: "Kaartbetaling later", cashCollection: "Contant bij afhalen", cashDelivery: "Contant bij bezorgen", payment: "Betaling V1", privacy: "Privacy", tagline: "Internationale producten, koffie, empanadas en dranken", terms: "Voorwaarden", visit: "Bezoek" },
+    footer: { bankTransfer: "Bankoverschrijving", bizum: "Bizum", payment: "Betaling V1", privacy: "Privacy", tagline: "Internationale producten, koffie, empanadas en dranken", terms: "Voorwaarden", visit: "Bezoek" },
     infoPoints: ["Kleine voorraad", "Pre-orders", "Bestellen via WhatsApp", "Afhalen in Castalla", "Lokale bezorging wanneer mogelijk"],
     categories: {
       "Dutch products": "Nederlandse producten", "British & Irish products": "Britse & Ierse producten", "German products": "Duitse producten",
@@ -163,7 +171,7 @@ const copies: Record<Locale, UiCopy> = {
       name: "Name", notes: "Anmerkungen oder gewünschte Zeit", orderError: "Die Bestellung konnte nicht gesendet werden.", orderReceived: "eingegangen", orderSent: "gesendet. Bitte prüfen Sie Ihre E-Mail.",
       phone: "Telefon / WhatsApp", send: "Bestellanfrage senden", sending: "Wird gesendet...", title: "Ihre Bestellanfrage", withinRadius: "innerhalb von etwa {km} km, wenn möglich.",
     },
-    footer: { bankTransfer: "Überweisung", cardLater: "Kartenzahlung später", cashCollection: "Bar bei Abholung", cashDelivery: "Bar bei Lieferung", payment: "Zahlung V1", privacy: "Datenschutz", tagline: "Internationale Lebensmittel, Kaffee, Empanadas und Getränke", terms: "Bedingungen", visit: "Besuch" },
+    footer: { bankTransfer: "Überweisung", bizum: "Bizum", payment: "Zahlung V1", privacy: "Datenschutz", tagline: "Internationale Lebensmittel, Kaffee, Empanadas und Getränke", terms: "Bedingungen", visit: "Besuch" },
     infoPoints: ["Kleiner Bestand", "Vorbestellungen", "Bestellung per WhatsApp", "Abholung in Castalla", "Lokale Lieferung wenn möglich"],
     categories: {
       "Dutch products": "Niederländische Produkte", "British & Irish products": "Britische & irische Produkte", "German products": "Deutsche Produkte",
@@ -195,7 +203,7 @@ const copies: Record<Locale, UiCopy> = {
       name: "Nombre", notes: "Notas u horario preferido", orderError: "No se pudo enviar el pedido.", orderReceived: "recibido", orderSent: "enviado. Revisa tu correo.",
       phone: "Teléfono / WhatsApp", send: "Enviar solicitud de pedido", sending: "Enviando...", title: "Tu solicitud de pedido", withinRadius: "en un radio aproximado de {km} km cuando sea posible.",
     },
-    footer: { bankTransfer: "Transferencia bancaria", cardLater: "Pago con tarjeta más adelante", cashCollection: "Efectivo al recoger", cashDelivery: "Efectivo al entregar", payment: "Pago V1", privacy: "Privacidad", tagline: "Productos internacionales, café, empanadas y bebidas", terms: "Condiciones", visit: "Visítanos" },
+    footer: { bankTransfer: "Transferencia bancaria", bizum: "Bizum", payment: "Pago V1", privacy: "Privacidad", tagline: "Productos internacionales, café, empanadas y bebidas", terms: "Condiciones", visit: "Visítanos" },
     infoPoints: ["Stock pequeño", "Prepedidos", "Pedidos por WhatsApp", "Recogida en Castalla", "Entrega local cuando sea posible"],
     categories: {
       "Dutch products": "Productos neerlandeses", "British & Irish products": "Productos británicos e irlandeses", "German products": "Productos alemanes",
@@ -227,7 +235,7 @@ const copies: Record<Locale, UiCopy> = {
       name: "Namn", notes: "Anteckningar eller önskad tid", orderError: "Beställningen kunde inte skickas.", orderReceived: "mottagen", orderSent: "skickad. Kontrollera din e-post.",
       phone: "Telefon / WhatsApp", send: "Skicka beställningsförfrågan", sending: "Skickar...", title: "Din beställningsförfrågan", withinRadius: "inom cirka {km} km när det är möjligt.",
     },
-    footer: { bankTransfer: "Banköverföring", cardLater: "Kortbetalning senare", cashCollection: "Kontant vid hämtning", cashDelivery: "Kontant vid leverans", payment: "Betalning V1", privacy: "Integritet", tagline: "Internationella livsmedel, kaffe, empanadas och drycker", terms: "Villkor", visit: "Besök" },
+    footer: { bankTransfer: "Banköverföring", bizum: "Bizum", payment: "Betalning V1", privacy: "Integritet", tagline: "Internationella livsmedel, kaffe, empanadas och drycker", terms: "Villkor", visit: "Besök" },
     infoPoints: ["Litet lager", "Förbeställningar", "Beställning via WhatsApp", "Hämtning i Castalla", "Lokal leverans när det är möjligt"],
     categories: {
       "Dutch products": "Nederländska produkter", "British & Irish products": "Brittiska och irländska produkter", "German products": "Tyska produkter",

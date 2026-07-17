@@ -1,7 +1,7 @@
 ﻿# AI Context: Nancy's Castalla
 
 **Doel:** snelle, zelfstandige projectcontext voor ChatGPT, Codex en andere AI-assistenten.  
-**Laatst bijgewerkt:** 12 juli 2026
+**Laatst bijgewerkt:** 16 juli 2026
 **Productie:** `https://www.nancys.es`
 
 Lees dit bestand voordat je een wijziging plant of uitvoert. Gebruik voor diepere details de documenten in `/docs`:
@@ -40,7 +40,7 @@ De primaire doelgroep bestaat uit internationale inwoners en expats rond Castall
 - Spaans en Zuid-Amerikaans.
 - Aziatisch/Indonesisch geinteresseerde klanten.
 
-Engels is de hoofdtaal. Ondersteunde localecodes zijn `en`, `nl`, `de`, `es` en `sv`. Spaans is essentieel voor Spaanse en Zuid-Amerikaanse klanten. Bekende productnamen en een groeiende set klantgerichte productbeschrijvingen worden vertaald. Ontbreekt een niet-Engelse productbeschrijving, toon dan liever een korte locale-fallback zoals `Vertaling volgt binnenkort` dan willekeurig Engelse of Spaanse leveranciersinhoud.
+Engels is de hoofdtaal. Ondersteunde localecodes zijn `en`, `nl`, `de`, `es` en `sv`. Spaans is essentieel voor Spaanse en Zuid-Amerikaanse klanten. `sv` is de Zweedse/Scandinavische fallback en moet klantgericht Zweeds gebruiken met normale tekens zoals å, ä en ö; in taalkeuzes mag dit als `Svenska / Scandinavian` worden gelabeld. Bekende productnamen en een groeiende set klantgerichte productbeschrijvingen worden vertaald via veilige helpers. Productnamen worden alleen bij weergave vertaald; Supabase-productdata blijft ongewijzigd. Ontbreekt een niet-Engelse productbeschrijving, toon dan liever een korte locale-fallback zoals `Vertaling volgt binnenkort` dan willekeurig Engelse of Spaanse leveranciersinhoud.
 
 Localevoorkeur volgt deze regels:
 
@@ -74,6 +74,8 @@ npm run dev
 npm run lint
 npm run build
 ```
+
+`npm run lint` voert eerst `scripts/validate-i18n.mjs` uit. Die controle vergelijkt de dictionary-structuur voor `en`, `nl`, `de`, `es` en `sv`, blokkeert lege vertalingen en signaleert kapotte accent-encoding in de i18n-bronbestanden.
 
 Databasewijzigingen staan in `supabase/migrations`. Deze migraties zijn leidend. Leveranciersimports staan in `supabase/imports`.
 
@@ -340,7 +342,7 @@ Verwijder geen bestaande functionaliteit, migratie of data-import omdat deze ver
 - Sommige productqueries laden te veel of de volledige catalogus.
 - Lokale productfallback kan een Supabase-storing maskeren.
 - Account/order e-mails hebben geen volwaardige queue en retryflow.
-- Publieke interface, juridische basiscontent en transactionele order-/factuurmails zijn vertaald in de basislocales. Bekende productnamen worden klantgericht vertaald via een veilige helper op productkaarten, productdetail, zoeken, cart, ordermails, klantaccount en facturen. Onbekende productnamen en leveranciersinhoud vallen terug op de catalogusnaam/broninhoud. Backoffice en volledige productinhoud zijn nog niet volledig meertalig.
+- Publieke interface, juridische basiscontent en transactionele order-/factuurmails zijn vertaald in de basislocales. Bekende productnamen worden klantgericht vertaald via een veilige helper op productkaarten, productdetail, zoeken, cart, ordermails, klantaccount en facturen. De helper normaliseert hoofdletters, accenten, leestekens en veelvoorkomende importvarianten, maar vertaalt nooit onbekende producten automatisch. Onbekende productnamen blijven de catalogusnaam; onbekende niet-Engelse beschrijvingen vallen terug op een korte locale-eigen melding. Backoffice en volledige productinhoud zijn nog niet volledig meertalig.
 - Geen volledige product-/categoriesitemap of structured data.
 - Inkoop, facturatie en rapportages zijn nog gedeeltelijk.
 - Klantadres is nog geen apart onveranderlijk ordersnapshot.

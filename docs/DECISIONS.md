@@ -359,6 +359,20 @@ Dit document legt belangrijke technische beslissingen en hun motivatie vast. Het
 
 **Waarom:** leverancierslijsten bevatten vaak een doosprijs en een bron-eenheidsprijs. Wanneer de publieke verpakking nog `24x500ml` toont maar de verkoopprijs rond de eenheidsprijs ligt, lijkt de webshop een hele doos voor een stukprijs te verkopen. De Magners-controle op 12 juli 2026 heeft dit risico concreet aangetoond. De veilige regel is daarom: admin kiest expliciet of het product per doos, per stuk, per custom pack, per kg of per unit verkocht wordt voordat publicatie of cart/order-validatie mogelijk is.
 
+## 2026-07-16
+
+### Automatische i18n-structuurcontrole
+
+**Besluit:** `npm run lint` voert eerst `scripts/validate-i18n.mjs` uit. Deze controle vergelijkt de dictionary-structuur van `en`, `nl`, `de`, `es` en `sv`, faalt op lege vertalingen en signaleert kapotte accent-encoding in de i18n-bronbestanden.
+
+**Waarom:** de webshop heeft meerdere vertaalbronnen en snelle wijzigingen hadden geleid tot oude of ontbrekende klantteksten. Een lichte controle vóór ESLint voorkomt dat één locale stil achterblijft of dat accenten kapot in productie komen.
+
+### Veilige productweergavevertaling blijft code-only
+
+**Besluit:** productnamen en klantgerichte beschrijvingen worden alleen bij weergave vertaald via helpers die hoofdletters, accenten, leestekens en bekende importvarianten normaliseren. Onbekende productnamen blijven de catalogusnaam; onbekende niet-Engelse beschrijvingen tonen een korte locale-fallback. Supabase-productdata, supplier offers, prijzen, IVA, categorieën en zichtbaarheid worden niet gewijzigd.
+
+**Waarom:** leveranciersinhoud mag niet automatisch worden overschreven of met AI worden verzonnen, zeker niet bij voedselinformatie. De klantbeleving verbetert voor bekende producten zonder risico op verkeerde productdata, allergeneninformatie of historische order-/factuurverschillen.
+
 ## Beslisregel voor toekomstige wijzigingen
 
 Leg een besluit hier vast wanneer het een architectuurgrens, datamodel, beveiligingsmodel, externe provider, kernworkflow of blijvende ontwikkelconventie verandert. Vermeld altijd datum, besluit, motivatie, gevolgen en eventueel het vervangen besluit.

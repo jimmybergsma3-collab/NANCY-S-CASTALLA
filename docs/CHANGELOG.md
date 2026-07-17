@@ -67,6 +67,12 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Verbeterd
 
+- Publieke i18n-teksten zijn geactualiseerd voor de huidige winkelmand/orderrequest-flow: oude meldingen over geen checkout, geen database en geen accounts zijn vervangen door uitleg over server-gecontroleerde bestelaanvragen, Bizum/bankoverschrijving en WhatsApp-support.
+- De `sv`/Scandinavische klantteksten zijn opgeschoond naar natuurlijk Zweeds met normale accenten en de taalkeuze gebruikt nu `Svenska / Scandinavian` waar passend.
+- Cart- en checkoutfouten gebruiken nu verplichte locale-teksten voor ontbrekende velden, tijdelijke serviceproblemen, ongeldige orders en ontbrekend bezorgadres, zodat niet-Engelse klanten geen Engelse fallback krijgen.
+- De productnaamvertalingshelper normaliseert nu hoofdletters, accenten, leestekens en veelvoorkomende importvarianten zoals saté, frikandel, back bacon, HP Sauce, Bisto, hash browns en Nederlandse snacks, zonder Supabase-productdata te wijzigen.
+- Productbeschrijvingsfallbacks gebruiken nu correcte Duitse, Spaanse en Zweedse tekst en herkennen extra veilige aliassen; onbekende niet-Engelse beschrijvingen blijven terugvallen op een korte locale-eigen melding.
+- `npm run lint` voert nu eerst `scripts/validate-i18n.mjs` uit om ontbrekende/extra dictionary-sleutels, lege vertalingen en kapotte accent-encoding in i18n-bronnen te blokkeren.
 - `POST /api/admin/products` staat handmatige producten zonder supplier code toe, genereert indien nodig server-side een nieuwe `NC-xxxxx`-code, retourneert altijd JSON met `diagnosticId` bij fouten, blokkeert publicatie wanneer verplichte verkoopvelden ontbreken en beschermt bestaande imported products tegen wijziging van supplier/importmetadata.
 - Admin productbeheer toont nu leverancierdoos/verpakking, doosinkoopprijs, bron-eenheidsprijs, publieke verkoopeenheid, sales-unit quantity en reviewvinkjes voor sales unit en prijsbasis.
 - Nieuwe leveranciersimports blijven standaard in review: verkoopprijs wordt niet automatisch als veilige publieke prijs beschouwd en importproducten kunnen niet live zolang sales unit en prijsbasis niet bevestigd zijn.

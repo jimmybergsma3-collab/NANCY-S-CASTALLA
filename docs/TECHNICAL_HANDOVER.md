@@ -1,7 +1,7 @@
 ﻿# Technisch overdrachtsrapport: Nancy's Castalla
 
 **Documentstatus:** actuele technische situatie  
-**Peildatum:** 12 juli 2026
+**Peildatum:** 16 juli 2026
 **Productiedomein:** `https://www.nancys.es`  
 **Repository:** `jimmybergsma3-collab/NANCY-S-CASTALLA`  
 **Doelgroep:** ontwikkelaars, beheerders en technische partners die het project zonder voorafgaande broncodekennis moeten kunnen overnemen.
@@ -110,12 +110,14 @@ De scripts gebruiken bewust Webpack:
 
 ```text
 npm run dev    -> next dev --webpack
+npm run lint   -> node scripts/validate-i18n.mjs && eslint . --max-warnings=0
 npm run build  -> next build --webpack
 npm run start  -> next start
-npm run lint   -> eslint . --max-warnings=0
 ```
 
 Webpack is gekozen nadat Turbopack tijdens ontwikkeling instabiele chunk- en workerfouten gaf. Dit vermindert ontwikkelproblemen zonder de functionele architectuur te veranderen.
+
+De i18n-validator is bewust licht gehouden en draait vóór ESLint. Hij laadt de centrale i18n-woordenboeken, vergelijkt alle locales met de Engelse bronstructuur, blokkeert lege vertalingen en detecteert kapotte accent-encoding in de i18n-bronbestanden.
 
 Databasewijzigingen staan in `supabase/migrations` en moeten bewust in Supabase productie worden uitgevoerd. Let extra op bij leveranciersimports: leveranciersprijzen zijn geen publieke verkoopprijzen. Vanaf migratie `202607120002_sales_unit_price_basis_safety.sql` bewaart `products` aparte velden voor leverancierdoosprijs, bron-eenheidsprijs, aantal per doos, bronverpakking, publieke verkoopeenheid, sales-unit quantity en twee adminreviewvinkjes. De applicatiecode blokkeert geïmporteerde producten uit `IMPORT_2026_LIVE_%` in publieke queries, cartvalidatie en adminpublicatie wanneer deze prijsbasis niet gecontroleerd is.
 
@@ -241,6 +243,7 @@ De publieke frontend en serverbackend staan in dezelfde Next.js-repository, maar
 - Adminauth is bewust apart en gebruikt geen Supabase-gebruiker, maar een server-side gedeeld credential uit Vercel-environmentvariabelen.
 - De browser is nooit de bron van waarheid voor orderprijzen, btw of voorraad.
 - Productinhoud kan uit de database komen en bij een fout terugvallen op lokale data. Dit verhoogt beschikbaarheid, maar kan databaseproblemen maskeren.
+- Productnamen en beschrijvingen worden alleen bij klantgerichte weergave vertaald. De helpers normaliseren veilige naamvarianten, maar schrijven nooit terug naar Supabase en verzinnen geen onbekende productinformatie.
 
 ---
 

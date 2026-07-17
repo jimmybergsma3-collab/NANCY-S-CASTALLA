@@ -1,6 +1,6 @@
 # Projectstatus: Nancy's Castalla
 
-**Peildatum:** 12 juli 2026
+**Peildatum:** 16 juli 2026
 **Fase:** productie-MVP / pre-orderfase
 **Productiedomein:** `https://www.nancys.es`
 **Bronnen voor deze status:** volledige Git-geschiedenis vanaf de eerste webshopcommit, actuele routes, services, migraties en documentatie.
@@ -135,3 +135,5 @@ Een laatste read-only productiecontrole op 12 juli 2026 telde 13 Supabase Auth-u
 Op 12 juli 2026 is een urgente prijs-/verpakkingscontrole uitgevoerd op actieve zichtbare producten uit `IMPORT_2026_LIVE_%`. Twee Magners-producten stonden publiek met leverancierdoosverpakking maar een verkoopprijs rond bron-eenheidsprijs: `NC-03174 MAGNERS CIDER DARK FRUIT 24x440ml` en `NC-03292 MAGNERS CIDER 24x500ml`. Beide zijn in productie teruggezet naar `draft`, `is_visible=false`, `featured=false`, `ready_for_publish=false` en `needs_package_review=true`. De code is uitgebreid zodat geïmporteerde producten niet publiek of bestelbaar zijn zonder expliciete bevestiging van sales unit en prijsbasis. De aanvullende database-migratie `202607120002_sales_unit_price_basis_safety.sql` moet nog handmatig in Supabase worden uitgevoerd voor database-level bescherming.
 
 Op 13 juli 2026 is het bestaande productbeheer uitgebreid en daarna gecorrigeerd met mobiele snelle productinvoer op `/{locale}/admin/products`. De primaire flow is nu `Uit leverancierslijst`: de admin kiest een leverancier, zoekt server-side in bestaande imported products met supplier offer, selecteert het bestaande product en werkt prijs, IVA, categorie, foto, beschrijving, type en beschikbaarheid af zonder nieuwe NC-code, supplier offer of importrecord te maken. De secundaire optie `Nieuw handmatig product` blijft bedoeld voor producten die niet in leverancierslijsten staan. De drawer gebruikt dezelfde products-tabel, foto-upload en product-create API, zonder databasewijzigingen. `npm run lint` en `npm run build` zijn succesvol uitgevoerd.
+
+Op 16 juli 2026 is een publieke i18n-audit uitgevoerd zonder productdata of Supabase-records te wijzigen. Verouderde teksten die nog spraken over geen checkout, geen database en geen accounts zijn vervangen door de actuele orderrequest/cart-flow. De Zweedse/Scandinavische klantteksten zijn aangevuld met natuurlijk Zweeds, checkout-foutmeldingen komen nu volledig uit het cart-woordenboek, en de productnaam-/beschrijvingshelpers herkennen meer veilige importvarianten zonder onbekende producten automatisch te vertalen. `npm run lint` voert nu eerst een automatische i18n-structuurcontrole uit; `npm run lint` en `npm run build` zijn succesvol uitgevoerd.
