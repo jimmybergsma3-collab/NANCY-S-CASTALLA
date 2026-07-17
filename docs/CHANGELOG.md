@@ -19,6 +19,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Toegevoegd
 
+- De mobiele quick-edit voor bestaande leveranciersproducten toont en bewaart nu ook de bestaande velden `Ingrediënten / allergenen`, `Bereidingswijze` en `Bewaaradvies`, direct onder de korte beschrijving en zonder nieuwe databasevelden.
 - Mobiele snelle productinvoer op `/{locale}/admin/products` gebruikt nu standaard `Uit leverancierslijst`: admin zoekt server-side bestaande geïmporteerde draft/disabled/active producten met supplier offer, werkt het bestaande product af en behoudt Nancy-code, supplier, supplier code, supplier offer, importbatch en bronprijsmetadata. `Nieuw handmatig product` blijft als secundaire optie bestaan.
 - Migratie `202607120002_sales_unit_price_basis_safety.sql` voor expliciete scheiding tussen leveranciersdoos, bron-eenheidsprijs en publieke verkoopeenheid bij geïmporteerde producten.
 - Productvelden voor sales-unitcontrole: `sales_unit_type`, `sales_unit_quantity`, `sales_unit_confirmed`, `price_basis_confirmed`, `supplier_case_price`, `supplier_unit_price`, `supplier_case_quantity` en `source_package_text`.

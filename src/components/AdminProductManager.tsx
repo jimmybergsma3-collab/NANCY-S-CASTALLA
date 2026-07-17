@@ -79,6 +79,9 @@ type QuickProductForm = {
   vatRate: 4 | 10 | 21;
   category: Product["category"];
   description: string;
+  ingredients: string;
+  directions: string;
+  conservation: string;
   type: Product["type"];
   stockStatus: Extract<Product["stockStatus"], "available" | "preorder">;
 };
@@ -94,6 +97,9 @@ function createBlankQuickProduct(products: Product[]): QuickProductForm {
     vatRate: 10,
     category: "British & Irish products",
     description: "",
+    ingredients: "",
+    directions: "",
+    conservation: "",
     type: "ambient",
     stockStatus: "preorder",
   };
@@ -469,6 +475,9 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
       vatRate: ([4, 10, 21].includes(Number(item.vatRate)) ? Number(item.vatRate) : 10) as 4 | 10 | 21,
       category: item.category,
       description: item.description ?? "",
+      ingredients: item.ingredients ?? "",
+      directions: item.directions ?? "",
+      conservation: item.conservation ?? "",
       type: item.type,
       stockStatus: item.stockStatus === "available" ? "available" : "preorder",
     });
@@ -517,6 +526,9 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
         category: quickProduct.category,
         categories: [quickProduct.category],
         description: quickProduct.description.trim(),
+        ingredients: quickProduct.ingredients.trim(),
+        directions: quickProduct.directions.trim(),
+        conservation: quickProduct.conservation.trim(),
         price: Number(quickProduct.salePriceInclVat),
         unit: quickProduct.unit.trim(),
         stockStatus: quickProduct.stockStatus,
@@ -571,6 +583,9 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
           vatRate: ([4, 10, 21].includes(Number(result.product.vatRate)) ? Number(result.product.vatRate) : 10) as 4 | 10 | 21,
           category: result.product.category,
           description: result.product.description,
+          ingredients: result.product.ingredients ?? "",
+          directions: result.product.directions ?? "",
+          conservation: result.product.conservation ?? "",
           type: result.product.type,
           stockStatus: result.product.stockStatus === "available" ? "available" : "preorder",
         });
@@ -736,6 +751,15 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
                   </Field>
                   <Field help="Optioneel. Kort en klantvriendelijk." label="Korte beschrijving">
                     <textarea className="min-h-24 w-full rounded-lg border border-forest/15 bg-white px-4 py-3 text-base" onChange={(event) => updateQuick("description", event.target.value)} placeholder="Korte tekst voor de productkaart." value={quickProduct.description} />
+                  </Field>
+                  <Field help="Optioneel. Neem dit over van het etiket of de leverancier." label="Ingrediënten / allergenen">
+                    <textarea className="min-h-28 w-full rounded-lg border border-forest/15 bg-white px-4 py-3 text-base" onChange={(event) => updateQuick("ingredients", event.target.value)} placeholder="Ingrediënten en allergenen..." value={quickProduct.ingredients} />
+                  </Field>
+                  <Field help="Optioneel. Bereidingsinstructies voor oven, pan, frituur of airfryer." label="Bereidingswijze">
+                    <textarea className="min-h-28 w-full rounded-lg border border-forest/15 bg-white px-4 py-3 text-base" onChange={(event) => updateQuick("directions", event.target.value)} placeholder="Bereidingswijze..." value={quickProduct.directions} />
+                  </Field>
+                  <Field help="Optioneel. Bijvoorbeeld diepvries, gekoeld of droog bewaren." label="Bewaaradvies">
+                    <textarea className="min-h-28 w-full rounded-lg border border-forest/15 bg-white px-4 py-3 text-base" onChange={(event) => updateQuick("conservation", event.target.value)} placeholder="Bewaaradvies..." value={quickProduct.conservation} />
                   </Field>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="Producttype">

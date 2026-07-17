@@ -53,7 +53,7 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 
 - Verborgen adminlogin met environmentcredentials en HttpOnly-sessiecookie.
 - Dashboard met product-, online-, verborgen- en lagevoorraadtellingen.
-- Volledig productbeheer: toevoegen, wijzigen, verwijderen, publiceren, zoeken, filteren, prijzen, IVA, verpakking, voorraad en afbeeldingen. Op mobiel is er een compacte `Snel product toevoegen`-drawer die standaard bestaande geïmporteerde leveranciersproducten zoekt en afwerkt, met handmatig nieuw product als aparte secundaire optie.
+- Volledig productbeheer: toevoegen, wijzigen, verwijderen, publiceren, zoeken, filteren, prijzen, IVA, verpakking, voorraad, afbeeldingen en productdetails zoals ingrediënten/allergenen, bereidingswijze en bewaaradvies. Op mobiel is er een compacte `Snel product toevoegen`-drawer die standaard bestaande geïmporteerde leveranciersproducten zoekt en afwerkt, met handmatig nieuw product als aparte secundaire optie.
 - Productarchivering voor livegang: oude catalogus kan in bulk naar `archived` onder batch `IMPORT_2026_PRELAUNCH`, zonder producten, afbeeldingen, categorieën, codes, relaties of voorraadhistorie te verwijderen.
 - Vervolg-migratie `202607110003_product_catalogue_conflict_protection.sql` bereidt bescherming voor tegen gewone database-updates op archived producten; oude importbestanden of toekomstige importtools mogen ze niet stil overschrijven of heractiveren. Supplier code en EAN zijn duplicaatsignalen, geen unieke productsleutels.
 - Productbeheer toont standaard alleen actieve producten en heeft filters voor Active, Archived, Disabled, Draft en All; individuele archived producten kunnen veilig worden hersteld.
