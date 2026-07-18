@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { isAdminSession } from "@/lib/admin-auth";
 import { env } from "@/lib/env";
 import { logAdminAction } from "@/services/admin/audit-service";
-import { archiveOrder, deleteTestOrder, getOrderById, InventoryError, listOrders, markOrderEmailSent, markOrderTest, OrderEditError, replaceOrderItemsForCorrection, resetInventoryCommitFlagWithoutMovement, resetInvoiceForOrderCorrection, updateOrder, updateOrderNotes, voidInvoiceAndReleaseInventoryForOrderCorrection } from "@/services/orders/order-service";
+import { archiveOrder, deleteTestOrder, getOrderById, InventoryError, listOrders, markOrderEmailSent, markOrderTest, OrderEditError, prepareOrderForCorrection, replaceOrderItemsForCorrection, resetInventoryCommitFlagWithoutMovement, resetInvoiceForOrderCorrection, updateOrder, updateOrderNotes, voidInvoiceAndReleaseInventoryForOrderCorrection } from "@/services/orders/order-service";
 import { sendOrderStatusEmail } from "@/lib/email";
 import type { AdminOrderLineEditInput, OrderStatus, PaymentStatus } from "@/types/backoffice";
 
@@ -33,7 +33,7 @@ export async function GET() {
 export async function PATCH(request: Request) {
   const id = diagnosticId();
   if (!(await isAdminSession())) return jsonError("Unauthorized", 401, id);
-  const body = (await request.json()) as { id?: string; status?: OrderStatus; paymentStatus?: PaymentStatus; notes?: string; action?: "notes" | "mark_test" | "archive" | "replace_items" | "reset_invoice_for_correction" | "void_invoice_release_inventory_for_correction" | "reset_inventory_commit_flag_without_movement"; isTest?: boolean; archived?: boolean; reason?: string; lines?: AdminOrderLineEditInput[]; expectedUpdatedAt?: string };
+  const body = (await request.json()) as { id?: string; status?: OrderStatus; paymentStatus?: PaymentStatus; notes?: string; action?: "notes" | "mark_test" | "archive" | "prepare_for_correction" | "replace_items" | "reset_invoice_for_correction" | "void_invoice_release_inventory_for_correction" | "reset_inventory_commit_flag_without_movement"; isTest?: boolean; archived?: boolean; reason?: string; lines?: AdminOrderLineEditInput[]; expectedUpdatedAt?: string };
   if (!body.id) return jsonError("Missing order update.", 400, id);
   const actor = env.adminEmail || "admin";
   try {
@@ -51,6 +51,11 @@ export async function PATCH(request: Request) {
     if (body.action === "archive") {
       const order = await archiveOrder(body.id, Boolean(body.archived));
       await logAdminAction({ recordType: "order", recordId: body.id, action: body.archived ? "archive" : "restore" });
+      return jsonSuccess({ order }, id);
+    }
+    if (body.action === "prepare_for_correction") {
+      const order = await prepareOrderForCorrection(body.id, body.reason ?? "", actor);
+      await logAdminAction({ recordType: "order", recordId: body.id, action: "prepare_for_correction", metadata: { actor, reason: body.reason ?? "" } });
       return jsonSuccess({ order }, id);
     }
     if (body.action === "replace_items") {

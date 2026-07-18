@@ -87,7 +87,6 @@ begin
     if not found then raise exception 'product_not_found'; end if;
     if coalesce(v_product.product_status, '') <> 'active' then raise exception 'product_not_active'; end if;
     if not coalesce(v_product.is_visible, false) then raise exception 'product_not_visible'; end if;
-    if not coalesce(v_product.ready_for_publish, false) then raise exception 'product_not_ready_for_publish'; end if;
     if coalesce(v_product.sale_price_incl_vat, 0) <= 0 then raise exception 'product_price_required'; end if;
     if v_product.vat_rate is null or not (v_product.vat_rate = any(v_allowed_vat)) then raise exception 'product_invalid_vat'; end if;
     if coalesce(v_product.sales_unit_confirmed, false) is not true then raise exception 'product_sales_unit_unconfirmed'; end if;

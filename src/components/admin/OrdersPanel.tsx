@@ -50,6 +50,7 @@ type OrderSearchProduct = Product & {
   orderSearchAllowed?: boolean;
   orderSearchBlockers?: string[];
 };
+type AdminInvoiceSummary = NonNullable<BackofficeOrder["invoices"]>[number];
 
 function editableLineTotal(line: EditableOrderLine) {
   const packageQuantity = Number(line.packageQuantity) > 0 ? Number(line.packageQuantity) : 1;
@@ -147,18 +148,41 @@ export function OrdersPanel() {
   async function invoiceAction(order: BackofficeOrder, action: "create" | "email", invoiceId?: string) {
     setInvoiceBusy(action);
     setMessage("");
+    let targetOrder = order;
+    if (action === "create" && !["confirmed", "ready_for_collection", "delivered"].includes(order.status) && order.payment_status !== "paid") {
+      const statusResponse = await fetch("/api/admin/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: order.id, status: "confirmed", paymentStatus: order.payment_status }),
+      });
+      const { data: statusData, message: statusMessage, diagnosticId: statusDiagnosticId } = await readSafeJson<{ order?: BackofficeOrder; data?: { order?: BackofficeOrder } }>(statusResponse);
+      if (!statusResponse.ok || !statusData) {
+        setInvoiceBusy("");
+        setMessage(`${statusMessage || "Order could not be finalized before invoice creation."}${statusDiagnosticId ? ` Diagnostic ID: ${statusDiagnosticId}` : ""}`);
+        return;
+      }
+      const updatedOrder = statusData.order ?? statusData.data?.order;
+      if (updatedOrder) {
+        targetOrder = updatedOrder;
+        mergeOrder(updatedOrder);
+      }
+    }
     const response = await fetch("/api/admin/invoices", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(action === "create" ? { action, orderId: order.id } : { action, invoiceId }),
+      body: JSON.stringify(action === "create" ? { action, orderId: targetOrder.id } : { action, invoiceId }),
     });
-    const { data, message, diagnosticId } = await readSafeJson<{ invoice?: BackofficeOrder["invoices"] extends Array<infer T> ? T : never; email?: { sent?: boolean }; data?: { invoice?: BackofficeOrder["invoices"] extends Array<infer T> ? T : never; email?: { sent?: boolean } } }>(response);
+    const { data, message, diagnosticId } = await readSafeJson<{ invoice?: AdminInvoiceSummary; email?: { sent?: boolean }; data?: { invoice?: AdminInvoiceSummary; email?: { sent?: boolean } } }>(response);
     setInvoiceBusy("");
     if (!response.ok || !data) { setMessage(`${message || "Invoice action failed."}${diagnosticId ? ` Diagnostic ID: ${diagnosticId}` : ""}`); return; }
     const invoice = data.invoice ?? data.data?.invoice;
     const email = data.email ?? data.data?.email;
     if (invoice) {
-      setOrders((current) => current.map((item) => item.id === order.id ? { ...item, invoices: [invoice] } : item));
+      setOrders((current) => current.map((item) => {
+        if (item.id !== targetOrder.id) return item;
+        const previousInvoices = item.invoices ?? [];
+        return { ...item, invoices: [invoice, ...previousInvoices.filter((existing) => existing.id !== invoice.id)] };
+      }));
     }
     setMessage(action === "create" ? "Invoice created." : email?.sent ? "Invoice emailed to the customer." : "Invoice saved, but email is not configured.");
   }
@@ -289,13 +313,13 @@ function OrderDetail({ invoiceBusy, notesDraft, onAdminAction, onInvoiceAction, 
   const invoiceHistory = order.invoices ?? [];
   const invoice = invoiceHistory.find((item) => item.status !== "void" && !item.voided_at);
   const voidInvoices = invoiceHistory.filter((item) => item.status === "void" || item.voided_at);
-  const canInvoice = ["confirmed", "ready_for_collection", "delivered"].includes(order.status) || order.payment_status === "paid";
+  const invoiceableNow = ["confirmed", "ready_for_collection", "delivered"].includes(order.status) || order.payment_status === "paid";
+  const canFinalizeAndInvoice = !["cancelled", "delivered"].includes(order.status) && order.payment_status !== "cancelled" && items.length > 0;
   const canDeleteTest = Boolean(order.is_test) && !order.inventory_committed && !invoice?.invoice_series?.startsWith("NC");
-  const canEditOrder = !invoice && !["cancelled", "delivered"].includes(order.status) && order.payment_status !== "paid" && !order.inventory_committed;
+  const canPrepareEdit = !["cancelled", "delivered"].includes(order.status) && order.payment_status !== "paid";
+  const canEditOrder = canPrepareEdit && !invoice && !order.inventory_committed;
   const invoiceCanBeVoided = Boolean(invoice && !invoice.email_sent_at && order.payment_status !== "paid" && !["cancelled", "delivered"].includes(order.status) && !["paid", "cancelled", "credited", "exported"].includes(invoice.status));
-  const canResetInvoice = invoiceCanBeVoided && !order.inventory_committed;
-  const canVoidInvoiceAndReleaseInventory = invoiceCanBeVoided && Boolean(order.inventory_committed);
-  const canResetLegacyCommitFlag = invoiceCanBeVoided && Boolean(order.inventory_committed);
+  const canPrepareOrderCorrection = canEditOrder || invoiceCanBeVoided;
 
   const editSubtotalExVat = editLines.reduce((sum, line) => sum + editableLineExVat(line), 0);
   const editTotal = editLines.reduce((sum, line) => sum + editableLineTotal(line), 0);
@@ -401,82 +425,37 @@ function OrderDetail({ invoiceBusy, notesDraft, onAdminAction, onInvoiceAction, 
     }
   }
 
-  async function resetInvoiceForCorrection() {
-    const reason = window.prompt(`Waarom moet de factuur voor ${orderLabel(order)} worden ingetrokken voor ordercorrectie?`);
-    if (!reason || reason.trim().length < 3) return;
-    const confirmation = window.prompt("Typ VOID INVOICE om deze nog niet verzonden/onbetaalde factuur in te trekken voor ordercorrectie.");
-    if (confirmation !== "VOID INVOICE") return;
-    setEditSaving(true);
-    setEditMessage("");
-    const response = await fetch("/api/admin/orders", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: order.id, action: "reset_invoice_for_correction", reason }),
-    });
-    const { data, message, diagnosticId } = await readSafeJson<{ order?: BackofficeOrder; data?: { order?: BackofficeOrder } }>(response);
-    setEditSaving(false);
-    if (!response.ok || !data) {
-      setEditMessage(`${message || "Invoice could not be reset for correction."}${diagnosticId ? ` Diagnostic ID: ${diagnosticId}` : ""}`);
+  async function prepareOrderForEditing() {
+    if (editOpen) {
+      setEditOpen(false);
       return;
     }
-    const updated = data.order ?? data.data?.order;
-    if (updated) {
-      onOrderUpdated(updated);
-      setEditOpen(true);
+    const reason = window.prompt(`Waarom moet ${orderLabel(order)} worden aangepast?`);
+    if (!reason || reason.trim().length < 3) return;
+    setEditSaving(true);
+    setEditMessage("");
+    try {
+      const response = await fetch("/api/admin/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: order.id, action: "prepare_for_correction", reason }),
+      });
+      const { data, message, diagnosticId } = await readSafeJson<{ order?: BackofficeOrder; data?: { order?: BackofficeOrder } }>(response);
+      if (!response.ok || !data) {
+        setEditMessage(`${message || "Order could not be prepared for editing."}${diagnosticId ? ` Diagnostic ID: ${diagnosticId}` : ""}`);
+        return;
+      }
+      const updated = data.order ?? data.data?.order;
+      const editableOrder = updated ?? order;
+      if (updated) onOrderUpdated(updated);
+      setEditLines(orderItemsToEditableLines(editableOrder.order_items));
       setEditReason(reason);
-      setEditMessage("Factuur is ingetrokken voor ordercorrectie. Corrigeer nu de orderregels en maak daarna een nieuwe factuur met een nieuw nummer.");
-    }
-  }
-
-  async function voidInvoiceAndReleaseInventoryForCorrection() {
-    const reason = window.prompt(`Waarom moet de factuur en voorraadcommit voor ${orderLabel(order)} worden ingetrokken voor ordercorrectie?`);
-    if (!reason || reason.trim().length < 3) return;
-    const confirmation = window.prompt("Typ RELEASE INVENTORY om de factuur in te trekken en uitsluitend de voorraadmutaties van deze order terug te boeken.");
-    if (confirmation !== "RELEASE INVENTORY") return;
-    setEditSaving(true);
-    setEditMessage("");
-    const response = await fetch("/api/admin/orders", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: order.id, action: "void_invoice_release_inventory_for_correction", reason }),
-    });
-    const { data, message, diagnosticId } = await readSafeJson<{ order?: BackofficeOrder; data?: { order?: BackofficeOrder } }>(response);
-    setEditSaving(false);
-    if (!response.ok || !data) {
-      setEditMessage(`${message || "Invoice and inventory could not be released for correction."}${diagnosticId ? ` Diagnostic ID: ${diagnosticId}` : ""}`);
-      return;
-    }
-    const updated = data.order ?? data.data?.order;
-    if (updated) {
-      onOrderUpdated(updated);
       setEditOpen(true);
-      setEditReason(reason);
-      setEditMessage("Factuur is ingetrokken en de voorraadcommit van deze order is teruggeboekt. Corrigeer nu de orderregels en maak daarna een nieuwe factuur met een nieuw nummer.");
-    }
-  }
-
-  async function resetInventoryCommitFlagWithoutMovement() {
-    const reason = window.prompt(`Waarom moet alleen de foutieve voorraadcommit-vlag van ${orderLabel(order)} worden hersteld? Er wordt geen voorraadmutatie gemaakt.`);
-    if (!reason || reason.trim().length < 3) return;
-    const confirmation = window.prompt("Typ RESET COMMIT FLAG om alleen de inventory_committed-vlag te herstellen zonder voorraadbeweging.");
-    if (confirmation !== "RESET COMMIT FLAG") return;
-    setEditSaving(true);
-    setEditMessage("");
-    const response = await fetch("/api/admin/orders", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: order.id, action: "reset_inventory_commit_flag_without_movement", reason }),
-    });
-    const { data, message, diagnosticId } = await readSafeJson<{ order?: BackofficeOrder; data?: { order?: BackofficeOrder } }>(response);
-    setEditSaving(false);
-    if (!response.ok || !data) {
-      setEditMessage(`${message || "Inventory commit flag could not be repaired."}${diagnosticId ? ` Diagnostic ID: ${diagnosticId}` : ""}`);
-      return;
-    }
-    const updated = data.order ?? data.data?.order;
-    if (updated) {
-      onOrderUpdated(updated);
-      setEditMessage("Voorraadcommit-vlag is hersteld zonder voorraadmutatie. Trek nu de factuur apart in voor ordercorrectie.");
+      setEditMessage("Order is klaar om aan te passen. Eventuele niet-verzonden factuur is historisch ingetrokken.");
+    } catch (error) {
+      setEditMessage(error instanceof Error ? error.message : "Order could not be prepared for editing.");
+    } finally {
+      setEditSaving(false);
     }
   }
 
@@ -515,14 +494,11 @@ function OrderDetail({ invoiceBusy, notesDraft, onAdminAction, onInvoiceAction, 
 
       <div className="border-b border-forest/10 bg-cream/45 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div><h3 className="flex items-center gap-2 font-serif text-xl font-bold text-forest"><FileText size={19} />Invoice</h3><p className="mt-1 text-sm text-forest/60">{invoice ? `${invoiceLabel(invoice)} · ${invoice.is_test ? "Test" : "Production"} · ${statusLabel(invoice.status)}` : canInvoice ? "This order is eligible for invoicing." : "Confirm, complete or mark the order as paid first."}</p>{!businessConfig.fiscalName || !businessConfig.fiscalId ? <p className="mt-2 text-sm font-bold text-red-700">Fiscal business details are incomplete. Invoice may not be legally complete.</p> : null}</div>
+          <div><h3 className="flex items-center gap-2 font-serif text-xl font-bold text-forest"><FileText size={19} />Invoice</h3><p className="mt-1 text-sm text-forest/60">{invoice ? `${invoiceLabel(invoice)} · ${invoice.is_test ? "Test" : "Production"} · ${statusLabel(invoice.status)}` : invoiceableNow ? "This order is eligible for invoicing." : "Finalize the corrected order to create a new invoice."}</p>{!businessConfig.fiscalName || !businessConfig.fiscalId ? <p className="mt-2 text-sm font-bold text-red-700">Fiscal business details are incomplete. Invoice may not be legally complete.</p> : null}</div>
           <div className="flex flex-wrap gap-2">
-            {!invoice ? <button className="inline-flex min-h-9 items-center gap-2 rounded-md bg-forest px-3 py-2 text-xs font-bold text-cream disabled:opacity-50" disabled={!canInvoice || Boolean(invoiceBusy)} onClick={() => void onInvoiceAction(order, "create")} type="button"><FileText size={15} />{invoiceBusy === "create" ? "Creating..." : "Order definitief maken en factuur aanmaken"}</button> : <>
+            {!invoice ? <button className="inline-flex min-h-9 items-center gap-2 rounded-md bg-forest px-3 py-2 text-xs font-bold text-cream disabled:opacity-50" disabled={!canFinalizeAndInvoice || Boolean(invoiceBusy)} onClick={() => void onInvoiceAction(order, "create")} type="button"><FileText size={15} />{invoiceBusy === "create" ? "Creating..." : "Order definitief maken en factuur aanmaken"}</button> : <>
               <a className="inline-flex min-h-9 items-center gap-2 rounded-md border border-forest/15 bg-white px-3 py-2 text-xs font-bold text-forest" href={`/api/admin/invoices/${invoice.id}/pdf`}><Download size={15} />PDF</a>
               <button className="inline-flex min-h-9 items-center gap-2 rounded-md bg-forest px-3 py-2 text-xs font-bold text-cream disabled:opacity-50" disabled={Boolean(invoiceBusy)} onClick={() => void onInvoiceAction(order, "email", invoice.id)} type="button"><Send size={15} />{invoiceBusy === "email" ? "Sending..." : invoice.email_sent_at ? "Email again" : "Email customer"}</button>
-              <button className="inline-flex min-h-9 items-center gap-2 rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 disabled:opacity-40" disabled={!canResetInvoice || editSaving} onClick={() => void resetInvoiceForCorrection()} type="button"><RotateCcw size={15} />Factuur intrekken voor ordercorrectie</button>
-              <button className="inline-flex min-h-9 items-center gap-2 rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 disabled:opacity-40" disabled={!canVoidInvoiceAndReleaseInventory || editSaving} onClick={() => void voidInvoiceAndReleaseInventoryForCorrection()} type="button"><RotateCcw size={15} />Factuur intrekken en voorraad vrijgeven voor ordercorrectie</button>
-              <button className="inline-flex min-h-9 items-center gap-2 rounded-md border border-amber-300 bg-white px-3 py-2 text-xs font-bold text-amber-800 disabled:opacity-40" disabled={!canResetLegacyCommitFlag || editSaving} onClick={() => void resetInventoryCommitFlagWithoutMovement()} type="button"><ShieldAlert size={15} />Voorraadcommit-vlag herstellen zonder voorraadmutatie</button>
             </>}
           </div>
         </div>
@@ -548,10 +524,10 @@ function OrderDetail({ invoiceBusy, notesDraft, onAdminAction, onInvoiceAction, 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="flex items-center gap-2 font-serif text-xl font-bold text-forest"><PackagePlus size={19} />Order controleren en bewerken</h3>
-            <p className="mt-1 text-sm text-forest/60">{canEditOrder ? "Pas producten en aantallen aan voordat je de order definitief factureert." : "Orderregels zijn vergrendeld door status, betaling, voorraadboeking of factuur."}</p>
+            <p className="mt-1 text-sm text-forest/60">{canPrepareOrderCorrection ? "Pas producten en aantallen aan voordat je de order definitief factureert." : "Deze order kan niet meer worden aangepast door status of betaling."}</p>
           </div>
-          <button className="rounded-md bg-forest px-4 py-2 text-sm font-bold text-cream disabled:opacity-45" disabled={!canEditOrder} onClick={() => setEditOpen((open) => !open)} type="button">
-            {editOpen ? "Editor sluiten" : "Order bewerken"}
+          <button className="rounded-md bg-forest px-4 py-2 text-sm font-bold text-cream disabled:opacity-45" disabled={!canPrepareOrderCorrection || editSaving} onClick={() => void prepareOrderForEditing()} type="button">
+            {editOpen ? "Editor sluiten" : editSaving ? "Voorbereiden..." : "Order aanpassen"}
           </button>
         </div>
         {editMessage ? <p className="mt-3 rounded-md border border-brass/30 bg-cream p-3 text-sm font-bold text-forest">{editMessage}</p> : null}
@@ -604,7 +580,7 @@ function OrderDetail({ invoiceBusy, notesDraft, onAdminAction, onInvoiceAction, 
               {editVatByRate.map(([rate, value]) => <div className="flex justify-between gap-4" key={rate}><span>IVA {rate}%</span><strong>{formatEuro(value)}</strong></div>)}
               <div className="flex justify-between gap-4 border-t border-forest/10 pt-2 text-lg"><span className="font-bold">Totaal incl. IVA</span><strong>{formatEuro(editTotal)}</strong></div>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                <button className="rounded-md bg-forest px-4 py-3 text-sm font-bold text-cream disabled:opacity-50" disabled={editSaving || editLines.length === 0} onClick={() => void saveCorrectedOrder()} type="button">{editSaving ? "Opslaan..." : "Correctie opslaan"}</button>
+                <button className="rounded-md bg-forest px-4 py-3 text-sm font-bold text-cream disabled:opacity-50" disabled={editSaving || editLines.length === 0} onClick={() => void saveCorrectedOrder()} type="button">{editSaving ? "Opslaan..." : "Wijzigingen opslaan"}</button>
                 <button className="rounded-md border border-forest/15 bg-white px-4 py-3 text-sm font-bold text-forest disabled:opacity-50" disabled={editSaving} onClick={() => { setEditOpen(false); setEditLines(orderItemsToEditableLines(order.order_items)); setProductResults([]); setProductQuery(""); setEditMessage(""); }} type="button">Annuleren</button>
               </div>
             </div>

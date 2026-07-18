@@ -416,7 +416,6 @@ export async function replaceOrderItemsForCorrection(id: string, lines: AdminOrd
     if (message.includes("product_not_found")) throw new OrderEditError("One of the selected replacement products no longer exists.", 409);
     if (message.includes("product_not_active")) throw new OrderEditError("One of the selected replacement products is not active.", 409);
     if (message.includes("product_not_visible")) throw new OrderEditError("One of the selected replacement products is not visible online.", 409);
-    if (message.includes("product_not_ready_for_publish")) throw new OrderEditError("One of the selected replacement products is not marked ready for publish.", 409);
     if (message.includes("product_price_required")) throw new OrderEditError("One of the selected replacement products has no valid selling price.", 409);
     if (message.includes("product_invalid_vat")) throw new OrderEditError("One of the selected replacement products has an invalid IVA rate.", 409);
     if (message.includes("product_sales_unit_unconfirmed")) throw new OrderEditError("One of the selected replacement products has no confirmed sales unit.", 409);
@@ -429,6 +428,40 @@ export async function replaceOrderItemsForCorrection(id: string, lines: AdminOrd
   }
 
   return getOrderById(id);
+}
+
+export async function prepareOrderForCorrection(id: string, reason: string, actor: string) {
+  const cleanReason = reason.trim();
+  const cleanActor = actor.trim();
+  if (cleanReason.length < 3) throw new OrderEditError("A correction reason of at least 3 characters is required before editing this order.", 400);
+  if (cleanActor.length < 3) throw new OrderEditError("An admin actor is required.", 400);
+
+  const order = await getOrderById(id);
+  if (!order) throw new OrderEditError("Order not found.", 404);
+  if (order.status === "cancelled" || order.status === "delivered") throw new OrderEditError("This order status is locked and cannot be edited.", 409);
+  if (order.payment_status === "paid") throw new OrderEditError("This order is marked as paid and cannot be edited.", 409);
+
+  const activeInvoice = order.invoices?.find((invoice) => invoice.status !== "void" && !invoice.voided_at);
+  if (!activeInvoice) {
+    if (order.inventory_committed) throw new OrderEditError("This order has committed inventory and needs manual stock review before editing.", 409);
+    return order;
+  }
+
+  if (activeInvoice.email_sent_at) throw new OrderEditError("This invoice has already been emailed and cannot be voided automatically for correction.", 409);
+  if (["paid", "cancelled", "credited", "exported"].includes(activeInvoice.status)) throw new OrderEditError("This invoice status is locked and cannot be voided automatically for correction.", 409);
+
+  if (!order.inventory_committed) {
+    return resetInvoiceForOrderCorrection(id, cleanReason, cleanActor);
+  }
+
+  try {
+    return await voidInvoiceAndReleaseInventoryForOrderCorrection(id, cleanReason, cleanActor);
+  } catch (error) {
+    const message = sanitizeErrorMessage(error).toLowerCase();
+    if (!message.includes("no sale movements") && !message.includes("legacy commit-flag") && !message.includes("inventory_commit_missing_movements")) throw error;
+    await resetInventoryCommitFlagWithoutMovement(id, cleanReason, cleanActor);
+    return resetInvoiceForOrderCorrection(id, cleanReason, cleanActor);
+  }
 }
 
 export async function resetInvoiceForOrderCorrection(id: string, reason: string, actor: string) {

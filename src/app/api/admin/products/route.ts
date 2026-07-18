@@ -77,7 +77,6 @@ function orderSearchBlockers(product: Product) {
   const lifecycle = product.lifecycleStatus ?? "active";
   if (lifecycle !== "active") blockers.push(`Product status is ${lifecycle}.`);
   if (product.isVisible === false) blockers.push("Product is not visible online.");
-  if (product.readyForPublish !== true) blockers.push("Product is not marked ready for publish.");
   if (Number(product.salePriceInclVat) <= 0) blockers.push("Sale price incl. IVA is missing or zero.");
   if (![4, 10, 21].includes(Number(product.vatRate))) blockers.push("IVA must be 4%, 10% or 21%.");
   if (product.salesUnitConfirmed !== true) blockers.push("Sales unit is not confirmed.");
