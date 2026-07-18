@@ -40,6 +40,13 @@ declare
   v_line_ex numeric;
   v_line_vat numeric;
   v_line_total numeric;
+  v_quantity numeric;
+  v_package_label text;
+  v_package_quantity numeric;
+  v_package_price numeric;
+  v_package_unit_price numeric;
+  v_effective_units numeric;
+  v_package_option jsonb;
   v_allowed_vat numeric[] := array[4, 10, 21];
 begin
   if length(trim(coalesce(p_reason, ''))) < 3 then raise exception 'correction_reason_required'; end if;
@@ -73,7 +80,8 @@ begin
 
   for v_line in select value from jsonb_array_elements(p_lines) loop
     if coalesce(v_line->>'productId', '') = '' then raise exception 'line_product_required'; end if;
-    if coalesce((v_line->>'quantity')::numeric, 0) <= 0 then raise exception 'line_quantity_required'; end if;
+    v_quantity := coalesce((v_line->>'quantity')::numeric, 0);
+    if v_quantity <= 0 then raise exception 'line_quantity_required'; end if;
 
     select * into v_product from products where id = v_line->>'productId';
     if not found then raise exception 'product_not_found'; end if;
@@ -88,10 +96,35 @@ begin
       raise exception 'product_price_basis_unconfirmed';
     end if;
 
-    if round((v_line->>'salePriceInclVat')::numeric, 2) <> round(v_product.sale_price_incl_vat, 2) then raise exception 'line_price_mismatch'; end if;
+    v_package_label := coalesce(nullif(v_line->>'packageLabel', ''), nullif(v_line->>'unit', ''), v_product.unit, '');
+    v_package_quantity := coalesce((v_line->>'packageQuantity')::numeric, 1);
+    if v_package_quantity <= 0 then raise exception 'line_package_quantity_required'; end if;
+
+    v_package_option := null;
+    if jsonb_typeof(coalesce(v_product.package_options, '[]'::jsonb)) = 'array'
+       and jsonb_array_length(coalesce(v_product.package_options, '[]'::jsonb)) > 0 then
+      select option_value
+        into v_package_option
+        from jsonb_array_elements(v_product.package_options) as option_value
+       where option_value->>'label' = v_package_label
+         and round((option_value->>'quantity')::numeric, 4) = round(v_package_quantity, 4)
+       limit 1;
+
+      if v_package_option is null then raise exception 'line_package_unavailable'; end if;
+      v_package_price := round((v_package_option->>'salePriceInclVat')::numeric, 2);
+    else
+      if round(v_package_quantity, 4) <> 1 then raise exception 'line_package_unavailable'; end if;
+      v_package_price := round(v_product.sale_price_incl_vat, 2);
+      v_package_label := coalesce(nullif(v_package_label, ''), v_product.unit, '');
+    end if;
+
+    if coalesce(v_package_price, 0) <= 0 then raise exception 'line_price_mismatch'; end if;
+    if round((v_line->>'salePriceInclVat')::numeric, 2) <> v_package_price then raise exception 'line_price_mismatch'; end if;
     if round((v_line->>'vatRate')::numeric, 2) <> round(v_product.vat_rate, 2) then raise exception 'line_vat_mismatch'; end if;
 
-    v_line_total := round(((v_line->>'quantity')::numeric * v_product.sale_price_incl_vat)::numeric, 2);
+    v_effective_units := v_quantity * v_package_quantity;
+    v_package_unit_price := v_package_price / v_package_quantity;
+    v_line_total := round((v_effective_units * v_package_unit_price)::numeric, 2);
     v_line_ex := round((v_line_total / (1 + v_product.vat_rate / 100))::numeric, 2);
     v_line_vat := round((v_line_total - v_line_ex)::numeric, 2);
 

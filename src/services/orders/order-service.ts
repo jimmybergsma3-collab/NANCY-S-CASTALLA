@@ -112,7 +112,8 @@ export async function validateCartLines(lines: OrderLineInput[]): Promise<Valida
     else if (!selected && options.length > 0) code = "package_unavailable";
     else if (!salesUnitSafety.ok) code = "price_basis_review";
     else code = evaluateProductAvailability({ stockStatus: product.stockStatus, trackInventory: Boolean(product.trackInventory), stockQuantity: Number(product.stockQuantity ?? 0), requestedUnits: stockUnits });
-    const lineTotal = roundMoney(requested.quantity * selectedPrice);
+    const selectedUnitPrice = selectedPrice / selectedQuantity;
+    const lineTotal = roundMoney(requested.quantity * selectedQuantity * selectedUnitPrice);
     const lineExVat = roundMoney(lineTotal / (1 + product.vatRate / 100));
     return {
       productId: product.id, name: product.name, imageUrl: product.imageUrl, quantity: requested.quantity,

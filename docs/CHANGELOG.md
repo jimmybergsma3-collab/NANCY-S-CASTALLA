@@ -74,6 +74,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 ### Verbeterd
 
 - Admin productzoekactie `mode=order-search` levert alleen actieve, zichtbare en sales-unit-veilige producten aan de ordercorrectie-editor. Browserwaarden voor prijs, IVA en totaal worden genegeerd; de order-service valideert verpakkingen en rekent actuele bedragen opnieuw uit.
+- Admin ordercorrecties valideren nu ook gekozen package options server-side in de Supabase RPC. Verpakkingen zoals `12 stuks` voor `NC-03263` worden berekend als effectieve units met de gevalideerde pakketprijs, waardoor totals zoals `1 x 12 x €3,00 = €36,00` niet meer worden afgewezen.
 - `npm run lint` negeert expliciet lokale import-/runtime-mappen zoals `tmp/**`, zodat tijdelijke parserdependencies de codecontrole niet blokkeren.
 
 - Publieke i18n-teksten zijn geactualiseerd voor de huidige winkelmand/orderrequest-flow: oude meldingen over geen checkout, geen database en geen accounts zijn vervangen door uitleg over server-gecontroleerde bestelaanvragen, Bizum/bankoverschrijving en WhatsApp-support.

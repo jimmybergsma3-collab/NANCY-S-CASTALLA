@@ -52,7 +52,9 @@ type OrderSearchProduct = Product & {
 };
 
 function editableLineTotal(line: EditableOrderLine) {
-  return Math.round(line.quantity * line.salePriceInclVat * 100) / 100;
+  const packageQuantity = Number(line.packageQuantity) > 0 ? Number(line.packageQuantity) : 1;
+  const unitPrice = Number(line.salePriceInclVat) / packageQuantity;
+  return Math.round(line.quantity * packageQuantity * unitPrice * 100) / 100;
 }
 
 function editableLineExVat(line: EditableOrderLine) {
