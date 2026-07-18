@@ -1,6 +1,6 @@
 # Projectstatus: Nancy's Castalla
 
-**Peildatum:** 16 juli 2026
+**Peildatum:** 18 juli 2026
 **Fase:** productie-MVP / pre-orderfase
 **Productiedomein:** `https://www.nancys.es`
 **Bronnen voor deze status:** volledige Git-geschiedenis vanaf de eerste webshopcommit, actuele routes, services, migraties en documentatie.
@@ -14,9 +14,9 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 | Publieke webshop | Operationeel | Home, categorieën, zoeken, productdetail, winkelmand en checkout bestaan in vijf locales. |
 | Pre-orders | Operationeel | Pre-order is bestelbaar bij voorraad nul; coming-soon is geblokkeerd. |
 | Klantaccount | Operationeel | Registratie loopt via de centrale serverroute, toont een duidelijke bevestigings- en spammapmelding, ondersteunt resend na 60 seconden, en bevat login, herstel, profiel, orderhistorie, orderdetails en eigen factuurdownload. Accountbevestigingsmail blijft afhankelijk van Supabase SMTP/Resend/DNS-configuratie. |
-| Orders | Operationeel | Serverprijzen, IVA, idempotency, orderregels, ordernummer, klantkoppeling en adminbeheer. E-mail is secundair en blokkeert orderopslag niet. De order-API logt een diagnose-id per stap en heeft een service-role REST-fallback wanneer de Supabase RPC in productie achterloopt of faalt. |
+| Orders | Operationeel | Serverprijzen, IVA, idempotency, orderregels, ordernummer, klantkoppeling en adminbeheer. Admin kan orderregels corrigeren voordat voorraad is gecommit, betaling is ontvangen of een definitieve factuur bestaat. E-mail is secundair en blokkeert orderopslag niet. |
 | Voorraad | Operationeel met beperking | Afboeken bij bevestiging en terugboeken bij annulering; geen reservering tijdens status `new`. |
-| Facturatie | Operationeel voor normale facturen | Unieke factuur per order, snapshots, Spaans/Engelse PDF, admin- en klantdownload, e-mail. |
+| Facturatie | Operationeel voor normale facturen | Maximaal één actieve factuur per order, snapshots, Spaans/Engelse PDF, admin- en klantdownload, e-mail. Een nog niet verzonden/onbetaalde factuur kan via een gecontroleerde adminactie op `void` worden gezet voor ordercorrectie; nummer en regels blijven historisch zichtbaar en worden niet hergebruikt. |
 | E-mail | Operationeel mits extern geconfigureerd | Resend voor order/factuur met professionele responsive HTML, plain-text fallback en correcte Reply-To; Supabase SMTP voor accountmail; geen queue of automatische retry. |
 | Admin | Gemengd | Producten, orders, voorraad en facturen functioneel; Orders/Customers laden backwards-compatible wanneer cleanupkolommen in productie nog ontbreken en tonen altijd JSON-fouten met diagnose-id. Overige modules variëren van overzicht tot voorbereiding. |
 | Leveranciersimport | Operationeel voor draftimport | Migratie `202607120001` staat live. Tindale en Europ Foods kunnen via dry-run en confirmed import naar draftproducten/supplier offers, zonder voorraadmutaties of automatische publicatie. |
@@ -67,6 +67,8 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 - Categorieoverzicht, klantoverzicht, leveranciersoverzicht, inkooporderoverzicht, IVA-samenvatting, rapportagekaarten, instellingen en integratieregister.
 - Orderoverzicht en responsieve orderdetails met klantgegevens, adres, opmerkingen, regels, verpakking, aantallen, prijzen, IVA en totalen.
 - Status, betaalstatus en interne notities wijzigen; bellen, WhatsApp en e-mail openen.
+- Ordercorrectie vóór definitieve facturatie: admins kunnen orderregels verwijderen, aantallen wijzigen en vervangende actieve producten zoeken/toevoegen. De browser stuurt alleen productcode, verpakking en aantal; de server rekent actuele prijs, IVA en totalen opnieuw uit en schrijft auditmetadata.
+- Een nog niet verzonden, onbetaalde en niet geëxporteerde factuur kan veilig worden ingetrokken voor correctie via `Factuur intrekken voor ordercorrectie`; daarna is de order opnieuw bewerkbaar en moet een nieuwe factuur met nieuw nummer worden aangemaakt. De ingetrokken factuur en regels blijven zichtbaar in historie. Definitief verzonden/betaalde/geleverde orders blijven vergrendeld.
 - Compact orderbeheer met zoeken, statusfilter, betaalfilter, datumfilter en onderscheid tussen echte, test- en gearchiveerde orders.
 - Klantenbeheer met detailweergave, zoeken, filters voor actief/gearchiveerd/test/met account/zonder account, archiveren, testmarkering en veilige deleteblokkades.
 - Klanten- en orderbeheer gebruiken veilige JSON-responses met `diagnosticId` en vallen terug op basisvelden wanneer productie nog niet alle cleanup-/factuurseriekolommen bevat; data wordt in dat geval niet gewijzigd.
@@ -114,7 +116,8 @@ Aanvullende productiecontrole 12 juli 2026: Orders en Customers laden nu ook wan
 12. Controleer juridische teksten, privacy/cookiebeleid, bewaartermijnen, allergeneninformatie en consumentenvoorwaarden met passende deskundigen.
 13. Gebruik het Europ Foods recovery-paneel om geldige overgeslagen varianten als draft te importeren, los daarna resterende importconflicten en reviewflags op, en publiceer alleen producten die `ready_for_publish` zijn en een gecontroleerde verkoopprijs, IVA, categorie en verpakking hebben.
 14. Voer migratie `202607120002_sales_unit_price_basis_safety.sql` handmatig uit in Supabase productie zodat databasepublicatie dezelfde sales-unit prijsveiligheid afdwingt als de applicatiecode.
-15. Voer na publicatie van een kleine selectie een echte cart/order-smoketest uit met Bizum en bankoverschrijving.
+15. Voer migratie `202607180001_admin_order_corrections.sql` handmatig uit in Supabase productie voordat admin-ordercorrecties en invoice-voiding live gebruikt worden.
+16. Voer na publicatie van een kleine selectie een echte cart/order-smoketest uit met Bizum en bankoverschrijving.
 
 ## Niet blokkerend voor de eerste gecontroleerde pre-orders
 
@@ -137,3 +140,7 @@ Op 12 juli 2026 is een urgente prijs-/verpakkingscontrole uitgevoerd op actieve 
 Op 13 juli 2026 is het bestaande productbeheer uitgebreid en daarna gecorrigeerd met mobiele snelle productinvoer op `/{locale}/admin/products`. De primaire flow is nu `Uit leverancierslijst`: de admin kiest een leverancier, zoekt server-side in bestaande imported products met supplier offer, selecteert het bestaande product en werkt prijs, IVA, categorie, foto, beschrijving, type en beschikbaarheid af zonder nieuwe NC-code, supplier offer of importrecord te maken. De secundaire optie `Nieuw handmatig product` blijft bedoeld voor producten die niet in leverancierslijsten staan. De drawer gebruikt dezelfde products-tabel, foto-upload en product-create API, zonder databasewijzigingen. `npm run lint` en `npm run build` zijn succesvol uitgevoerd.
 
 Op 16 juli 2026 is een publieke i18n-audit uitgevoerd zonder productdata of Supabase-records te wijzigen. Verouderde teksten die nog spraken over geen checkout, geen database en geen accounts zijn vervangen door de actuele orderrequest/cart-flow. De Zweedse/Scandinavische klantteksten zijn aangevuld met natuurlijk Zweeds, checkout-foutmeldingen komen nu volledig uit het cart-woordenboek, en de productnaam-/beschrijvingshelpers herkennen meer veilige importvarianten zonder onbekende producten automatisch te vertalen. `npm run lint` voert nu eerst een automatische i18n-structuurcontrole uit; `npm run lint` en `npm run build` zijn succesvol uitgevoerd.
+
+Op 18 juli 2026 is admin-ordercorrectie voorbereid voor de pre-orderpraktijk: orders zijn aanvraagregels totdat Nancy beschikbaarheid, vervanging, verpakking, prijzen en IVA heeft gecontroleerd. De backoffice kan orderregels vóór definitieve facturatie server-side vervangen of aanpassen, inclusief productzoekactie en auditreden. Orders zijn vergrendeld zodra er een actieve factuur bestaat, betaling `paid` is, voorraad is gecommit of de order is geleverd/geannuleerd. Een nog niet verzonden/onbetaalde factuur kan gecontroleerd op `void` worden gezet voor correctie; factuur en invoice_items blijven bestaan, de factuursnapshot wordt in de auditlog bewaard en het factuurnummer wordt niet hergebruikt. Nieuwe migratie `202607180001_admin_order_corrections.sql` moet handmatig in Supabase worden uitgevoerd.
+
+Aanvulling 18 juli 2026: dezelfde migratie onderscheidt nu twee voorraadcorrecties. Normale voorraadcommits met aantoonbare negatieve `sale`-movements kunnen via positieve `correction_release`-movements worden teruggeboekt voordat orderregels worden gecorrigeerd. Legacy/bug-orders met `inventory_committed=true` maar exact nul `inventory_movements` krijgen een aparte adminactie die alleen de foutieve commit-vlag reset, zonder productvoorraad of movements te wijzigen, en dit volledig audit met orderregels, stocksnapshot, actor en reden.

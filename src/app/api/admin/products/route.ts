@@ -85,6 +85,29 @@ export async function GET(request: Request) {
 
   const products = await getProducts({ includeHidden: true, includeArchived: true });
   const { searchParams } = new URL(request.url);
+  if (searchParams.get("mode") === "order-search") {
+    const query = searchParams.get("q")?.trim().toLowerCase() ?? "";
+    const allowedVatRates = new Set([4, 10, 21]);
+    const matches = products
+      .filter((product) => (product.lifecycleStatus ?? "active") === "active" && product.isVisible !== false)
+      .filter((product) => product.readyForPublish === true)
+      .filter((product) => Number(product.salePriceInclVat) > 0)
+      .filter((product) => allowedVatRates.has(Number(product.vatRate)))
+      .filter((product) => product.salesUnitConfirmed === true)
+      .filter((product) => evaluateSalesUnitSafety(product).ok)
+      .filter((product) => !query || [
+        product.id,
+        product.name,
+        product.category,
+        product.categories?.join(" "),
+        product.unit,
+        product.ean,
+        product.supplierCode,
+      ].join(" ").toLowerCase().includes(query))
+      .slice(0, 25)
+      .map((product) => ({ ...product, packageOptions: getEffectivePackageOptions(product) }));
+    return NextResponse.json({ ok: true, products: matches, databaseEnabled: hasSupabaseAdmin() });
+  }
   if (searchParams.get("mode") === "quick-supplier") {
     const supplier = searchParams.get("supplier")?.trim().toLowerCase() ?? "";
     const query = searchParams.get("q")?.trim().toLowerCase() ?? "";

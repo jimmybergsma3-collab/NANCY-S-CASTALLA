@@ -185,6 +185,14 @@ Er zijn twee orderkanalen:
 10. Resend verstuurt admin- en klantmail als e-mailconfiguratie werkt. Order-, status- en factuurmails gebruiken branded responsive HTML met logo, ordertabellen, betaalinformatie, contactknoppen, WhatsApp, website, Facebook en plain-text fallback. De afzendernaam is `Nancy's Castalla`; klantmails gebruiken `info@nancys.es` als Reply-To en adminordermeldingen gebruiken het klantadres als Reply-To.
 11. Nieuwe order start als `new` met betaalstatus `pending`; de klant kan alleen `bizum` of `bank-transfer` als betaalvoorkeur kiezen. Oude opgeslagen waarden voor cash/card kunnen nog als historische labels gelezen worden, maar zijn niet zichtbaar of selecteerbaar in de klantflow.
 
+### Admin-ordercorrectie
+
+Een databaseorder is in de pre-orderfase eerst een aanvraag. Nancy controleert daarna beschikbaarheid, vervangingen, aantallen, verpakking, IVA en verkoopprijs voordat de definitieve factuur wordt gemaakt. Admins mogen orderregels daarom corrigeren zolang er geen definitieve factuur bestaat, betaling niet `paid` is, voorraad niet is gecommit en de order niet `delivered` of `cancelled` is. De browser mag nooit prijzen of totalen bepalen: de admin-editor stuurt alleen productcode, verpakking en aantal naar `/api/admin/orders`; `replaceOrderItemsForCorrection` haalt actuele productdata server-side op, valideert bestelbaarheid en rekent subtotalen, IVA en totaal opnieuw uit.
+
+Als per ongeluk al een factuur is gemaakt, mag alleen een nog niet verzonden/onbetaalde/onverwerkte factuur via `reset_invoice_for_order_correction` op status `void` worden gezet. Het oude factuurrecord en de `invoice_items` blijven bestaan, voidreden/actor/datum worden op de factuur opgeslagen en een audit-snapshot bewaart de oorspronkelijke toestand. Het factuurnummer wordt nooit hergebruikt. Voer migratie `202607180001_admin_order_corrections.sql` handmatig uit voordat deze adminflow live gebruikt wordt.
+
+Voor orders waarbij voorraad al gecommit is, zijn er twee expliciete correctiepaden. Normale commits met negatieve `sale`-movements worden alleen via `void_invoice_and_release_inventory_for_order_correction` vrijgegeven; deze maakt positieve `correction_release`-movements en zet daarna `inventory_committed=false`. Legacy/bug-orders met `inventory_committed=true` maar nul `inventory_movements` gebruiken uitsluitend `reset_inventory_commit_flag_without_movement`; die wijzigt geen voorraad en maakt geen movements, maar audit actor, reden, orderregels, stocksnapshot en bewijs dat movement count nul was.
+
 ### WhatsApp-order
 
 De CTA opent een samengesteld bericht naar het zakelijke WhatsApp-nummer uit `config/business.ts`. Een WhatsApp-bericht wordt niet automatisch als databaseorder opgeslagen. Maak nooit de aanname dat beide kanalen hetzelfde zijn.

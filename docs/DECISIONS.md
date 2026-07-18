@@ -1,9 +1,29 @@
 # Technische beslissingen: Nancy's Castalla
 
 **Formaat:** chronologisch Architecture Decision Log  
-**Peildatum:** 5 juli 2026
+**Peildatum:** 18 juli 2026
 
 Dit document legt belangrijke technische beslissingen en hun motivatie vast. Het beschrijft geen volledige codegeschiedenis; daarvoor dient `CHANGELOG.md`. Nieuwe besluiten worden onder de juiste datum toegevoegd. Wanneer een besluit wordt vervangen, blijft het oude besluit staan met een verwijzing naar het nieuwe besluit.
+
+## 2026-07-18
+
+### Admin-ordercorrectie vóór definitieve factuur
+
+**Besluit:** orders mogen in de backoffice worden gecorrigeerd zolang er geen definitieve factuur bestaat, betaling niet `paid` is, voorraad niet is gecommit en de order niet geleverd/geannuleerd is. De admin stuurt alleen productcode, verpakking en aantal; de server haalt actuele productdata op, valideert bestelbaarheid en rekent prijs, IVA en totaal opnieuw uit.
+
+**Waarom:** Nancy's Castalla werkt met pre-orders en leveranciersbeschikbaarheid. Een order is eerst een aanvraag; pas na controle kan de juiste verpakking of vervanging worden vastgelegd. Dit voorkomt dat klanten of admins officiële facturen maken op basis van producten die niet leverbaar blijken.
+
+### Beperkte invoice-voiding voor ordercorrecties
+
+**Besluit:** een nog niet verzonden/onbetaalde/onverwerkte factuur mag via een expliciete adminactie op status `void` worden gezet voor correctie. De factuur en regels blijven bestaan, voidreden/actor/datum staan op de factuur, een audit-snapshot bewaart de oorspronkelijke toestand en een nieuwe factuur moet daarna opnieuw worden gemaakt met een nieuw nummer.
+
+**Waarom:** de eerste echte orders kunnen operationele correcties vragen voordat er sprake is van fiscale verzending of betaling. Zodra een factuur verzonden, betaald, geëxporteerd, gecrediteerd, geannuleerd of gekoppeld aan voorraad/levering is, hoort correctie via een formele creditnota/correctieworkflow te gebeuren.
+
+### Gescheiden voorraadcorrectie bij ordercorrectie
+
+**Besluit:** gecommitte voorraad mag alleen worden vrijgegeven wanneer de bestaande negatieve `sale`-movements exact overeenkomen met de huidige tracked orderregels; de release schrijft positieve `correction_release`-movements. Als een legacy/bug-order wel `inventory_committed=true` heeft maar nul `inventory_movements`, is er een aparte actie die uitsluitend de vlag reset en geen voorraadmutatie maakt.
+
+**Waarom:** factuur 10/order 22 liet zien dat een oude inconsistente status kan bestaan. Het systeem mag dan geen fictieve voorraadbewegingen creëren. Door normale terugboeking en legacy-vlagherstel strikt te scheiden blijft de audit betrouwbaar.
 
 ## 2026-06-23
 

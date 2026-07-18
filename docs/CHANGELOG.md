@@ -19,6 +19,11 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Toegevoegd
 
+- Admin-ordercorrectie vóór definitieve facturatie: orderregels kunnen in `/{locale}/admin` worden verwijderd, aantallen kunnen worden aangepast en vervangende producten kunnen via server-side productzoekactie worden toegevoegd.
+- Migratie `202607180001_admin_order_corrections.sql` met RPC's `replace_order_items_for_admin` en `reset_invoice_for_order_correction`. Deze functies blokkeren correcties bij betaalde, geleverde, geannuleerde, voorraad-gecommitte of actief gefactureerde orders en schrijven verplichte auditmetadata met actor en reden.
+- Gecontroleerde actie `Factuur intrekken voor ordercorrectie` voor nog niet verzonden/onbetaalde facturen. De factuur krijgt status `void`, `invoice_items` blijven bestaan, het oude nummer blijft zichtbaar en de admin maakt daarna een nieuwe factuur met nieuw nummer.
+- Aparte voorraadcorrectiepaden voor ordercorrecties: normale gecommitte voorraad met negatieve `sale`-movements wordt via positieve `correction_release`-movements teruggeboekt; legacy-orders met `inventory_committed=true` maar nul movements kunnen alleen de foutieve vlag resetten zonder voorraadmutatie, met volledige audit.
+
 - De mobiele quick-edit voor bestaande leveranciersproducten toont en bewaart nu ook de bestaande velden `Ingrediënten / allergenen`, `Bereidingswijze` en `Bewaaradvies`, direct onder de korte beschrijving en zonder nieuwe databasevelden.
 - Mobiele snelle productinvoer op `/{locale}/admin/products` gebruikt nu standaard `Uit leverancierslijst`: admin zoekt server-side bestaande geïmporteerde draft/disabled/active producten met supplier offer, werkt het bestaande product af en behoudt Nancy-code, supplier, supplier code, supplier offer, importbatch en bronprijsmetadata. `Nieuw handmatig product` blijft als secundaire optie bestaan.
 - Migratie `202607120002_sales_unit_price_basis_safety.sql` voor expliciete scheiding tussen leveranciersdoos, bron-eenheidsprijs en publieke verkoopeenheid bij geïmporteerde producten.
@@ -67,6 +72,9 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 - Optionele klantvelden voor NIF/CIF/NIE, bedrijfsnaam en fiscaal adres via migratie `202607070002_spanish_invoice_customer_fields.sql`.
 
 ### Verbeterd
+
+- Admin productzoekactie `mode=order-search` levert alleen actieve, zichtbare en sales-unit-veilige producten aan de ordercorrectie-editor. Browserwaarden voor prijs, IVA en totaal worden genegeerd; de order-service valideert verpakkingen en rekent actuele bedragen opnieuw uit.
+- `npm run lint` negeert expliciet lokale import-/runtime-mappen zoals `tmp/**`, zodat tijdelijke parserdependencies de codecontrole niet blokkeren.
 
 - Publieke i18n-teksten zijn geactualiseerd voor de huidige winkelmand/orderrequest-flow: oude meldingen over geen checkout, geen database en geen accounts zijn vervangen door uitleg over server-gecontroleerde bestelaanvragen, Bizum/bankoverschrijving en WhatsApp-support.
 - De `sv`/Scandinavische klantteksten zijn opgeschoond naar natuurlijk Zweeds met normale accenten en de taalkeuze gebruikt nu `Svenska / Scandinavian` waar passend.

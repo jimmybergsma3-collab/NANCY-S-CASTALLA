@@ -20,6 +20,9 @@ export type InvoiceSummary = {
   archived_at?: string;
   status: string;
   email_sent_at?: string;
+  voided_at?: string;
+  voided_by?: string;
+  void_reason?: string;
   issued_at?: string;
   created_at?: string;
 };
@@ -53,6 +56,13 @@ export type BackofficeOrderItem = {
   vat_rate: number;
   line_total_incl_vat: number;
   line_total_ex_vat: number;
+};
+
+export type AdminOrderLineEditInput = {
+  productId: string;
+  quantity: number;
+  packageLabel?: string;
+  packageQuantity?: number;
 };
 
 export type OrderLineInput = {

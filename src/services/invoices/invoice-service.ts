@@ -28,6 +28,7 @@ export async function createInvoiceFromOrder(orderId: string) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     if (message.includes("invoice_not_allowed")) throw new InvoiceError("Confirm, complete or mark the order as paid before creating an invoice.", 409);
+    if (message.includes("active_invoice_exists")) throw new InvoiceError("This order already has an active invoice.", 409);
     if (message.includes("order_has_no_items")) throw new InvoiceError("This order has no order lines.", 409);
     if (message.includes("order_not_found")) throw new InvoiceError("Order not found.", 404);
     throw error;

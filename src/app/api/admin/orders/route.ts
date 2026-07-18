@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { isAdminSession } from "@/lib/admin-auth";
+import { env } from "@/lib/env";
 import { logAdminAction } from "@/services/admin/audit-service";
-import { archiveOrder, deleteTestOrder, getOrderById, InventoryError, listOrders, markOrderEmailSent, markOrderTest, updateOrder, updateOrderNotes } from "@/services/orders/order-service";
+import { archiveOrder, deleteTestOrder, getOrderById, InventoryError, listOrders, markOrderEmailSent, markOrderTest, OrderEditError, replaceOrderItemsForCorrection, resetInventoryCommitFlagWithoutMovement, resetInvoiceForOrderCorrection, updateOrder, updateOrderNotes, voidInvoiceAndReleaseInventoryForOrderCorrection } from "@/services/orders/order-service";
 import { sendOrderStatusEmail } from "@/lib/email";
-import type { OrderStatus, PaymentStatus } from "@/types/backoffice";
+import type { AdminOrderLineEditInput, OrderStatus, PaymentStatus } from "@/types/backoffice";
 
 function diagnosticId() {
   return `admin_orders_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -32,8 +33,9 @@ export async function GET() {
 export async function PATCH(request: Request) {
   const id = diagnosticId();
   if (!(await isAdminSession())) return jsonError("Unauthorized", 401, id);
-  const body = (await request.json()) as { id?: string; status?: OrderStatus; paymentStatus?: PaymentStatus; notes?: string; action?: "notes" | "mark_test" | "archive"; isTest?: boolean; archived?: boolean; reason?: string };
+  const body = (await request.json()) as { id?: string; status?: OrderStatus; paymentStatus?: PaymentStatus; notes?: string; action?: "notes" | "mark_test" | "archive" | "replace_items" | "reset_invoice_for_correction" | "void_invoice_release_inventory_for_correction" | "reset_inventory_commit_flag_without_movement"; isTest?: boolean; archived?: boolean; reason?: string; lines?: AdminOrderLineEditInput[]; expectedUpdatedAt?: string };
   if (!body.id) return jsonError("Missing order update.", 400, id);
+  const actor = env.adminEmail || "admin";
   try {
     if (body.action === "notes") {
       if (typeof body.notes !== "string" || body.notes.length > 5000) return jsonError("Invalid order notes.", 400, id);
@@ -51,8 +53,32 @@ export async function PATCH(request: Request) {
       await logAdminAction({ recordType: "order", recordId: body.id, action: body.archived ? "archive" : "restore" });
       return jsonSuccess({ order }, id);
     }
+    if (body.action === "replace_items") {
+      const order = await replaceOrderItemsForCorrection(body.id, body.lines ?? [], body.reason ?? "", actor, body.expectedUpdatedAt);
+      if (!order) return jsonError("Order not found after correction.", 404, id);
+      await logAdminAction({ recordType: "order", recordId: body.id, action: "replace_items_for_correction", metadata: { actor, reason: body.reason ?? "", lineCount: body.lines?.length ?? 0 } });
+      return jsonSuccess({ order }, id);
+    }
+    if (body.action === "reset_invoice_for_correction") {
+      const order = await resetInvoiceForOrderCorrection(body.id, body.reason ?? "", actor);
+      if (!order) return jsonError("Order not found after invoice reset.", 404, id);
+      await logAdminAction({ recordType: "order", recordId: body.id, action: "void_invoice_for_order_correction", metadata: { actor, reason: body.reason ?? "" } });
+      return jsonSuccess({ order }, id);
+    }
+    if (body.action === "void_invoice_release_inventory_for_correction") {
+      const order = await voidInvoiceAndReleaseInventoryForOrderCorrection(body.id, body.reason ?? "", actor);
+      if (!order) return jsonError("Order not found after inventory release.", 404, id);
+      await logAdminAction({ recordType: "order", recordId: body.id, action: "void_invoice_release_inventory_for_correction", metadata: { actor, reason: body.reason ?? "" } });
+      return jsonSuccess({ order }, id);
+    }
+    if (body.action === "reset_inventory_commit_flag_without_movement") {
+      const order = await resetInventoryCommitFlagWithoutMovement(body.id, body.reason ?? "", actor);
+      if (!order) return jsonError("Order not found after legacy inventory flag repair.", 404, id);
+      await logAdminAction({ recordType: "order", recordId: body.id, action: "reset_inventory_commit_flag_without_movement", metadata: { actor, reason: body.reason ?? "" } });
+      return jsonSuccess({ order }, id);
+    }
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : "Order action failed.", 409, id);
+    return jsonError(error instanceof Error ? error.message : "Order action failed.", error instanceof OrderEditError ? error.status : 409, id);
   }
   if (!body.status || !body.paymentStatus) return jsonError("Missing order update.", 400, id);
   const allowedStatuses = ["new", "confirmed", "processing", "ready_for_collection", "shipped", "delivered", "cancelled"];

@@ -6,13 +6,16 @@ import { SupabaseRestError, supabaseAdminFetch } from "@/lib/supabase-rest";
 import { evaluateProductAvailability } from "@/lib/product-availability";
 import { normalizePaymentMethod } from "@/lib/payment";
 import { evaluateSalesUnitSafety, isSupplierImportProduct } from "@/lib/sales-unit-safety";
-import type { BackofficeCustomer, BackofficeOrder, OrderInput, OrderLineInput, OrderStatus, PaymentStatus } from "@/types/backoffice";
+import type { AdminOrderLineEditInput, BackofficeCustomer, BackofficeOrder, OrderInput, OrderLineInput, OrderStatus, PaymentStatus } from "@/types/backoffice";
 
 export class OrderValidationError extends Error {
   constructor(message: string, public status = 400, public code = "invalid_order") { super(message); }
 }
 
 export class InventoryError extends Error {}
+export class OrderEditError extends Error {
+  constructor(message: string, public status = 400) { super(message); }
+}
 
 function roundMoney(value: number) { return Math.round((value + Number.EPSILON) * 100) / 100; }
 
@@ -316,11 +319,11 @@ async function enrichOrdersWithCustomers(orders: BackofficeOrder[]) {
 export async function listOrders() {
   if (!hasSupabaseAdmin()) return [];
   try {
-    const orders = await supabaseAdminFetch<BackofficeOrder[]>("orders?select=*,order_items(*),invoices(id,invoice_number,invoice_series,invoice_series_year,invoice_series_number,is_test,archived_at,status,email_sent_at,issued_at,created_at)&order=created_at.desc&limit=500");
+    const orders = await supabaseAdminFetch<BackofficeOrder[]>("orders?select=*,order_items(*),invoices(id,invoice_number,invoice_series,invoice_series_year,invoice_series_number,is_test,archived_at,status,email_sent_at,voided_at,voided_by,void_reason,issued_at,created_at)&order=created_at.desc&limit=500");
     return enrichOrdersWithCustomers(orders);
   } catch (error) {
     if (!isMissingColumnError(error)) throw error;
-    const orders = await supabaseAdminFetch<BackofficeOrder[]>("orders?select=*,order_items(*),invoices(id,invoice_number,status,email_sent_at,issued_at,created_at)&order=created_at.desc&limit=500");
+    const orders = await supabaseAdminFetch<BackofficeOrder[]>("orders?select=*,order_items(*),invoices(id,invoice_number,status,email_sent_at,voided_at,voided_by,void_reason,issued_at,created_at)&order=created_at.desc&limit=500");
     return enrichOrdersWithCustomers(orders.map((order) => ({
       ...order,
       archived_at: order.archived_at ?? "",
@@ -347,6 +350,165 @@ export async function updateOrderNotes(id: string, notes: string) {
     method: "PATCH", body: { notes: notes.trim(), updated_at: new Date().toISOString() },
   });
   return rows[0];
+}
+
+export async function replaceOrderItemsForCorrection(id: string, lines: AdminOrderLineEditInput[], reason: string, actor: string, expectedUpdatedAt?: string) {
+  if (reason.trim().length < 3) throw new OrderEditError("A correction reason of at least 3 characters is required.", 400);
+  if (actor.trim().length < 3) throw new OrderEditError("An admin actor is required.", 400);
+  if (!expectedUpdatedAt) throw new OrderEditError("The order was opened without a revision timestamp. Refresh the order and try again.", 409);
+  if (!Array.isArray(lines) || lines.length === 0) throw new OrderEditError("At least one order line is required.", 400);
+  if (lines.length > 100) throw new OrderEditError("Too many order lines.", 400);
+
+  const validated = await validateCartLines(lines.map((line) => ({
+    productId: line.productId,
+    name: line.productId,
+    quantity: Number(line.quantity),
+    unit: line.packageLabel ?? "",
+    packageLabel: line.packageLabel ?? "",
+    packageQuantity: Number(line.packageQuantity ?? 1),
+    salePriceInclVat: 0,
+  })));
+  const invalid = validated.find((line) => !line.available);
+  if (invalid) {
+    throw new OrderEditError(`${invalid.name} cannot be used in this corrected order (${invalid.code}).`, invalid.code === "invalid_quantity" ? 400 : 409);
+  }
+
+  const subtotalExVat = roundMoney(validated.reduce((sum, line) => sum + line.lineTotalExVat, 0));
+  const vatTotal = roundMoney(validated.reduce((sum, line) => sum + line.lineVat, 0));
+  const total = roundMoney(validated.reduce((sum, line) => sum + line.lineTotalInclVat, 0));
+  const payloadLines = validated.map((line) => ({
+    productId: line.productId,
+    name: line.name,
+    quantity: line.quantity,
+    unit: line.unit,
+    packageLabel: line.packageLabel,
+    packageQuantity: line.packageQuantity,
+    salePriceInclVat: line.salePriceInclVat,
+    vatRate: line.vatRate,
+    lineTotalInclVat: line.lineTotalInclVat,
+    lineTotalExVat: line.lineTotalExVat,
+    lineVat: line.lineVat,
+  }));
+
+  try {
+    await supabaseAdminFetch<BackofficeOrder[]>("rpc/replace_order_items_for_admin", {
+      method: "POST",
+      body: {
+        p_order_id: id,
+        p_lines: payloadLines,
+        p_subtotal_ex_vat: subtotalExVat,
+        p_vat_total: vatTotal,
+        p_total: total,
+        p_reason: reason.trim(),
+        p_actor: actor.trim(),
+        p_expected_updated_at: expectedUpdatedAt,
+      },
+    });
+  } catch (error) {
+    const message = sanitizeErrorMessage(error);
+    if (message.includes("order_not_found")) throw new OrderEditError("Order not found.", 404);
+    if (message.includes("order_locked_status")) throw new OrderEditError("This order status is locked and cannot be edited.", 409);
+    if (message.includes("order_changed")) throw new OrderEditError("This order was changed by another admin. Refresh the order before saving corrections.", 409);
+    if (message.includes("order_inventory_committed")) throw new OrderEditError("This order already has committed inventory. Reset the status in a controlled stock flow before editing lines.", 409);
+    if (message.includes("order_payment_locked")) throw new OrderEditError("This order is marked as paid and cannot be edited.", 409);
+    if (message.includes("active_invoice_exists")) throw new OrderEditError("This order has an active invoice. Void the unsent/unpaid invoice for correction before editing lines.", 409);
+    if (message.includes("product_not_found")) throw new OrderEditError("One of the selected replacement products no longer exists.", 409);
+    if (message.includes("product_not_active")) throw new OrderEditError("One of the selected replacement products is not active.", 409);
+    if (message.includes("product_not_visible")) throw new OrderEditError("One of the selected replacement products is not visible online.", 409);
+    if (message.includes("product_not_ready_for_publish")) throw new OrderEditError("One of the selected replacement products is not marked ready for publish.", 409);
+    if (message.includes("product_price_required")) throw new OrderEditError("One of the selected replacement products has no valid selling price.", 409);
+    if (message.includes("product_invalid_vat")) throw new OrderEditError("One of the selected replacement products has an invalid IVA rate.", 409);
+    if (message.includes("product_sales_unit_unconfirmed")) throw new OrderEditError("One of the selected replacement products has no confirmed sales unit.", 409);
+    if (message.includes("product_price_basis_unconfirmed")) throw new OrderEditError("One of the selected imported products has no confirmed price basis.", 409);
+    if (message.includes("mismatch")) throw new OrderEditError("The corrected order totals do not match the server product calculation. Refresh and try again.", 409);
+    if (message.includes("replace_order_items_for_admin") || message.includes("PGRST202") || message.includes("function")) {
+      throw new OrderEditError("Order editing requires migration 202607180001_admin_order_corrections.sql in Supabase.", 503);
+    }
+    throw error;
+  }
+
+  return getOrderById(id);
+}
+
+export async function resetInvoiceForOrderCorrection(id: string, reason: string, actor: string) {
+  if (reason.trim().length < 3) throw new OrderEditError("A correction reason of at least 3 characters is required before voiding an invoice.", 400);
+  if (actor.trim().length < 3) throw new OrderEditError("An admin actor is required.", 400);
+  try {
+    await supabaseAdminFetch<BackofficeOrder[]>("rpc/reset_invoice_for_order_correction", {
+      method: "POST",
+      body: { p_order_id: id, p_reason: reason.trim(), p_actor: actor.trim() },
+    });
+  } catch (error) {
+    const message = sanitizeErrorMessage(error);
+    if (message.includes("order_not_found")) throw new OrderEditError("Order not found.", 404);
+    if (message.includes("active_invoice_not_found")) throw new OrderEditError("This order has no active invoice to void for correction.", 404);
+    if (message.includes("invoice_already_emailed")) throw new OrderEditError("This invoice has already been emailed and cannot be voided for correction.", 409);
+    if (message.includes("invoice_locked_status")) throw new OrderEditError("This invoice status is locked and cannot be voided for correction.", 409);
+    if (message.includes("order_inventory_committed")) throw new OrderEditError("This order has committed inventory and cannot be corrected.", 409);
+    if (message.includes("order_payment_locked")) throw new OrderEditError("This order is marked as paid and cannot be corrected.", 409);
+    if (message.includes("order_locked_status")) throw new OrderEditError("This order status is locked and cannot be corrected.", 409);
+    if (message.includes("reset_invoice_for_order_correction") || message.includes("PGRST202") || message.includes("function")) {
+      throw new OrderEditError("Invoice voiding requires migration 202607180001_admin_order_corrections.sql in Supabase.", 503);
+    }
+    throw error;
+  }
+  return getOrderById(id);
+}
+
+export async function voidInvoiceAndReleaseInventoryForOrderCorrection(id: string, reason: string, actor: string) {
+  if (reason.trim().length < 3) throw new OrderEditError("A correction reason of at least 3 characters is required before releasing committed inventory.", 400);
+  if (actor.trim().length < 3) throw new OrderEditError("An admin actor is required.", 400);
+  try {
+    await supabaseAdminFetch<BackofficeOrder[]>("rpc/void_invoice_and_release_inventory_for_order_correction", {
+      method: "POST",
+      body: { p_order_id: id, p_reason: reason.trim(), p_actor: actor.trim() },
+    });
+  } catch (error) {
+    const message = sanitizeErrorMessage(error);
+    if (message.includes("order_not_found")) throw new OrderEditError("Order not found.", 404);
+    if (message.includes("active_invoice_not_found")) throw new OrderEditError("This order has no active invoice to void for correction.", 404);
+    if (message.includes("invoice_already_emailed")) throw new OrderEditError("This invoice has already been emailed and cannot be voided for correction.", 409);
+    if (message.includes("invoice_locked_status")) throw new OrderEditError("This invoice status is locked and cannot be voided for correction.", 409);
+    if (message.includes("order_payment_locked")) throw new OrderEditError("This order is marked as paid and cannot be corrected.", 409);
+    if (message.includes("order_locked_status")) throw new OrderEditError("This order status is locked and cannot be corrected.", 409);
+    if (message.includes("inventory_not_committed")) throw new OrderEditError("This order has no committed inventory to release.", 409);
+    if (message.includes("inventory_already_released")) throw new OrderEditError("Committed inventory for this order was already released for correction.", 409);
+    if (message.includes("inventory_commit_missing_movements")) throw new OrderEditError("This order is marked inventory-committed, but has no sale movements. Use the legacy commit-flag repair action instead.", 409);
+    if (message.includes("no_tracked_order_items")) throw new OrderEditError("This order has no inventory-tracked order lines to release.", 409);
+    if (message.includes("inventory_commit_mismatch")) throw new OrderEditError("The committed inventory movements do not match this order's current lines. Manual review is required.", 409);
+    if (message.includes("inventory_negative_after_release")) throw new OrderEditError("Inventory release would create inconsistent stock. Manual review is required.", 409);
+    if (message.includes("void_invoice_and_release_inventory_for_order_correction") || message.includes("PGRST202") || message.includes("function")) {
+      throw new OrderEditError("Inventory release for order correction requires migration 202607180001_admin_order_corrections.sql in Supabase.", 503);
+    }
+    throw error;
+  }
+  return getOrderById(id);
+}
+
+export async function resetInventoryCommitFlagWithoutMovement(id: string, reason: string, actor: string) {
+  if (reason.trim().length < 3) throw new OrderEditError("A correction reason of at least 3 characters is required before resetting the inventory commit flag.", 400);
+  if (actor.trim().length < 3) throw new OrderEditError("An admin actor is required.", 400);
+  try {
+    await supabaseAdminFetch<BackofficeOrder[]>("rpc/reset_inventory_commit_flag_without_movement", {
+      method: "POST",
+      body: { p_order_id: id, p_reason: reason.trim(), p_actor: actor.trim() },
+    });
+  } catch (error) {
+    const message = sanitizeErrorMessage(error);
+    if (message.includes("order_not_found")) throw new OrderEditError("Order not found.", 404);
+    if (message.includes("active_invoice_not_found")) throw new OrderEditError("This order has no active invoice linked to the inconsistent inventory flag.", 404);
+    if (message.includes("invoice_already_emailed")) throw new OrderEditError("This invoice has already been emailed and cannot be repaired through the legacy flag reset.", 409);
+    if (message.includes("invoice_locked_status")) throw new OrderEditError("This invoice status is locked and cannot be repaired through the legacy flag reset.", 409);
+    if (message.includes("order_payment_locked")) throw new OrderEditError("This order is marked as paid and cannot be corrected.", 409);
+    if (message.includes("order_locked_status")) throw new OrderEditError("This order status is locked and cannot be corrected.", 409);
+    if (message.includes("inventory_not_committed")) throw new OrderEditError("This order is no longer marked as inventory-committed.", 409);
+    if (message.includes("inventory_movements_exist")) throw new OrderEditError("This order has inventory movements. Use the normal inventory release action instead.", 409);
+    if (message.includes("reset_inventory_commit_flag_without_movement") || message.includes("PGRST202") || message.includes("function")) {
+      throw new OrderEditError("Legacy inventory flag repair requires migration 202607180001_admin_order_corrections.sql in Supabase.", 503);
+    }
+    throw error;
+  }
+  return getOrderById(id);
 }
 
 export async function markOrderTest(id: string, isTest: boolean, reason: string) {
@@ -381,11 +543,11 @@ export async function deleteTestOrder(id: string) {
 
 export async function getOrderById(id: string) {
   try {
-    const rows = await supabaseAdminFetch<BackofficeOrder[]>(`orders?select=*,order_items(*),invoices(id,invoice_number,invoice_series,invoice_series_year,invoice_series_number,is_test,archived_at,status,email_sent_at,issued_at,created_at)&id=eq.${encodeURIComponent(id)}&limit=1`);
+    const rows = await supabaseAdminFetch<BackofficeOrder[]>(`orders?select=*,order_items(*),invoices(id,invoice_number,invoice_series,invoice_series_year,invoice_series_number,is_test,archived_at,status,email_sent_at,voided_at,voided_by,void_reason,issued_at,created_at)&id=eq.${encodeURIComponent(id)}&limit=1`);
     return (await enrichOrdersWithCustomers(rows))[0];
   } catch (error) {
     if (!isMissingColumnError(error)) throw error;
-    const rows = await supabaseAdminFetch<BackofficeOrder[]>(`orders?select=*,order_items(*),invoices(id,invoice_number,status,email_sent_at,issued_at,created_at)&id=eq.${encodeURIComponent(id)}&limit=1`);
+    const rows = await supabaseAdminFetch<BackofficeOrder[]>(`orders?select=*,order_items(*),invoices(id,invoice_number,status,email_sent_at,voided_at,voided_by,void_reason,issued_at,created_at)&id=eq.${encodeURIComponent(id)}&limit=1`);
     return (await enrichOrdersWithCustomers(rows.map((order) => ({ ...order, invoices: (order.invoices ?? []).map((invoice) => ({ ...invoice, is_test: Boolean(invoice.is_test), archived_at: invoice.archived_at ?? "" })) }))))[0];
   }
 }

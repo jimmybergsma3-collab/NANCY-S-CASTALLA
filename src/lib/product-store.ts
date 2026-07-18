@@ -15,6 +15,7 @@ type ProductRow = {
   images?: string[];
   is_visible?: boolean;
   is_new?: boolean;
+  ready_for_publish?: boolean;
   product_status?: Product["lifecycleStatus"];
   import_batch?: string;
   archived_at?: string;
@@ -66,6 +67,7 @@ export function rowToProduct(row: ProductRow): Product {
     images: row.images ?? (row.image_url ? [row.image_url] : []),
     isVisible: row.is_visible ?? true,
     isNew: row.is_new ?? false,
+    readyForPublish: row.ready_for_publish ?? false,
     lifecycleStatus: row.product_status ?? "active",
     importBatch: row.import_batch ?? "",
     archivedAt: row.archived_at ?? "",
@@ -118,6 +120,7 @@ export function productToRow(product: Product): ProductRow {
     images: product.images ?? (product.imageUrl ? [product.imageUrl] : []),
     is_visible: product.isVisible ?? false,
     is_new: product.isNew ?? false,
+    ready_for_publish: product.readyForPublish ?? false,
     product_status: product.lifecycleStatus ?? "active",
     import_batch: product.importBatch ?? "",
     archived_at: product.archivedAt || undefined,

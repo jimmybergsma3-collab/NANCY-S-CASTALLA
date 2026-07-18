@@ -96,6 +96,14 @@ Dit document legt uit waarom het bedrijf bepaalde product-, verkoop- en operatio
 
 **Motivatie:** de klant en beheerder zien direct hoe betaling waarschijnlijk wordt afgehandeld, terwijl Nancy's Castalla eerst beschikbaarheid kan controleren. `payment_status` blijft afzonderlijk de bron voor de vraag of daadwerkelijk is betaald.
 
+### Ordercorrectie vóór definitieve factuur
+
+**Keuze:** een bestelling blijft in de pre-orderfase bewerkbaar totdat Nancy de order definitief heeft gecontroleerd en gefactureerd.
+
+**Motivatie:** leveranciersproducten kunnen op het laatste moment niet beschikbaar zijn of alleen in een andere verpakking leverbaar zijn. Voorbeeld: Magners cans kunnen vervangen moeten worden door 568 ml bottles. De klantorder moet dan netjes worden aangepast voordat er een officiële factuur en betaalafspraak ontstaat.
+
+**Gevolg voor de website:** admins kunnen orderregels verwijderen, aantallen aanpassen en vervangende producten toevoegen zolang er geen verzonden/betaalde actieve factuur, gecommitte voorraad, levering of annulering is. Prijzen en IVA worden altijd opnieuw door de server berekend. Een nog niet verzonden/onbetaalde factuur mag gecontroleerd op `void` worden gezet voor correctie; het oorspronkelijke nummer en de regels blijven historisch zichtbaar. Een definitieve factuur moet later via creditnota/correctie worden behandeld.
+
 ### Factuur uit bevestigde order
 
 **Keuze:** een normale factuur wordt vanuit een geschikte order gemaakt en gebruikt onveranderlijke klant-, product-, prijs-, IVA- en betaalmethodesnapshots. De factuur is Spaans/Engels en toont de fiscale gegevens uit de centrale bedrijfsconfiguratie.

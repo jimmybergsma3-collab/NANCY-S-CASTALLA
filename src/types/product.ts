@@ -36,6 +36,7 @@ export type Product = {
   images?: string[];
   isVisible?: boolean;
   isNew?: boolean;
+  readyForPublish?: boolean;
   lifecycleStatus?: ProductLifecycleStatus;
   importBatch?: string;
   archivedAt?: string;
