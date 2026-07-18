@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Minus, Plus, Send, Trash2 } from "lucide-react";
 import type { Locale } from "@/i18n/config";
@@ -40,7 +40,6 @@ export function CartView({ locale }: { locale: Locale }) {
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [message, setMessage] = useState("");
-  const idempotencyKey = useRef("");
 
   useEffect(() => {
     let active = true;
@@ -102,14 +101,14 @@ export function CartView({ locale }: { locale: Locale }) {
     }
     setStatus("sending"); setMessage("");
     try {
-      if (!idempotencyKey.current) idempotencyKey.current = crypto.randomUUID();
+      const idempotencyKey = crypto.randomUUID();
       const { data } = await getSupabaseBrowserClient().auth.getSession();
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {}) },
-        body: JSON.stringify({ customerName, customerEmail, customerPhone, fulfillment, paymentMethod, locale, notes: [fulfillment === "Local delivery" && customerAddress ? `${ui.order.address}: ${customerAddress}` : "", notes].filter(Boolean).join("\n\n"), idempotencyKey: idempotencyKey.current, lines: items.map((item) => ({ ...item, unit: item.packageLabel, salePriceInclVat: 0 })) }),
+        body: JSON.stringify({ customerName, customerEmail, customerPhone, fulfillment, paymentMethod, locale, notes: [fulfillment === "Local delivery" && customerAddress ? `${ui.order.address}: ${customerAddress}` : "", notes].filter(Boolean).join("\n\n"), idempotencyKey, lines: items.map((item) => ({ ...item, unit: item.packageLabel, salePriceInclVat: 0 })) }),
       });
-      const result = await response.json() as { ok: boolean; errorCode?: CartValidationCode | "missing_fields" | "service_unavailable" | "invalid_order" | "order_failed"; message?: string; orderId?: string; emailed?: boolean; diagnosticId?: string };
+      const result = await response.json() as { ok: boolean; errorCode?: CartValidationCode | "missing_fields" | "service_unavailable" | "invalid_order" | "order_storage_unconfirmed" | "order_failed"; message?: string; orderId?: string; emailed?: boolean; diagnosticId?: string };
       if (!response.ok || !result.ok) throw new Error(orderErrorMessage(result.errorCode, result.message));
       setStatus("sent");
       setMessage(`${copy.orderSent}${result.orderId ? ` ${result.orderId}.` : ""}${result.emailed ? "" : ` ${copy.emailUnavailable}`}`);

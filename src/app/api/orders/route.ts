@@ -14,6 +14,7 @@ type OrderErrorCode =
   | "invalid_quantity"
   | "package_unavailable"
   | "insufficient_stock"
+  | "order_storage_unconfirmed"
   | "order_failed";
 
 export async function POST(request: Request) {
@@ -50,6 +51,15 @@ export async function POST(request: Request) {
     const authUser = await getCustomerAuthUser(request);
     console.info("order_api", { requestId, step: "auth_checked", hasAuthUser: Boolean(authUser?.id) });
     const order = await createOrder({ ...body, customerName, customerEmail, lines: body.lines, authUserId: authUser?.id });
+    if (!order.orderId || !order.orderNumber) {
+      console.error("Order storage returned without a confirmed order id", {
+        requestId,
+        hasOrderId: Boolean(order.orderId),
+        hasOrderNumber: Boolean(order.orderNumber),
+        alreadyExisted: Boolean(order.alreadyExisted),
+      });
+      throw new OrderValidationError("Order storage could not be confirmed. Please try again.", 500, "order_storage_unconfirmed");
+    }
     const publicOrderId = order.orderNumber ? `NC-${String(order.orderNumber).padStart(6, "0")}` : order.orderId;
     console.info("order_api", { requestId, step: "order_stored", orderId: publicOrderId, stored: order.stored });
 

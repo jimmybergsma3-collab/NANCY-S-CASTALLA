@@ -1027,7 +1027,7 @@ Daaruit berekent de server `line_total_incl_vat`, `line_total_ex_vat`, btw per r
 
 ## 11.4 Idempotentie
 
-Het bestelcomponent behoudt tijdens een poging een UUID. `orders.idempotency_key` is uniek. Bij een retry retourneert de RPC de bestaande order in plaats van een duplicaat. E-mail gebruikt stabiele idempotency identifiers per ordergebeurtenis.
+Het bestelcomponent genereert per nieuwe verzendpoging een UUID. `orders.idempotency_key` is uniek. Bij een echte retry met dezelfde key retourneert de RPC alleen de bestaande order wanneer er aantoonbaar een bestaande order-id en ordernummer zijn; `already_existed=true` met null id/nummer wordt als opslagfout behandeld. De API start geen e-mail en toont geen succes zonder bevestigde order-id en ordernummer. E-mail gebruikt stabiele idempotency identifiers per ordergebeurtenis.
 
 ## 11.5 Ordernummering
 
@@ -1467,7 +1467,7 @@ Klantaccounts gebruiken Supabase Auth. Registratie verstuurt via Supabase en Res
 
 Het registratieformulier heeft aparte wachtwoord- en bevestigingsvelden, vergelijkt deze voor signup, ondersteunt gegenereerde browserwachtwoorden via `new-password` en biedt per veld toon/verbergbediening. Login gebruikt `current-password`.
 
-Bij bestellen verstuurt de browser alleen productcodes, aantallen en verpakkingskeuzes. De server vertrouwt geen prijzen of totalen uit de browser. Hij leest actuele producten uit Supabase, controleert zichtbaarheid, status, verpakking en voorraad en berekent excl.-btw, btw en incl.-btw opnieuw. Een idempotency key en unieke database-index voorkomen dubbele orders bij retries. De order krijgt een UUID en oplopend ordernummer. Ingelogde klanten worden via `customer_id` gekoppeld; gastorders blijven mogelijk.
+Bij bestellen verstuurt de browser alleen productcodes, aantallen en verpakkingskeuzes. De server vertrouwt geen prijzen of totalen uit de browser. Hij leest actuele producten uit Supabase, controleert zichtbaarheid, status, verpakking en voorraad en berekent excl.-btw, btw en incl.-btw opnieuw. Een idempotency key en unieke database-index voorkomen dubbele orders bij retries, maar een mislukte poging mag een volgende bestelling nooit als valse bestaande order wegvangen. De order krijgt een UUID en oplopend ordernummer en wordt pas als opgeslagen gezien wanneer beide waarden terugkomen. Ingelogde klanten worden via `customer_id` gekoppeld; gastorders blijven mogelijk.
 
 Nieuwe orders boeken nog geen voorraad af. Wanneer een beheerder een order bevestigt, gebruikt PostgreSQL een transactionele RPC met row locks. Tracked voorraad wordt gecontroleerd en afgeboekt en er wordt een movement geschreven. `inventory_committed` voorkomt dubbel afboeken. Annuleren zet eerder geboekte voorraad terug. Dit is veilig bij gelijktijdige bevestigingen, maar open orders reserveren nog niets. Daardoor kan de tweede van twee concurrerende orders pas bij bevestiging onvoldoende voorraad blijken te hebben.
 

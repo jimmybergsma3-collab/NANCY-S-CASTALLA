@@ -179,8 +179,8 @@ Er zijn twee orderkanalen:
 4. Een ingelogde klant krijgt profielgegevens vooraf ingevuld.
 5. Browser stuurt alleen productcodes, verpakkingen en aantallen naar `POST /api/orders`.
 6. Server vertrouwt geen browserprijzen of totalen en voert dezelfde controle opnieuw uit.
-7. Een idempotency key voorkomt dubbele orders bij retries.
-8. Order en orderregels worden via een database-RPC opgeslagen en krijgen UUID plus oplopend ordernummer.
+7. Een verse idempotency key per nieuwe verzendpoging voorkomt dubbele orders bij echte retries, maar een mislukte poging mag een volgende bestelling nooit stil wegvangen.
+8. Order en orderregels worden via een database-RPC opgeslagen en krijgen UUID plus oplopend ordernummer. Een order geldt pas als opgeslagen wanneer de RPC of fallback een echte order-id én ordernummer bevestigt; `already_existed=true` met null id/nummer is een harde fout.
 9. Als de order-RPC in productie faalt door schema-cache, ontbrekende functie, permissie of `payment_method`-mismatch, gebruikt de server een service-role REST-fallback om customer, order en orderregels alsnog op te slaan. Iedere orderpoging logt een veilige diagnose-id per stap.
 10. Resend verstuurt admin- en klantmail als e-mailconfiguratie werkt. Order-, status- en factuurmails gebruiken branded responsive HTML met logo, ordertabellen, betaalinformatie, contactknoppen, WhatsApp, website, Facebook en plain-text fallback. De afzendernaam is `Nancy's Castalla`; klantmails gebruiken `info@nancys.es` als Reply-To en adminordermeldingen gebruiken het klantadres als Reply-To.
 11. Nieuwe order start als `new` met betaalstatus `pending`; de klant kan alleen `bizum` of `bank-transfer` als betaalvoorkeur kiezen. Oude opgeslagen waarden voor cash/card kunnen nog als historische labels gelezen worden, maar zijn niet zichtbaar of selecteerbaar in de klantflow.

@@ -44,8 +44,8 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 - Supabase Auth-registratie via `POST /api/auth/register`, e-mailverificatie, resend van bevestigingsmail met 60 seconden wachttijd, login, logout en wachtwoordherstel.
 - Klantprofiel met naam, e-mail, telefoon, adres en leidende taalvoorkeur.
 - Server-side prijs-, verpakking-, beschikbaarheids-, voorraad- en IVA-validatie.
-- Idempotente ordercreatie met UUID, oplopend nummer `NC-000001`, klantkoppeling en orderregelsnapshot.
-- Orderopslag blijft werken wanneer e-mail faalt; de checkout toont specifieke foutmeldingen voor onder meer verouderde verpakkingen, ontbrekende gegevens en tijdelijke serviceproblemen. De API geeft bij fouten een diagnose-id en backendmelding terug en kan bij herstelbare RPC-problemen direct via de service-role REST API opslaan.
+- Idempotente ordercreatie met UUID, oplopend nummer `NC-000001`, klantkoppeling en orderregelsnapshot. Een order wordt alleen als opgeslagen behandeld wanneer een echte database-id en ordernummer bevestigd zijn; null-idempotency-success wordt geblokkeerd en als serverfout teruggegeven.
+- Orderopslag blijft werken wanneer e-mail faalt; e-mails worden pas gestart na bevestigde order-id en ordernummer. De checkout toont specifieke foutmeldingen voor onder meer verouderde verpakkingen, ontbrekende gegevens, onbevestigde opslag en tijdelijke serviceproblemen. De API geeft bij fouten een diagnose-id en backendmelding terug en kan bij herstelbare RPC-problemen direct via de service-role REST API opslaan.
 - Klantorderhistorie met uitklapbare orderdetails, producten, verpakkingen, aantallen, status, betaalstatus, totalen en factuurdownload.
 - Transactionele voorraadafboeking bij bevestiging, terugboeking bij annulering en movement-audittrail.
 

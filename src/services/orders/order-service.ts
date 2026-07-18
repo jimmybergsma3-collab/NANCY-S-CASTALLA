@@ -62,6 +62,35 @@ export type ValidatedCartLine = {
   code: CartValidationCode;
 };
 
+type SavedOrderRow = { order_id: string | null; order_number: number | null; already_existed: boolean | null };
+
+async function findExistingOrderByIdempotencyKey(idempotencyKey: string, requestId: string) {
+  const existing = await supabaseAdminFetch<Array<{ id: string | null; order_number: number | null }>>(
+    `orders?select=id,order_number&idempotency_key=eq.${encodeURIComponent(idempotencyKey)}&limit=1`,
+  );
+  const order = existing[0];
+  if (!order?.id || !order.order_number) {
+    logOrderStep(requestId, "idempotency_existing_not_found", { found: Boolean(order) });
+    return null;
+  }
+  logOrderStep(requestId, "idempotency_existing_found", { orderNumber: order.order_number });
+  return { order_id: order.id, order_number: order.order_number, already_existed: true };
+}
+
+async function confirmSavedOrder(saved: SavedOrderRow | undefined, input: OrderInput, totals: { total: number; subtotalExVat: number; vatTotal: number; requestId: string }) {
+  if (saved?.order_id && saved.order_number) return saved as { order_id: string; order_number: number; already_existed: boolean };
+  logOrderStep(totals.requestId, "stored_order_unconfirmed", {
+    alreadyExisted: Boolean(saved?.already_existed),
+    hasOrderId: Boolean(saved?.order_id),
+    hasOrderNumber: Boolean(saved?.order_number),
+  });
+  if (input.idempotencyKey) {
+    const existing = await findExistingOrderByIdempotencyKey(input.idempotencyKey, totals.requestId);
+    if (existing) return existing;
+  }
+  throw new OrderValidationError("Order storage could not be confirmed. Please try again.", 500, "order_storage_unconfirmed");
+}
+
 async function loadSupplierOfferSafetyRows(productIds: string[]) {
   if (!productIds.length || !hasSupabaseAdmin()) return new Map<string, { casePrice?: number; unitPrice?: number; unitsPerCase?: number; packageDescription?: string }>();
   try {
@@ -167,10 +196,10 @@ export async function createOrder(input: OrderInput) {
     p_subtotal_ex_vat: subtotalExVat, p_vat_total: vatTotal, p_total: total, p_lines: validatedLines,
     p_payment_method: normalizePaymentMethod(input.paymentMethod),
   };
-  let result: Array<{ order_id: string; order_number: number; already_existed: boolean }>;
+  let result: SavedOrderRow[];
   try {
     logOrderStep(requestId, "rpc_attempt", { withPaymentMethod: true });
-    result = await supabaseAdminFetch<Array<{ order_id: string; order_number: number; already_existed: boolean }>>("rpc/create_validated_order", {
+    result = await supabaseAdminFetch<SavedOrderRow[]>("rpc/create_validated_order", {
       method: "POST",
       body: rpcBody,
     });
@@ -193,7 +222,7 @@ export async function createOrder(input: OrderInput) {
     console.warn("Retrying order creation without payment_method because Supabase RPC schema is not refreshed yet.", { requestId, error: message });
     try {
       logOrderStep(requestId, "legacy_rpc_attempt", { withPaymentMethod: false });
-      result = await supabaseAdminFetch<Array<{ order_id: string; order_number: number; already_existed: boolean }>>("rpc/create_validated_order", {
+      result = await supabaseAdminFetch<SavedOrderRow[]>("rpc/create_validated_order", {
         method: "POST",
         body: legacyRpcBody,
       });
@@ -206,8 +235,7 @@ export async function createOrder(input: OrderInput) {
       return { orderId: saved.order_id, orderNumber: saved.order_number, alreadyExisted: saved.already_existed, stored: true, total, subtotalExVat, vatTotal, lines: validatedLines };
     }
   }
-  const saved = result[0];
-  if (!saved) throw new Error("Order could not be stored.");
+  const saved = await confirmSavedOrder(result[0], input, { total, subtotalExVat, vatTotal, requestId });
   return { orderId: saved.order_id, orderNumber: saved.order_number, alreadyExisted: saved.already_existed, stored: true, total, subtotalExVat, vatTotal, lines: validatedLines };
 }
 
@@ -219,10 +247,8 @@ async function createOrderDirect(
   }>,
   totals: { subtotalExVat: number; vatTotal: number; total: number; requestId: string },
 ) {
-  const existing = await supabaseAdminFetch<Array<{ id: string; order_number: number }>>(
-    `orders?select=id,order_number&idempotency_key=eq.${encodeURIComponent(input.idempotencyKey ?? "")}&limit=1`,
-  );
-  if (existing[0]) return { order_id: existing[0].id, order_number: existing[0].order_number, already_existed: true };
+  const existing = await findExistingOrderByIdempotencyKey(input.idempotencyKey ?? "", totals.requestId);
+  if (existing) return existing;
 
   const email = input.customerEmail.toLowerCase().trim();
   const existingCustomers = await supabaseAdminFetch<Array<{ id: string; auth_user_id?: string | null; phone?: string | null }>>(
@@ -296,7 +322,12 @@ async function createOrderDirect(
     throw error;
   }
 
-  return { order_id: orderId, order_number: createdOrder[0]?.order_number ?? 0, already_existed: false };
+  if (!createdOrder[0]?.id || !createdOrder[0]?.order_number) {
+    logOrderStep(totals.requestId, "direct_order_unconfirmed", { hasCreatedOrder: Boolean(createdOrder[0]) });
+    throw new OrderValidationError("Order storage could not be confirmed. Please try again.", 500, "order_storage_unconfirmed");
+  }
+
+  return { order_id: orderId, order_number: createdOrder[0].order_number, already_existed: false };
 }
 
 async function enrichOrdersWithCustomers(orders: BackofficeOrder[]) {

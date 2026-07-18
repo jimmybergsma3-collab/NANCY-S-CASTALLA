@@ -151,6 +151,9 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Opgelost
 
+- `POST /api/orders` behandelt een RPC-resultaat met `order_id=null` of ontbrekend ordernummer niet meer als succesvolle orderopslag. De service controleert bij idempotency-retries nu eerst of de bestaande order werkelijk bestaat en retourneert anders een duidelijke `order_storage_unconfirmed` fout met diagnose-id.
+- De Supabase RPC `create_validated_order` vangt `unique_violation` alleen nog als idempotency-herhaling af wanneer er aantoonbaar een bestaande order met id en ordernummer is; andere unieke fouten worden niet langer als `already_existed=true` met null ids teruggegeven.
+- De checkout gebruikt per nieuwe verzendpoging een verse idempotency-key, zodat een mislukte poging niet stil een volgende echte bestelling kan wegvangen.
 - De live Magners-prijs/verpakkingsfout is veilig geneutraliseerd: `NC-03174 MAGNERS CIDER DARK FRUIT 24x440ml` en `NC-03292 MAGNERS CIDER 24x500ml` zijn teruggezet naar draft/onzichtbaar en gemarkeerd voor package review, zonder producten, afbeeldingen, orders of historische data te verwijderen.
 - Productdetailpagina's tonen in de add-to-cart sectie niet langer opnieuw dezelfde productfoto; dit voorkomt dat Android/Chrome bij producten zoals Potato Scones meerdere afbeeldingen gestapeld of overlappend lijkt te tonen.
 
