@@ -18,6 +18,7 @@ const defaultProduct: Product = {
   images: [],
   isVisible: false,
   isNew: false,
+  readyForPublish: false,
   lifecycleStatus: "active",
   importBatch: "",
   archivedAt: "",
@@ -82,6 +83,7 @@ type QuickProductForm = {
   ingredients: string;
   directions: string;
   conservation: string;
+  readyForPublish: boolean;
   type: Product["type"];
   stockStatus: Extract<Product["stockStatus"], "available" | "preorder">;
 };
@@ -100,6 +102,7 @@ function createBlankQuickProduct(products: Product[]): QuickProductForm {
     ingredients: "",
     directions: "",
     conservation: "",
+    readyForPublish: false,
     type: "ambient",
     stockStatus: "preorder",
   };
@@ -107,14 +110,14 @@ function createBlankQuickProduct(products: Product[]): QuickProductForm {
 
 function inferSalesUnitType(unit: string): Product["salesUnitType"] {
   const normalized = unit.trim().toLowerCase();
-  if (/^\d+\s*[x×]\s*\d+/.test(normalized) || /\b\d+\s*(stuks|pcs|units)\b/.test(normalized)) return "case";
+  if (/^\d+\s*[xÃ—]\s*\d+/.test(normalized) || /\b\d+\s*(stuks|pcs|units)\b/.test(normalized)) return "case";
   if (/\bkg\b/.test(normalized)) return "per_kg";
   return "per_unit";
 }
 
 function inferSalesUnitQuantity(unit: string, salesUnitType: Product["salesUnitType"]) {
   if (salesUnitType !== "case" && salesUnitType !== "custom_pack") return 0;
-  const match = unit.trim().toLowerCase().match(/^(\d+)\s*[x×]|\b(\d+)\s*(stuks|pcs|units)\b/);
+  const match = unit.trim().toLowerCase().match(/^(\d+)\s*[xÃ—]|\b(\d+)\s*(stuks|pcs|units)\b/);
   return Number(match?.[1] || match?.[2] || 1);
 }
 
@@ -478,6 +481,7 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
       ingredients: item.ingredients ?? "",
       directions: item.directions ?? "",
       conservation: item.conservation ?? "",
+      readyForPublish: item.readyForPublish ?? false,
       type: item.type,
       stockStatus: item.stockStatus === "available" ? "available" : "preorder",
     });
@@ -522,6 +526,7 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
         imageUrl,
         images: Array.from(new Set([imageUrl, ...(baseProduct.images ?? [])].filter(Boolean))),
         isVisible: mode === "online",
+        readyForPublish: mode === "online" ? true : quickProduct.readyForPublish,
         lifecycleStatus: mode === "online" ? "active" : "draft",
         category: quickProduct.category,
         categories: [quickProduct.category],
@@ -586,6 +591,7 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
           ingredients: result.product.ingredients ?? "",
           directions: result.product.directions ?? "",
           conservation: result.product.conservation ?? "",
+          readyForPublish: result.product.readyForPublish ?? false,
           type: result.product.type,
           stockStatus: result.product.stockStatus === "available" ? "available" : "preorder",
         });
@@ -648,58 +654,53 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
           <div className="flex h-full flex-col overflow-hidden bg-linen sm:h-auto sm:max-h-[92vh] sm:w-full sm:max-w-xl sm:rounded-xl sm:shadow-2xl">
             <div className="flex items-center justify-between border-b border-forest/10 bg-cream px-4 py-3">
               <div>
-                <h2 className="font-serif text-2xl font-bold text-forest">Snel product toevoegen</h2>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-coffee">{quickMode === "supplier" ? "Leverancierslijst" : quickProduct.id}</p>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-coffee">Mobiele invoer</p>
+                <h3 className="font-serif text-2xl font-bold text-forest">Snel product toevoegen</h3>
               </div>
-              <button className="grid h-11 w-11 place-items-center rounded-full border border-forest/15 bg-white text-forest" onClick={() => setQuickOpen(false)} type="button">
-                <X size={20} />
-              </button>
+              <button className="grid h-10 w-10 place-items-center rounded-full border border-forest/15 bg-white text-forest" onClick={() => setQuickOpen(false)} type="button"><X size={18} /></button>
             </div>
-
-            <div className="flex-1 space-y-4 overflow-y-auto px-4 py-5">
-              <div className="grid grid-cols-2 gap-2">
-                <button className={`rounded-lg px-3 py-3 text-sm font-bold ${quickMode === "supplier" ? "bg-forest text-cream" : "bg-white text-forest"}`} onClick={() => { setQuickMode("supplier"); resetQuickProduct(); }} type="button">
-                  Uit leverancierslijst
-                </button>
-                <button className={`rounded-lg px-3 py-3 text-sm font-bold ${quickMode === "manual" ? "bg-forest text-cream" : "bg-white text-forest"}`} onClick={() => { setQuickMode("manual"); resetQuickProduct(); }} type="button">
-                  Nieuw handmatig product
-                </button>
+            <div className="flex-1 space-y-4 overflow-y-auto p-4 pb-6">
+              <div className="grid grid-cols-2 gap-2 rounded-full bg-white p-1">
+                <button className={`rounded-full px-3 py-3 text-sm font-bold ${quickMode === "supplier" ? "bg-forest text-cream" : "text-forest"}`} onClick={() => { setQuickMode("supplier"); resetQuickProduct(); }} type="button">Uit leverancierslijst</button>
+                <button className={`rounded-full px-3 py-3 text-sm font-bold ${quickMode === "manual" ? "bg-forest text-cream" : "text-forest"}`} onClick={() => { setQuickMode("manual"); resetQuickProduct(); }} type="button">Nieuw handmatig product</button>
               </div>
 
               {quickMode === "supplier" ? (
-                <div className="space-y-4 rounded-lg border border-forest/10 bg-cream p-3">
-                  <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-                    <select className="h-12 rounded-lg border border-forest/15 bg-white px-3 text-base" onChange={(event) => setQuickSupplier(event.target.value)} value={quickSupplier}>
+                <div className="space-y-3 rounded-lg border border-forest/10 bg-white p-3">
+                  <Field label="Leverancier">
+                    <select className="h-12 w-full rounded-lg border border-forest/15 bg-white px-4 text-base" onChange={(event) => setQuickSupplier(event.target.value)} value={quickSupplier}>
                       <option value="">Alle leveranciers</option>
-                      {supplierNames.map((supplier) => <option key={supplier} value={supplier}>{supplier}</option>)}
+                      {supplierNames.map((name) => <option key={name} value={name}>{name}</option>)}
                     </select>
-                    <button className="h-12 rounded-full bg-forest px-5 font-bold text-cream disabled:opacity-50" disabled={quickSupplierLoading} onClick={() => void searchQuickSupplierProducts()} type="button">
-                      {quickSupplierLoading ? "Zoeken..." : "Zoeken"}
-                    </button>
-                  </div>
-                  <input className="h-12 w-full rounded-lg border border-forest/15 bg-white px-3 text-base" onChange={(event) => setQuickSupplierQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void searchQuickSupplierProducts(); }} placeholder="Zoek naam, supplier code, EAN, verpakking of NC-code" value={quickSupplierQuery} />
+                  </Field>
+                  <Field label="Zoek leverancierproduct">
+                    <div className="flex gap-2">
+                      <input className="min-w-0 flex-1 rounded-lg border border-forest/15 bg-white px-4 text-base" onChange={(event) => setQuickSupplierQuery(event.target.value)} placeholder="Naam, supplier code, EAN, NC-code" value={quickSupplierQuery} />
+                      <button className="rounded-lg bg-forest px-4 text-sm font-bold text-cream disabled:opacity-50" disabled={quickSupplierLoading} onClick={() => void searchQuickSupplierProducts()} type="button">Zoek</button>
+                    </div>
+                  </Field>
                   {quickSupplierResults.length ? (
                     <div className="max-h-72 space-y-2 overflow-y-auto">
                       {quickSupplierResults.map((item) => (
-                        <button className={`w-full rounded-lg border p-3 text-left ${quickSelectedProduct?.id === item.id ? "border-forest bg-white" : "border-forest/10 bg-white/80"}`} key={item.id} onClick={() => selectQuickSupplierProduct(item)} type="button">
-                          <div className="flex items-start justify-between gap-3">
+                        <button className={`w-full rounded-lg border p-3 text-left ${quickSelectedProduct?.id === item.id ? "border-forest bg-cream" : "border-forest/10 bg-linen"}`} key={item.id} onClick={() => selectQuickSupplierProduct(item)} type="button">
+                          <div className="flex items-start justify-between gap-2">
                             <div>
-                              <div className="font-bold text-forest">{item.name}</div>
-                              <div className="text-xs text-forest/60">{item.supplier} · {item.supplierCode || "no supplier code"} · {item.id}</div>
+                              <p className="text-sm font-bold text-forest">{item.name}</p>
+                              <p className="mt-1 text-xs text-forest/60">{item.supplier} · {item.supplierCode || "no code"} · {item.id}</p>
                             </div>
                             <span className={`rounded-full px-2 py-1 text-xs font-bold ${item.isVisible ? "bg-leaf/10 text-leaf" : "bg-coffee/10 text-coffee"}`}>{item.isVisible ? "Online" : item.lifecycleStatus ?? "draft"}</span>
                           </div>
-                          <div className="mt-2 grid gap-1 text-xs text-forest/70">
+                          <div className="mt-2 grid gap-1 text-xs text-forest/65">
                             <span>Bronverpakking: {item.sourcePackageText || item.packSize || item.unit || "-"}</span>
-                            <span>Doosprijs: {formatEuro(item.supplierCasePrice || item.costPriceExVat || 0)} · Bronstukprijs: {formatEuro(item.supplierUnitPrice || item.unitCost || 0)}</span>
-                            <span>Batch: {item.importBatch || "-"}</span>
-                            <span>Review: tax/category/image/package/translation controleren</span>
+                            <span>Doosprijs: {formatEuro(item.supplierCasePrice || item.costPriceExVat || 0)} · bronstukprijs {formatEuro(item.supplierUnitPrice || item.unitCost || 0)}</span>
+                            <span>Batch: {item.importBatch}</span>
+                            <span>Review: IVA {item.vatRate}% · verkoop {formatEuro(item.salePriceInclVat || 0)}</span>
                           </div>
                         </button>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-forest/65">Kies een leverancier en zoek een bestaand geïmporteerd product.</p>
+                    <p className="text-sm text-forest/65">Kies een leverancier en zoek een bestaand geÃ¯mporteerd product.</p>
                   )}
                 </div>
               ) : null}
@@ -752,14 +753,20 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
                   <Field help="Optioneel. Kort en klantvriendelijk." label="Korte beschrijving">
                     <textarea className="min-h-24 w-full rounded-lg border border-forest/15 bg-white px-4 py-3 text-base" onChange={(event) => updateQuick("description", event.target.value)} placeholder="Korte tekst voor de productkaart." value={quickProduct.description} />
                   </Field>
-                  <Field help="Optioneel. Neem dit over van het etiket of de leverancier." label="Ingrediënten / allergenen">
-                    <textarea className="min-h-28 w-full rounded-lg border border-forest/15 bg-white px-4 py-3 text-base" onChange={(event) => updateQuick("ingredients", event.target.value)} placeholder="Ingrediënten en allergenen..." value={quickProduct.ingredients} />
+                  <Field help="Optioneel. Neem dit over van het etiket of de leverancier." label="IngrediÃ«nten / allergenen">
+                    <textarea className="min-h-28 w-full rounded-lg border border-forest/15 bg-white px-4 py-3 text-base" onChange={(event) => updateQuick("ingredients", event.target.value)} placeholder="IngrediÃ«nten en allergenen..." value={quickProduct.ingredients} />
                   </Field>
                   <Field help="Optioneel. Bereidingsinstructies voor oven, pan, frituur of airfryer." label="Bereidingswijze">
                     <textarea className="min-h-28 w-full rounded-lg border border-forest/15 bg-white px-4 py-3 text-base" onChange={(event) => updateQuick("directions", event.target.value)} placeholder="Bereidingswijze..." value={quickProduct.directions} />
                   </Field>
                   <Field help="Optioneel. Bijvoorbeeld diepvries, gekoeld of droog bewaren." label="Bewaaradvies">
                     <textarea className="min-h-28 w-full rounded-lg border border-forest/15 bg-white px-4 py-3 text-base" onChange={(event) => updateQuick("conservation", event.target.value)} placeholder="Bewaaradvies..." value={quickProduct.conservation} />
+                  </Field>
+                  <Field help="Zet aan wanneer prijs, IVA, categorie, verpakking en foto gecontroleerd zijn. Direct online opslaan zet dit automatisch aan." label="Klaar voor publicatie">
+                    <label className="flex min-h-12 items-center gap-3 rounded-lg border border-forest/15 bg-white px-4 py-3 text-sm font-bold text-forest">
+                      <input checked={quickProduct.readyForPublish} onChange={(event) => updateQuick("readyForPublish", event.target.checked)} type="checkbox" />
+                      Klaar voor publicatie
+                    </label>
                   </Field>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="Producttype">
@@ -947,6 +954,12 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
             <label className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
               <input checked={product.priceBasisConfirmed ?? false} onChange={(event) => update("priceBasisConfirmed", event.target.checked)} type="checkbox" />
               Price basis confirmed
+            </label>
+          </Field>
+          <Field help="Tick when the product is approved for order editing and public sale after price, IVA, category, package and image checks." label="Klaar voor publicatie">
+            <label className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
+              <input checked={product.readyForPublish ?? false} onChange={(event) => update("readyForPublish", event.target.checked)} type="checkbox" />
+              Klaar voor publicatie
             </label>
           </Field>
           <Field help="Usually 10 for food, 4 for bread/basic items, 21 for non-food." label="IVA %">
@@ -1182,7 +1195,7 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
                 >
                   <td className="px-3 py-3">
                     <div className="font-bold text-forest">{item.name}</div>
-                    <div className="text-xs text-forest/60">{getProductCategories(item).join(" · ")}</div>
+                    <div className="text-xs text-forest/60">{getProductCategories(item).join(" Â· ")}</div>
                   </td>
                   <td className="px-3 py-3 text-xs text-forest/70">
                     <div className="font-bold text-forest">{item.id}</div>
