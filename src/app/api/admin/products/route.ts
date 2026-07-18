@@ -52,6 +52,41 @@ function productMatchesQuickQuery(product: Product, query: string) {
   ].join(" ").toLowerCase().includes(query);
 }
 
+function productMatchesOrderQuery(product: Product, query: string) {
+  if (!query) return true;
+  return [
+    product.id,
+    product.sku,
+    product.name,
+    product.category,
+    product.categories?.join(" "),
+    product.description,
+    product.unit,
+    product.packSize,
+    product.weight,
+    product.ean,
+    product.supplier,
+    product.supplierCode,
+    product.sourcePackageText,
+    product.importBatch,
+  ].join(" ").toLowerCase().includes(query);
+}
+
+function orderSearchBlockers(product: Product) {
+  const blockers: string[] = [];
+  const lifecycle = product.lifecycleStatus ?? "active";
+  if (lifecycle !== "active") blockers.push(`Product status is ${lifecycle}.`);
+  if (product.isVisible === false) blockers.push("Product is not visible online.");
+  if (product.readyForPublish !== true) blockers.push("Product is not marked ready for publish.");
+  if (Number(product.salePriceInclVat) <= 0) blockers.push("Sale price incl. IVA is missing or zero.");
+  if (![4, 10, 21].includes(Number(product.vatRate))) blockers.push("IVA must be 4%, 10% or 21%.");
+  if (product.salesUnitConfirmed !== true) blockers.push("Sales unit is not confirmed.");
+  if (isSupplierImportProduct(product) && product.priceBasisConfirmed !== true) blockers.push("Imported product price basis is not confirmed.");
+  const salesUnitSafety = evaluateSalesUnitSafety(product);
+  if (!salesUnitSafety.ok) blockers.push(salesUnitSafety.reason || "Sales unit safety check failed.");
+  return blockers;
+}
+
 async function hasActiveSupplierOffer(product: Product) {
   if (!product.id || !product.importBatch || !product.supplierCode) return false;
   try {
@@ -87,25 +122,19 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   if (searchParams.get("mode") === "order-search") {
     const query = searchParams.get("q")?.trim().toLowerCase() ?? "";
-    const allowedVatRates = new Set([4, 10, 21]);
     const matches = products
-      .filter((product) => (product.lifecycleStatus ?? "active") === "active" && product.isVisible !== false)
-      .filter((product) => product.readyForPublish === true)
-      .filter((product) => Number(product.salePriceInclVat) > 0)
-      .filter((product) => allowedVatRates.has(Number(product.vatRate)))
-      .filter((product) => product.salesUnitConfirmed === true)
-      .filter((product) => evaluateSalesUnitSafety(product).ok)
-      .filter((product) => !query || [
-        product.id,
-        product.name,
-        product.category,
-        product.categories?.join(" "),
-        product.unit,
-        product.ean,
-        product.supplierCode,
-      ].join(" ").toLowerCase().includes(query))
+      .filter((product) => (product.lifecycleStatus ?? "active") !== "archived")
+      .filter((product) => productMatchesOrderQuery(product, query))
       .slice(0, 25)
-      .map((product) => ({ ...product, packageOptions: getEffectivePackageOptions(product) }));
+      .map((product) => {
+        const blockers = orderSearchBlockers(product);
+        return {
+          ...product,
+          packageOptions: getEffectivePackageOptions(product),
+          orderSearchAllowed: blockers.length === 0,
+          orderSearchBlockers: blockers,
+        };
+      });
     return NextResponse.json({ ok: true, products: matches, databaseEnabled: hasSupabaseAdmin() });
   }
   if (searchParams.get("mode") === "quick-supplier") {

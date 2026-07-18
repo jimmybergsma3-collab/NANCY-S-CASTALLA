@@ -46,6 +46,11 @@ type EditableOrderLine = {
   vatRate: number;
 };
 
+type OrderSearchProduct = Product & {
+  orderSearchAllowed?: boolean;
+  orderSearchBlockers?: string[];
+};
+
 function editableLineTotal(line: EditableOrderLine) {
   return Math.round(line.quantity * line.salePriceInclVat * 100) / 100;
 }
@@ -270,7 +275,7 @@ function OrderDetail({ invoiceBusy, notesDraft, onAdminAction, onInvoiceAction, 
   const [editMessage, setEditMessage] = useState("");
   const [editSaving, setEditSaving] = useState(false);
   const [productQuery, setProductQuery] = useState("");
-  const [productResults, setProductResults] = useState<Product[]>([]);
+  const [productResults, setProductResults] = useState<OrderSearchProduct[]>([]);
   const [productLoading, setProductLoading] = useState(false);
   const phone = order.customer_phone || order.customer?.phone || "";
   const email = order.customer_email || order.customer?.email || "";
@@ -306,14 +311,25 @@ function OrderDetail({ invoiceBusy, notesDraft, onAdminAction, onInvoiceAction, 
     }
     setProductLoading(true);
     setEditMessage("");
-    const response = await fetch(`/api/admin/products?mode=order-search&q=${encodeURIComponent(query)}`);
-    const { data, message, diagnosticId } = await readSafeJson<{ products?: Product[] }>(response);
-    setProductLoading(false);
-    if (!response.ok || !data) {
-      setEditMessage(`${message || "Product search failed."}${diagnosticId ? ` Diagnostic ID: ${diagnosticId}` : ""}`);
-      return;
+    try {
+      const response = await fetch(`/api/admin/products?mode=order-search&q=${encodeURIComponent(query)}`);
+      const { data, message, diagnosticId } = await readSafeJson<{ products?: OrderSearchProduct[] }>(response);
+      if (!response.ok || !data) {
+        setEditMessage(`${message || "Product search failed."}${diagnosticId ? ` Diagnostic ID: ${diagnosticId}` : ""}`);
+        setProductResults([]);
+        return;
+      }
+      const results = data.products ?? [];
+      setProductResults(results);
+      if (results.length === 0) {
+        setEditMessage(`Geen producten gevonden voor "${query}". Probeer Magners, cider, 568, productcode of EAN.`);
+      }
+    } catch (error) {
+      setEditMessage(error instanceof Error ? error.message : "Product search failed.");
+      setProductResults([]);
+    } finally {
+      setProductLoading(false);
     }
-    setProductResults(data.products ?? []);
   }
 
   function addProductLine(product: Product, option: ProductPackageOption) {
@@ -342,35 +358,44 @@ function OrderDetail({ invoiceBusy, notesDraft, onAdminAction, onInvoiceAction, 
     }
     setEditSaving(true);
     setEditMessage("");
-    const response = await fetch("/api/admin/orders", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: order.id,
-        action: "replace_items",
-        reason: editReason,
-        lines: editLines.map((line) => ({
-          productId: line.productId,
-          quantity: line.quantity,
-          packageLabel: line.packageLabel,
-          packageQuantity: line.packageQuantity,
-        })),
-        expectedUpdatedAt: order.updated_at ?? order.created_at,
-      }),
-    });
-    const { data, message, diagnosticId } = await readSafeJson<{ order?: BackofficeOrder; data?: { order?: BackofficeOrder } }>(response);
-    setEditSaving(false);
-    if (!response.ok || !data) {
-      setEditMessage(`${message || "Order correction could not be saved."}${diagnosticId ? ` Diagnostic ID: ${diagnosticId}` : ""}`);
-      return;
-    }
-    const updated = data.order ?? data.data?.order;
-    if (updated) {
-      onOrderUpdated(updated);
-      setEditLines(orderItemsToEditableLines(updated.order_items));
-      setEditOpen(false);
-      setEditReason("");
-      setEditMessage("Orderregels zijn server-side opnieuw berekend.");
+    try {
+      const response = await fetch("/api/admin/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: order.id,
+          action: "replace_items",
+          reason: editReason,
+          lines: editLines.map((line) => ({
+            productId: line.productId,
+            quantity: line.quantity,
+            packageLabel: line.packageLabel,
+            packageQuantity: line.packageQuantity,
+          })),
+          expectedUpdatedAt: order.updated_at ?? order.created_at,
+        }),
+      });
+      const { data, message, diagnosticId } = await readSafeJson<{ order?: BackofficeOrder; data?: { order?: BackofficeOrder } }>(response);
+      if (!response.ok || !data) {
+        setEditMessage(`${message || "Order correction could not be saved."}${diagnosticId ? ` Diagnostic ID: ${diagnosticId}` : ""}`);
+        return;
+      }
+      const updated = data.order ?? data.data?.order;
+      if (updated) {
+        onOrderUpdated(updated);
+        setEditLines(orderItemsToEditableLines(updated.order_items));
+        setEditOpen(false);
+        setEditReason("");
+        setProductResults([]);
+        setProductQuery("");
+        setEditMessage("Orderregels zijn server-side opnieuw berekend.");
+      } else {
+        setEditMessage("Order correction succeeded but the server did not return the updated order. Refresh the admin page.");
+      }
+    } catch (error) {
+      setEditMessage(error instanceof Error ? error.message : "Order correction could not be saved.");
+    } finally {
+      setEditSaving(false);
     }
   }
 
@@ -552,26 +577,34 @@ function OrderDetail({ invoiceBusy, notesDraft, onAdminAction, onInvoiceAction, 
             <div className="rounded-md border border-forest/10 bg-white p-3">
               <label className="flex items-center gap-2 rounded-md border border-forest/15 px-3 py-2 text-sm">
                 <Search size={16} />
-                <input className="w-full bg-transparent outline-none" onChange={(event) => setProductQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void searchProducts(); }} placeholder="Zoek productnaam, code, EAN of verpakking" value={productQuery} />
+                <input className="w-full bg-transparent outline-none" onChange={(event) => setProductQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void searchProducts(); } }} placeholder="Zoek productnaam, code, EAN of verpakking" value={productQuery} />
               </label>
               <button className="mt-2 rounded-md bg-forest px-4 py-2 text-sm font-bold text-cream disabled:opacity-50" disabled={productLoading} onClick={() => void searchProducts()} type="button">{productLoading ? "Zoeken..." : "Product zoeken"}</button>
               <div className="mt-3 grid gap-2">
-                {productResults.map((product) => (
+                {productResults.map((product) => {
+                  const blockers = product.orderSearchBlockers ?? [];
+                  const allowed = product.orderSearchAllowed !== false && blockers.length === 0;
+                  return (
                   <article className="rounded-md border border-forest/10 bg-linen p-3" key={product.id}>
-                    <div><p className="text-xs font-bold text-coffee">{product.id}</p><h4 className="font-bold text-forest">{product.name}</h4><p className="text-xs text-forest/60">{product.unit} · IVA {product.vatRate}%</p></div>
+                    <div><p className="text-xs font-bold text-coffee">{product.id}{product.supplierCode ? ` · Supplier ${product.supplierCode}` : ""}</p><h4 className="font-bold text-forest">{product.name}</h4><p className="text-xs text-forest/60">{product.unit} · IVA {product.vatRate}% · {formatEuro(Number(product.salePriceInclVat))}</p></div>
+                    {!allowed ? <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-bold text-amber-900">Niet toe te voegen: {blockers.join(" ")}</div> : null}
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {productPackages(product).map((option) => <button className="rounded-md border border-forest/15 bg-white px-3 py-2 text-xs font-bold text-forest" key={`${product.id}-${option.label}-${option.quantity}`} onClick={() => addProductLine(product, option)} type="button">Toevoegen: {option.label} · {formatEuro(option.salePriceInclVat)}</button>)}
+                      {productPackages(product).map((option) => <button className="rounded-md border border-forest/15 bg-white px-3 py-2 text-xs font-bold text-forest disabled:cursor-not-allowed disabled:opacity-40" disabled={!allowed} key={`${product.id}-${option.label}-${option.quantity}`} onClick={() => addProductLine(product, option)} type="button">Toevoegen: {option.label} · {formatEuro(option.salePriceInclVat)}</button>)}
                     </div>
                   </article>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
-            <div className="ml-auto grid w-full max-w-md gap-2 rounded-md border border-forest/10 bg-cream p-4 text-sm">
+            <div className="sticky bottom-0 z-20 ml-auto grid w-full max-w-md gap-2 rounded-md border border-forest/10 bg-cream p-4 text-sm shadow-soft">
               <div className="flex justify-between gap-4"><span>Subtotaal excl. IVA</span><strong>{formatEuro(editSubtotalExVat)}</strong></div>
               {editVatByRate.map(([rate, value]) => <div className="flex justify-between gap-4" key={rate}><span>IVA {rate}%</span><strong>{formatEuro(value)}</strong></div>)}
               <div className="flex justify-between gap-4 border-t border-forest/10 pt-2 text-lg"><span className="font-bold">Totaal incl. IVA</span><strong>{formatEuro(editTotal)}</strong></div>
-              <button className="mt-2 rounded-md bg-forest px-4 py-3 text-sm font-bold text-cream disabled:opacity-50" disabled={editSaving || editLines.length === 0} onClick={() => void saveCorrectedOrder()} type="button">{editSaving ? "Opslaan..." : "Correctie server-side opslaan"}</button>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <button className="rounded-md bg-forest px-4 py-3 text-sm font-bold text-cream disabled:opacity-50" disabled={editSaving || editLines.length === 0} onClick={() => void saveCorrectedOrder()} type="button">{editSaving ? "Opslaan..." : "Correctie opslaan"}</button>
+                <button className="rounded-md border border-forest/15 bg-white px-4 py-3 text-sm font-bold text-forest disabled:opacity-50" disabled={editSaving} onClick={() => { setEditOpen(false); setEditLines(orderItemsToEditableLines(order.order_items)); setProductResults([]); setProductQuery(""); setEditMessage(""); }} type="button">Annuleren</button>
+              </div>
             </div>
           </div>
         ) : null}
