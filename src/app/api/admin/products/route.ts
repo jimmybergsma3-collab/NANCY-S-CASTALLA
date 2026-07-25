@@ -24,6 +24,7 @@ async function getNextProductId() {
 
 function validateOnlineProduct(product: Product) {
   if (!product.isVisible || (product.lifecycleStatus ?? "active") !== "active") return "";
+  if (isOfflineOnlySupplierProduct(product)) return "Tindale products are offline for now because they require pickup in La Nucia.";
   if (!product.name.trim()) return "Product name is required before publishing.";
   if (!product.unit.trim()) return "Package / sales unit is required before publishing.";
   if (Number(product.salePriceInclVat) <= 0) return "Sale price incl IVA must be greater than 0 before publishing.";
@@ -36,6 +37,16 @@ function validateOnlineProduct(product: Product) {
     return "Package looks like a case. Choose case or custom pack as public sales unit.";
   }
   return "";
+}
+
+function isOfflineOnlySupplierProduct(product: Product) {
+  return [product.importBatch, product.supplier]
+    .filter(Boolean)
+    .some((value) => String(value).toLowerCase().includes("tindale"));
+}
+
+function isSimpleSalesUnit(value?: Product["salesUnitType"]) {
+  return value === "single" || value === "per_unit" || value === "per_kg";
 }
 
 function productMatchesQuickQuery(product: Product, query: string) {
@@ -209,9 +220,9 @@ export async function POST(request: Request) {
     profitPerUnit: pricing.profitPerUnit,
     unitCost: Number(body.unitCost || body.costPriceExVat),
     salesUnitType: body.salesUnitType ?? "",
-    salesUnitQuantity: Number(body.salesUnitQuantity ?? 0),
-    salesUnitConfirmed: Boolean(body.salesUnitConfirmed),
-    priceBasisConfirmed: Boolean(body.priceBasisConfirmed),
+    salesUnitQuantity: isSimpleSalesUnit(body.salesUnitType) ? 1 : Number(body.salesUnitQuantity ?? 0),
+    salesUnitConfirmed: isSimpleSalesUnit(body.salesUnitType) ? true : Boolean(body.salesUnitConfirmed),
+    priceBasisConfirmed: isSimpleSalesUnit(body.salesUnitType) ? true : Boolean(body.priceBasisConfirmed),
     supplierCasePrice: Number(body.supplierCasePrice || body.costPriceExVat || 0),
     supplierUnitPrice: Number(body.supplierUnitPrice || body.unitCost || 0),
     supplierCaseQuantity: Number(body.supplierCaseQuantity ?? 0),

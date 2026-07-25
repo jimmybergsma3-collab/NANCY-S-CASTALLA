@@ -20,6 +20,10 @@ function positive(value: unknown) {
   return Number.isFinite(number) && number > 0 ? number : 0;
 }
 
+function isSimpleSalesUnit(value?: Product["salesUnitType"]) {
+  return value === "single" || value === "per_unit" || value === "per_kg";
+}
+
 export function isSupplierImportProduct(product: Pick<Product, "importBatch">) {
   return String(product.importBatch ?? "").startsWith("IMPORT_2026_LIVE_");
 }
@@ -36,7 +40,7 @@ export function evaluateSalesUnitSafety(product: Product, offer?: SalesUnitSafet
   const caseLikePublic = isCaseLikePackage(publicPackage);
   const caseLikeSource = isCaseLikePackage(sourcePackage);
   const salesUnitType = product.salesUnitType ?? "";
-  const salesUnitQuantity = positive(product.salesUnitQuantity);
+  const salesUnitQuantity = isSimpleSalesUnit(salesUnitType) ? 1 : positive(product.salesUnitQuantity);
 
   if (!product.salesUnitConfirmed || !product.priceBasisConfirmed || !salesUnitType) {
     return { ok: false, reason: "Sales unit and price basis must be confirmed before this supplier import product can be sold." };
