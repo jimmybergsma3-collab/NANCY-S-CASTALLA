@@ -105,6 +105,27 @@ const categoryFallbacks: Record<ProductCategory, Record<Locale, string>> = {
 };
 
 const knownDescriptions: Record<string, Record<Locale, string>> = {
+  beer: {
+    en: "Imported beer available by pre-order.",
+    nl: "Geimporteerd bier beschikbaar als voorbestelling.",
+    de: "Importiertes Bier auf Vorbestellung verfuegbar.",
+    es: "Cerveza importada disponible por prepedido.",
+    sv: "Importerad öl tillgänglig som förbeställning.",
+  },
+  cider: {
+    en: "Imported cider available by pre-order.",
+    nl: "Geimporteerde cider beschikbaar als voorbestelling.",
+    de: "Importierter Cider auf Vorbestellung verfuegbar.",
+    es: "Sidra importada disponible por prepedido.",
+    sv: "Importerad cider tillgänglig som förbeställning.",
+  },
+  "dark fruit cider": {
+    en: "Imported dark fruit cider available by pre-order.",
+    nl: "Geimporteerde dark fruit cider beschikbaar als voorbestelling.",
+    de: "Importierter Dark-Fruit-Cider auf Vorbestellung verfuegbar.",
+    es: "Sidra dark fruit importada disponible por prepedido.",
+    sv: "Importerad dark fruit-cider tillgänglig som förbeställning.",
+  },
   frikandel: {
     en: "Dutch fricandel, ideal as a snack or with chips. Available by pre-order.",
     nl: "Nederlandse frikandel, ideaal als snack of bij friet. Beschikbaar als voorbestelling.",
@@ -143,6 +164,23 @@ const knownDescriptions: Record<string, Record<Locale, string>> = {
 };
 
 const descriptionAliases: Record<string, string> = {
+  beer: "beer",
+  bier: "beer",
+  "beer can": "beer",
+  "beer bottle": "beer",
+  cider: "cider",
+  "dark fruit": "dark fruit cider",
+  strongbow: "cider",
+  magners: "cider",
+  kopparberg: "cider",
+  rekorderlig: "cider",
+  guinness: "beer",
+  "john smith": "beer",
+  tennents: "beer",
+  stella: "beer",
+  corona: "beer",
+  peroni: "beer",
+  jupiler: "beer",
   fricandel: "frikandel",
   "frikandel klassiek": "frikandel",
   "sate ajam": "chicken satay in peanut sauce",
@@ -168,7 +206,7 @@ function knownDescriptionKey(name: string) {
 }
 
 function isImportedPlaceholder(text: string) {
-  return /^(imported|dutch bakery product).+hidden until selected for sale\.$/i.test(text);
+  return /^(description coming soon\.|imported|dutch bakery product).+$/i.test(text);
 }
 
 export function getPublicProductDescription(product: Product, locale: Locale = "en") {
