@@ -365,6 +365,247 @@ const containsRules: Array<{ needles: string[]; translationKey: string }> = [
   { needles: ["gehaktstaaf pikant"], translationKey: "gehaktstaaf pikant" },
 ];
 
+const genericPhraseTranslations: Partial<Record<Locale, Array<[RegExp, string]>>> = {
+  en: [
+    [/\bBAMBOESTRIPS\b/gi, "Bamboo Strips"],
+    [/\bBASMATI RIJST\b/gi, "Basmati Rice"],
+    [/\bPILAU RIJST\b/gi, "Pilau Rice"],
+    [/\bGEPELDE SOJA BONEN\b/gi, "Peeled Soy Beans"],
+    [/\bKOKOSMELK\b/gi, "Coconut Milk"],
+    [/\bLOEMPIA GROENTEN\b/gi, "Vegetable Spring Rolls"],
+    [/\bMINI LOEMPIA MET GROENTEN\b/gi, "Mini Vegetable Spring Rolls"],
+    [/\bVIETNAMESE LOEMPIA\b/gi, "Vietnamese Spring Rolls"],
+    [/\bNAAN BROOD NATUREEL GROOT\b/gi, "Large Plain Naan Bread"],
+    [/\bNAAN BROOD ROND KNOFLOOK\s*&\s*CORIANDE\b/gi, "Round Garlic & Coriander Naan Bread"],
+    [/\bPOPPADOMS NATUREEL\b/gi, "Plain Poppadoms"],
+    [/\bRODE CURRY PASTA THAIS\b/gi, "Thai Red Curry Paste"],
+    [/\bGELE CURRYPASTA THAIS\b/gi, "Thai Yellow Curry Paste"],
+    [/\bCURRYPASTA THAIS\b/gi, "Thai Curry Paste"],
+    [/\bVISSAUS\b/gi, "Fish Sauce"],
+    [/\bOESTERSAUS\b/gi, "Oyster Sauce"],
+    [/\bSOJASAUS\b/gi, "Soy Sauce"],
+    [/\bSESAM OLIE\b/gi, "Sesame Oil"],
+    [/\bTARWE NOEDELS SNEL KOKENDE\b/gi, "Quick-Cooking Wheat Noodles"],
+    [/\bWAKAME ZEEWIER\b/gi, "Wakame Seaweed"],
+    [/\bBRIOCHE BROOD MET ZADEN\b/gi, "Brioche Bread with Seeds"],
+    [/\bBRIOCHE HAMBURGER BROOD\b/gi, "Brioche Hamburger Bun"],
+    [/\bBRIOCHE BROOD MINI MAAT\b/gi, "Mini Brioche Bread"],
+    [/\bBRIOCHE BROOD\b/gi, "Brioche Bread"],
+    [/\bBROOD DIK GESNEDEN\b/gi, "Thick-Sliced Bread"],
+    [/\bWITT BROOD EXTRA DIK GESNDEN\b/gi, "Extra Thick-Sliced White Bread"],
+    [/\bWITT BROOD DIK GESNEDEN\b/gi, "Thick-Sliced White Bread"],
+    [/\bVOLKOREN BROOD\b/gi, "Wholemeal Bread"],
+    [/\bKNOFLOOK BROOD SCHIJVEN\b/gi, "Garlic Bread Slices"],
+    [/\bKNOFLOOK BAGUETTE\b/gi, "Garlic Baguette"],
+    [/\bPITA BROOD ROND\b/gi, "Round Pita Bread"],
+    [/\bPETIT PAN BROOD\b/gi, "Petit Pain Bread"],
+    [/\bZACHTE BROODJES\b/gi, "Soft Rolls"],
+    [/\bIERSE SODABROODPLAATJES\b/gi, "Irish Soda Bread Slices"],
+    [/\bIERSE SODABROOD\b/gi, "Irish Soda Bread"],
+    [/\bAMERIKAANSE PANNENKOEKEN\b/gi, "American Pancakes"],
+    [/\bASSORTIMENT JAMPORTIES\b/gi, "Assorted Jam Portions"],
+    [/\bBOTER ZONDER ZOUT\b/gi, "Unsalted Butter"],
+    [/\bBOTER STAAF\b/gi, "Butter Block"],
+    [/\bIERSE BOTER PORTIES\b/gi, "Irish Butter Portions"],
+    [/\bKRUIDENBOTER\b/gi, "Herb Butter"],
+    [/\bKOOKROOM\b/gi, "Cooking Cream"],
+    [/\bSLAGROOM\b/gi, "Whipping Cream"],
+    [/\bVLOEIBARE MARGARINE\b/gi, "Liquid Margarine"],
+    [/\bZACHTE MARGARINE\b/gi, "Soft Margarine"],
+    [/\bMARGARINE ZONNEBLOEM PORTIES\b/gi, "Sunflower Margarine Portions"],
+    [/\bENGELSE CREME BOURBON\b/gi, "English Bourbon Cream"],
+    [/\bIJS MIX\b/gi, "Ice Cream Mix"],
+    [/\bCHEDDAR KAAS JONG BLOK\b/gi, "Mild Cheddar Cheese Block"],
+    [/\bEXTRA OUDE CHEDDAR KAAS BLOK\b/gi, "Extra Mature Cheddar Cheese Block"],
+    [/\bCHEDDAR OUDE KAAS BLOK\b/gi, "Mature Cheddar Cheese Block"],
+    [/\bCHEDDAR RODE KAAS BLOK\b/gi, "Red Cheddar Cheese Block"],
+    [/\bGOUDA KAAS JONG BLOK\b/gi, "Young Gouda Cheese Block"],
+    [/\bGERASPTE CHEDDAR WITTE KAAS\b/gi, "Grated White Cheddar Cheese"],
+    [/\bGERASPTE RODE CHEDDAR KAAS\b/gi, "Grated Red Cheddar Cheese"],
+    [/\bBRIE KAAS\b/gi, "Brie Cheese"],
+    [/\bHALLOUMI KAAS\b/gi, "Halloumi Cheese"],
+    [/\bHALLOUMI BLOK\b/gi, "Halloumi Block"],
+    [/\bGEITENKAAS ROLL\b/gi, "Goat Cheese Roll"],
+    [/\bCAMEMBERT BIJTEN\b/gi, "Camembert Bites"],
+    [/\bCHILI KAAS NUGGETS\b/gi, "Chili Cheese Nuggets"],
+    [/\bENGELSE WORST FOOTLONG\b/gi, "British Footlong Sausage"],
+    [/\bCOUNTRY PARK ENGELSE WORST\b/gi, "Country Park British Sausage"],
+    [/\bIERSE VARKENWORST\b/gi, "Irish Pork Sausage"],
+    [/\bIERSE ZWARTE BLOEDWORST\b/gi, "Irish Black Pudding"],
+    [/\bGEROOKT ENGELSE SPEK\b/gi, "Smoked British Bacon"],
+    [/\bENGELSE BACK BACON PREMIUM\b/gi, "Premium British Back Bacon"],
+    [/\bGEBRADEN KIPFILET PORTIES\b/gi, "Roasted Chicken Fillet Portions"],
+    [/\bGEMARINEERDE KIPFILET\b/gi, "Marinated Chicken Fillet"],
+    [/\bHALVE KIP VOORGEBAKKEN\b/gi, "Pre-Cooked Half Chicken"],
+    [/\bRUNDVLEES CURRY PORTIES\b/gi, "Beef Curry Portions"],
+    [/\bKIP CURRY PORTIES\b/gi, "Chicken Curry Portions"],
+    [/\bGEDESTILLEERD AZIJN\b/gi, "Distilled Vinegar"],
+    [/\bKAPPERTJES IN AZIJN\b/gi, "Capers in Vinegar"],
+    [/\bCURRY KETCHUP FLES\b/gi, "Curry Ketchup Bottle"],
+    [/\bANDALOUSE SAUS\b/gi, "Andalouse Sauce"],
+    [/\bHANNIBAL SAUS\b/gi, "Hannibal Sauce"],
+    [/\bCURRY GEWÜRZ SAUS\b/gi, "Curry Gewurz Sauce"],
+    [/\bSAUS\b/gi, "Sauce"],
+    [/\bBIER FLES\b/gi, "Beer Bottle"],
+    [/\bBIER BLIK\b/gi, "Beer Can"],
+    [/\bBIER ZWART\b/gi, "Dark Beer"],
+    [/\bBIER\b/gi, "Beer"],
+    [/\bFLES\b/gi, "Bottle"],
+    [/\bBLIK\b/gi, "Can"],
+    [/\bKAAS\b/gi, "Cheese"],
+    [/\bKIP\b/gi, "Chicken"],
+    [/\bBROOD\b/gi, "Bread"],
+    [/\bWORSTJES\b/gi, "Sausages"],
+    [/\bWORST\b/gi, "Sausage"],
+    [/\bENGELSE\b/gi, "British"],
+    [/\bIERSE\b/gi, "Irish"],
+    [/\bJONG\b/gi, "Mild"],
+    [/\bOUDE\b/gi, "Mature"],
+    [/\bRODE\b/gi, "Red"],
+    [/\bWITTE\b/gi, "White"],
+    [/\bZONDER ZOUT\b/gi, "Unsalted"],
+    [/\bPORTIES\b/gi, "Portions"],
+    [/\bNATUREEL\b/gi, "Plain"],
+    [/\bGROOT\b/gi, "Large"],
+    [/\bROND\b/gi, "Round"],
+    [/\bMET\b/gi, "with"],
+    [/\bEN\b/gi, "and"],
+  ],
+  nl: [
+    [/\bBeer\b/gi, "bier"],
+    [/\bBottle\b/gi, "fles"],
+    [/\bCan\b/gi, "blik"],
+    [/\bCider\b/gi, "cider"],
+    [/\bCheese\b/gi, "kaas"],
+    [/\bChicken\b/gi, "kip"],
+    [/\bBread\b/gi, "brood"],
+  ],
+  de: [
+    [/\bBAMBOESTRIPS\b/gi, "Bambussprossen"],
+    [/\bBASMATI RIJST\b/gi, "Basmati-Reis"],
+    [/\bGEPELDE SOJA BONEN\b/gi, "Geschälte Sojabohnen"],
+    [/\bKOKOSMELK\b/gi, "Kokosmilch"],
+    [/\bLOEMPIA GROENTEN\b/gi, "Gemüse-Frühlingsrollen"],
+    [/\bMINI LOEMPIA MET GROENTEN\b/gi, "Mini-Gemüse-Frühlingsrollen"],
+    [/\bVISSAUS\b/gi, "Fischsauce"],
+    [/\bOESTERSAUS\b/gi, "Austernsauce"],
+    [/\bSOJASAUS\b/gi, "Sojasauce"],
+    [/\bSESAM OLIE\b/gi, "Sesamöl"],
+    [/\bBRIOCHE BROOD\b/gi, "Brioche-Brot"],
+    [/\bVOLKOREN BROOD\b/gi, "Vollkornbrot"],
+    [/\bKNOFLOOK BROOD\b/gi, "Knoblauchbrot"],
+    [/\bBOTER ZONDER ZOUT\b/gi, "Ungesalzene Butter"],
+    [/\bSLAGROOM\b/gi, "Schlagsahne"],
+    [/\bGERASPTE\b/gi, "Geriebener"],
+    [/\bGEDESTILLEERD AZIJN\b/gi, "Destillierter Essig"],
+    [/\bBIER FLES\b/gi, "Bierflasche"],
+    [/\bBIER BLIK\b/gi, "Bierdose"],
+    [/\bBIER\b/gi, "Bier"],
+    [/\bFLES\b/gi, "Flasche"],
+    [/\bBLIK\b/gi, "Dose"],
+    [/\bKAAS\b/gi, "Käse"],
+    [/\bKIP\b/gi, "Hähnchen"],
+    [/\bBROOD\b/gi, "Brot"],
+    [/\bWORSTJES\b/gi, "Würstchen"],
+    [/\bWORST\b/gi, "Wurst"],
+    [/\bENGELSE\b/gi, "Britisch"],
+    [/\bIERSE\b/gi, "Irisch"],
+    [/\bJONG\b/gi, "Jung"],
+    [/\bOUDE\b/gi, "Gereift"],
+    [/\bRODE\b/gi, "Rot"],
+    [/\bWITTE\b/gi, "Weiß"],
+    [/\bSAUS\b/gi, "Sauce"],
+    [/\bPORTIES\b/gi, "Portionen"],
+    [/\bNATUREEL\b/gi, "Natur"],
+    [/\bGROOT\b/gi, "Groß"],
+    [/\bROND\b/gi, "Rund"],
+    [/\bMET\b/gi, "mit"],
+    [/\bEN\b/gi, "und"],
+  ],
+  es: [
+    [/\bBAMBOESTRIPS\b/gi, "Tiras de bambu"],
+    [/\bBASMATI RIJST\b/gi, "Arroz basmati"],
+    [/\bGEPELDE SOJA BONEN\b/gi, "Habas de soja peladas"],
+    [/\bKOKOSMELK\b/gi, "Leche de coco"],
+    [/\bLOEMPIA GROENTEN\b/gi, "Rollitos de primavera vegetales"],
+    [/\bMINI LOEMPIA MET GROENTEN\b/gi, "Mini rollitos vegetales"],
+    [/\bVISSAUS\b/gi, "Salsa de pescado"],
+    [/\bOESTERSAUS\b/gi, "Salsa de ostras"],
+    [/\bSOJASAUS\b/gi, "Salsa de soja"],
+    [/\bSESAM OLIE\b/gi, "Aceite de sesamo"],
+    [/\bBRIOCHE BROOD\b/gi, "Pan brioche"],
+    [/\bVOLKOREN BROOD\b/gi, "Pan integral"],
+    [/\bKNOFLOOK BROOD\b/gi, "Pan de ajo"],
+    [/\bBOTER ZONDER ZOUT\b/gi, "Mantequilla sin sal"],
+    [/\bSLAGROOM\b/gi, "Nata para montar"],
+    [/\bGEDESTILLEERD AZIJN\b/gi, "Vinagre destilado"],
+    [/\bBIER FLES\b/gi, "Cerveza botella"],
+    [/\bBIER BLIK\b/gi, "Cerveza lata"],
+    [/\bBIER\b/gi, "Cerveza"],
+    [/\bFLES\b/gi, "Botella"],
+    [/\bBLIK\b/gi, "Lata"],
+    [/\bKAAS\b/gi, "Queso"],
+    [/\bKIP\b/gi, "Pollo"],
+    [/\bBROOD\b/gi, "Pan"],
+    [/\bWORSTJES\b/gi, "Salchichas"],
+    [/\bWORST\b/gi, "Salchicha"],
+    [/\bENGELSE\b/gi, "Britanico"],
+    [/\bIERSE\b/gi, "Irlandes"],
+    [/\bJONG\b/gi, "Joven"],
+    [/\bOUDE\b/gi, "Curado"],
+    [/\bRODE\b/gi, "Rojo"],
+    [/\bWITTE\b/gi, "Blanco"],
+    [/\bSAUS\b/gi, "Salsa"],
+    [/\bPORTIES\b/gi, "Porciones"],
+    [/\bNATUREEL\b/gi, "Natural"],
+    [/\bGROOT\b/gi, "Grande"],
+    [/\bROND\b/gi, "Redondo"],
+    [/\bMET\b/gi, "con"],
+    [/\bEN\b/gi, "y"],
+  ],
+  sv: [
+    [/\bBAMBOESTRIPS\b/gi, "Bambuskott"],
+    [/\bBASMATI RIJST\b/gi, "Basmatiris"],
+    [/\bGEPELDE SOJA BONEN\b/gi, "Skalade sojabönor"],
+    [/\bKOKOSMELK\b/gi, "Kokosmjölk"],
+    [/\bLOEMPIA GROENTEN\b/gi, "Vegetariska vårrullar"],
+    [/\bMINI LOEMPIA MET GROENTEN\b/gi, "Mini-vårrullar med grönsaker"],
+    [/\bVISSAUS\b/gi, "Fisksås"],
+    [/\bOESTERSAUS\b/gi, "Ostronsås"],
+    [/\bSOJASAUS\b/gi, "Sojasås"],
+    [/\bSESAM OLIE\b/gi, "Sesamolja"],
+    [/\bBRIOCHE BROOD\b/gi, "Briochebröd"],
+    [/\bVOLKOREN BROOD\b/gi, "Fullkornsbröd"],
+    [/\bKNOFLOOK BROOD\b/gi, "Vitlöksbröd"],
+    [/\bBOTER ZONDER ZOUT\b/gi, "Osaltat smör"],
+    [/\bSLAGROOM\b/gi, "Vispgrädde"],
+    [/\bGEDESTILLEERD AZIJN\b/gi, "Destillerad vinäger"],
+    [/\bBIER FLES\b/gi, "Ölflaska"],
+    [/\bBIER BLIK\b/gi, "Ölburk"],
+    [/\bBIER\b/gi, "Öl"],
+    [/\bFLES\b/gi, "Flaska"],
+    [/\bBLIK\b/gi, "Burk"],
+    [/\bKAAS\b/gi, "Ost"],
+    [/\bKIP\b/gi, "Kyckling"],
+    [/\bBROOD\b/gi, "Bröd"],
+    [/\bWORSTJES\b/gi, "Korvar"],
+    [/\bWORST\b/gi, "Korv"],
+    [/\bENGELSE\b/gi, "Brittisk"],
+    [/\bIERSE\b/gi, "Irländsk"],
+    [/\bJONG\b/gi, "Ung"],
+    [/\bOUDE\b/gi, "Lagrad"],
+    [/\bRODE\b/gi, "Röd"],
+    [/\bWITTE\b/gi, "Vit"],
+    [/\bSAUS\b/gi, "Sås"],
+    [/\bPORTIES\b/gi, "Portioner"],
+    [/\bNATUREEL\b/gi, "Naturell"],
+    [/\bGROOT\b/gi, "Stor"],
+    [/\bROND\b/gi, "Rund"],
+    [/\bMET\b/gi, "med"],
+    [/\bEN\b/gi, "och"],
+  ],
+};
+
 function normalize(value: string) {
   return value
     .normalize("NFD")
@@ -385,8 +626,53 @@ function findTranslationKey(name: string) {
   return rule?.translationKey;
 }
 
+function smartTitleCase(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/\b([a-z])/g, (match) => match.toUpperCase())
+    .replace(/\b(ml|gr|kg|lt|cm|x)\b/gi, (match) => match.toLowerCase())
+    .replace(/\bHp\b/g, "HP")
+    .replace(/\bIrn Bru\b/g, "IRN BRU")
+    .replace(/\bBbc\b/g, "BBC")
+    .replace(/\bBbq\b/g, "BBQ")
+    .replace(/\bTikka Masala\b/g, "Tikka Masala")
+    .replace(/\bJalfrezi\b/g, "Jalfrezi")
+    .replace(/\bKorma\b/g, "Korma")
+    .replace(/\bMadras\b/g, "Madras")
+    .replace(/\bTandoori\b/g, "Tandoori")
+    .replace(/\bTeriyaki\b/g, "Teriyaki")
+    .replace(/\bWasabi\b/g, "Wasabi")
+    .replace(/\bCheddar\b/g, "Cheddar")
+    .replace(/\bGouda\b/g, "Gouda")
+    .replace(/\bHalloumi\b/g, "Halloumi")
+    .replace(/\bBrie\b/g, "Brie")
+    .replace(/\bCamembert\b/g, "Camembert");
+}
+
+function applyGenericProductTranslation(name: string, locale: Locale) {
+  const rules = genericPhraseTranslations[locale] ?? [];
+  let translated = name
+    .replace(/\s+/g, " ")
+    .replace(/\bWITT\b/gi, "WIT")
+    .replace(/\bGESNDEN\b/gi, "GESNEDEN")
+    .trim();
+
+  for (const [pattern, replacement] of rules) {
+    translated = translated.replace(pattern, replacement);
+  }
+
+  translated = translated
+    .replace(/\s+([,)])/g, "$1")
+    .replace(/([(])\s+/g, "$1")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  if (locale === "nl") return smartTitleCase(translated);
+  return smartTitleCase(translated);
+}
+
 export function translateProductName(name: string, locale?: string) {
   const safeLocale = isLocale(locale) ? locale : "en";
   const key = findTranslationKey(name);
-  return key ? translations[key][safeLocale] : name;
+  return key ? translations[key][safeLocale] : applyGenericProductTranslation(name, safeLocale);
 }
