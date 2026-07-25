@@ -101,7 +101,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
         <div>
           {product.imageUrl ? (
             <div className="aspect-[4/3] overflow-hidden rounded-lg border border-forest/10 bg-white shadow-soft">
-              <img alt={productName} className="h-full w-full object-cover" src={product.imageUrl} />
+              <img alt={productName} className="h-full w-full object-contain p-4" src={product.imageUrl} />
             </div>
           ) : (
             <div className="grid aspect-[4/3] place-items-center rounded-lg border border-forest/10 bg-cream text-sm font-bold text-forest/55 shadow-soft">
@@ -183,7 +183,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<un
                 >
                   {item.imageUrl ? (
                     <div className="aspect-[4/3] overflow-hidden rounded-md bg-cream">
-                      <img alt={itemName} className="h-full w-full object-cover" src={item.imageUrl} />
+                      <img alt={itemName} className="h-full w-full object-contain p-3" src={item.imageUrl} />
                     </div>
                   ) : (
                     <div className="grid aspect-[4/3] place-items-center rounded-md bg-cream text-xs font-bold text-forest/50">
