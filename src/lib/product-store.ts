@@ -184,7 +184,9 @@ async function getAllProductRows() {
 }
 
 function isActivePublicProduct(product: Product) {
-  return product.isVisible === true && (product.lifecycleStatus ?? "active") === "active" && evaluateSalesUnitSafety(product).ok;
+  if (product.isVisible !== true || (product.lifecycleStatus ?? "active") !== "active") return false;
+  if (product.stockStatus === "coming-soon") return true;
+  return evaluateSalesUnitSafety(product).ok;
 }
 
 export async function getProducts({ includeHidden = false, includeArchived = false }: { includeHidden?: boolean; includeArchived?: boolean } = {}) {
