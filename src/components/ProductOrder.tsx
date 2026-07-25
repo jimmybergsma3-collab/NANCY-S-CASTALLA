@@ -15,6 +15,7 @@ import { getUiCopy } from "@/i18n/ui";
 import { getCartCopy } from "@/i18n/cart";
 import { useCart } from "@/components/cart/CartProvider";
 import { translateProductName } from "@/lib/product-translations";
+import { ProductShareButton } from "@/components/ProductShareButton";
 
 type Props = { products: Product[]; initialCategory?: ProductCategory | "All"; locale?: Locale; compactCardImages?: boolean; hideCardImages?: boolean };
 
@@ -86,6 +87,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
                 {ui.products.soldAs}: {displayUnit}
               </p>
               <Link className="mt-3 inline-flex text-sm font-bold text-coffee underline-offset-4 hover:underline" href={productHref}>{ui.products.viewDetails}</Link>
+              <ProductShareButton compact locale={locale} productCode={product.id} productName={productName} productUrl={productHref} />
               {packageOptions.length > 1 ? <label className="mt-4 block text-sm font-bold text-forest">{ui.products.package}<select className="mt-1 w-full rounded-lg border border-forest/15 bg-linen px-3 py-2 text-sm font-normal text-forest" onChange={(event) => setSelectedOptions((current) => ({ ...current, [product.id]: Number(event.target.value) }))} value={optionIndex}>{packageOptions.map((option, index) => <option key={`${option.label}-${index}`} value={index}>{option.label} - {formatEuro(option.salePriceInclVat)}</option>)}</select></label> : null}
               {feedback ? <p className={`mt-3 text-xs leading-5 ${canOrder ? "text-forest/65" : "font-bold text-red-700"}`}>{feedback}</p> : null}
               <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
