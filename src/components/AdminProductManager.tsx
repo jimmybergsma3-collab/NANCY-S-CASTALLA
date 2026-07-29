@@ -147,6 +147,44 @@ function isSimpleSalesUnit(value?: Product["salesUnitType"]) {
   return value === "single" || value === "per_unit" || value === "per_kg";
 }
 
+function hasProductPrice(product: Product) {
+  return Number(product.salePriceInclVat) > 0 && Number(product.price) > 0;
+}
+
+function isPlaceholderImage(value: string) {
+  const normalized = value.trim().toLowerCase();
+  return !normalized || normalized.includes("placeholder") || normalized.includes("photo-soon") || normalized.includes("no-image");
+}
+
+function hasProductPhoto(product: Product) {
+  if (product.imageUrl && !isPlaceholderImage(product.imageUrl)) return true;
+  return (product.images ?? []).some((image) => !isPlaceholderImage(image));
+}
+
+function getProductPhotoUrl(product: Product) {
+  if (product.imageUrl && !isPlaceholderImage(product.imageUrl)) return product.imageUrl;
+  return (product.images ?? []).find((image) => !isPlaceholderImage(image)) ?? "";
+}
+
+function hasProductDescription(product: Product) {
+  const description = product.description?.trim() ?? "";
+  if (!description) return false;
+  const normalized = description.toLowerCase();
+  return normalized !== "description coming soon." && !normalized.includes("review public name");
+}
+
+function hasProductIngredients(product: Product) {
+  return Boolean(product.ingredients?.trim());
+}
+
+function StatusPill({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-1 text-xs font-bold ${ok ? "bg-leaf/10 text-leaf" : "bg-red-50 text-red-700"}`}>
+      {ok ? `OK ${label}` : `No ${label}`}
+    </span>
+  );
+}
+
 function Field({
   children,
   help,
@@ -175,6 +213,8 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
   const [visibilityFilter, setVisibilityFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState<Product["lifecycleStatus"] | "All">("active");
   const [duplicateFilter, setDuplicateFilter] = useState("All");
+  const [qualityFilter, setQualityFilter] = useState("All");
+  const [supplierFilter, setSupplierFilter] = useState("All");
   const [uploading, setUploading] = useState(false);
   const [packageOptionsText, setPackageOptionsText] = useState("");
   const [quickOpen, setQuickOpen] = useState(false);
@@ -217,6 +257,12 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
   const archivedCount = products.filter((item) => item.lifecycleStatus === "archived").length;
   const onlineCount = products.filter((item) => item.isVisible !== false && (item.lifecycleStatus ?? "active") === "active").length;
   const duplicateCount = products.filter((item) => duplicateKeys.has(`${item.supplier.trim().toLowerCase()}|${item.supplierCode.trim().toLowerCase()}`)).length;
+  const productSupplierFilters = useMemo(() => ["All", ...Array.from(new Set(products.map((item) => item.supplier.trim()).filter(Boolean))).sort()], [products]);
+  const activeProducts = products.filter((item) => (item.lifecycleStatus ?? "active") === "active" && item.isVisible !== false);
+  const missingPriceCount = activeProducts.filter((item) => !hasProductPrice(item)).length;
+  const missingPhotoCount = activeProducts.filter((item) => !hasProductPhoto(item)).length;
+  const missingDescriptionCount = activeProducts.filter((item) => !hasProductDescription(item)).length;
+  const missingIngredientsCount = activeProducts.filter((item) => !hasProductIngredients(item)).length;
   const filteredProducts = useMemo(() => {
     const query = productSearch.trim().toLowerCase();
 
@@ -233,10 +279,18 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
         (visibilityFilter === "Online" ? item.isVisible !== false : item.isVisible === false);
       const duplicateKey = `${item.supplier.trim().toLowerCase()}|${item.supplierCode.trim().toLowerCase()}`;
       const matchesDuplicate = duplicateFilter === "All" || duplicateKeys.has(duplicateKey);
+      const matchesSupplier = supplierFilter === "All" || item.supplier === supplierFilter;
+      const matchesQuality =
+        qualityFilter === "All" ||
+        (qualityFilter === "missing-price" && !hasProductPrice(item)) ||
+        (qualityFilter === "missing-photo" && !hasProductPhoto(item)) ||
+        (qualityFilter === "missing-description" && !hasProductDescription(item)) ||
+        (qualityFilter === "missing-ingredients" && !hasProductIngredients(item)) ||
+        (qualityFilter === "active-only" && (item.lifecycleStatus ?? "active") === "active");
 
-      return matchesQuery && matchesCategory && matchesStatus && matchesVisibility && matchesDuplicate;
+      return matchesQuery && matchesCategory && matchesStatus && matchesVisibility && matchesDuplicate && matchesSupplier && matchesQuality;
     });
-  }, [categoryFilter, duplicateFilter, duplicateKeys, productSearch, products, statusFilter, visibilityFilter]);
+  }, [categoryFilter, duplicateFilter, duplicateKeys, productSearch, products, qualityFilter, statusFilter, supplierFilter, visibilityFilter]);
 
   function setActiveProduct(nextProduct: Product) {
     setProduct(nextProduct);
@@ -1137,7 +1191,7 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
             </button>
           </div>
         </div>
-        <div className="mt-4 grid grid-cols-4 gap-2 text-center text-xs font-bold">
+        <div className="mt-4 grid grid-cols-2 gap-2 text-center text-xs font-bold lg:grid-cols-4">
           <button className="rounded-lg border border-forest/10 bg-white px-2 py-3 text-forest" onClick={() => setStatusFilter("active")} type="button">
             <span className="block text-lg">{activeCount}</span>Active
           </button>
@@ -1151,6 +1205,20 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
             <span className="block text-lg">{archivedCount}</span>Archived
           </button>
         </div>
+        <div className="mt-3 grid grid-cols-2 gap-2 text-center text-xs font-bold lg:grid-cols-4">
+          <button className="rounded-lg border border-red-200 bg-red-50 px-2 py-3 text-red-700" onClick={() => { setStatusFilter("active"); setQualityFilter("missing-price"); }} type="button">
+            <span className="block text-lg">{missingPriceCount}</span>No price
+          </button>
+          <button className="rounded-lg border border-coffee/20 bg-white px-2 py-3 text-coffee" onClick={() => { setStatusFilter("active"); setQualityFilter("missing-photo"); }} type="button">
+            <span className="block text-lg">{missingPhotoCount}</span>No photo
+          </button>
+          <button className="rounded-lg border border-coffee/20 bg-white px-2 py-3 text-coffee" onClick={() => { setStatusFilter("active"); setQualityFilter("missing-description"); }} type="button">
+            <span className="block text-lg">{missingDescriptionCount}</span>No description
+          </button>
+          <button className="rounded-lg border border-coffee/20 bg-white px-2 py-3 text-coffee" onClick={() => { setStatusFilter("active"); setQualityFilter("missing-ingredients"); }} type="button">
+            <span className="block text-lg">{missingIngredientsCount}</span>No ingredients
+          </button>
+        </div>
         <div className="mt-5 grid gap-3">
           <input
             className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm"
@@ -1159,7 +1227,7 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
             type="search"
             value={productSearch}
           />
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
             <select
               className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm"
               onChange={(event) => setCategoryFilter(event.target.value)}
@@ -1197,21 +1265,53 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
               <option value="All">All products</option>
               <option value="Duplicates">Possible duplicates ({duplicateCount})</option>
             </select>
+            <select
+              className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm"
+              onChange={(event) => setQualityFilter(event.target.value)}
+              value={qualityFilter}
+            >
+              <option value="All">All checks</option>
+              <option value="active-only">Only active products</option>
+              <option value="missing-price">Without price ({missingPriceCount})</option>
+              <option value="missing-photo">Without photo ({missingPhotoCount})</option>
+              <option value="missing-description">Without description ({missingDescriptionCount})</option>
+              <option value="missing-ingredients">Without ingredients ({missingIngredientsCount})</option>
+            </select>
+            <select
+              className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm"
+              onChange={(event) => setSupplierFilter(event.target.value)}
+              value={supplierFilter}
+            >
+              {productSupplierFilters.map((item) => (
+                <option key={item} value={item}>{item === "All" ? "All suppliers" : item}</option>
+              ))}
+            </select>
           </div>
         </div>
         <div className="mt-4 max-h-[720px] overflow-auto rounded-lg border border-forest/10 bg-white">
-          <table className="w-full min-w-[760px] text-left text-sm">
+          <table className="w-full min-w-[1120px] text-left text-sm">
             <thead className="sticky top-0 bg-forest text-cream">
               <tr>
                 <th className="px-3 py-2">Product</th>
                 <th className="px-3 py-2">Code</th>
+                <th className="px-3 py-2">Photo</th>
                 <th className="px-3 py-2">Price</th>
+                <th className="px-3 py-2">IVA</th>
+                <th className="px-3 py-2">Description</th>
+                <th className="px-3 py-2">Ingredients</th>
                 <th className="px-3 py-2">Status</th>
                 <th className="px-3 py-2 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredProducts.map((item) => (
+              {filteredProducts.map((item) => {
+                const photoOk = hasProductPhoto(item);
+                const priceOk = hasProductPrice(item);
+                const descriptionOk = hasProductDescription(item);
+                const ingredientsOk = hasProductIngredients(item);
+                const photoUrl = getProductPhotoUrl(item);
+
+                return (
                 <tr
                   className={`cursor-pointer border-t border-forest/10 transition hover:bg-linen ${
                     item.id === product.id ? "bg-cream" : ""
@@ -1224,13 +1324,36 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
                 >
                   <td className="px-3 py-3">
                     <div className="font-bold text-forest">{item.name}</div>
-                    <div className="text-xs text-forest/60">{getProductCategories(item).join(" Â· ")}</div>
+                    <div className="text-xs text-forest/60">{getProductCategories(item).join(" / ")}</div>
+                    <div className="mt-1 text-[11px] text-forest/50">{item.unit || item.packSize || "-"}</div>
                   </td>
                   <td className="px-3 py-3 text-xs text-forest/70">
                     <div className="font-bold text-forest">{item.id}</div>
-                    <div>{item.supplierCode}</div>
+                    <div>{item.supplierCode || "-"}</div>
+                    <div className="text-forest/50">{item.supplier || "-"}</div>
                   </td>
-                  <td className="px-3 py-3 font-bold text-coffee">{formatEuro(item.salePriceInclVat)}</td>
+                  <td className="px-3 py-3">
+                    <div className="flex items-center gap-2">
+                      {photoUrl ? (
+                        <span
+                          aria-hidden="true"
+                          className="block h-10 w-10 rounded-md border border-forest/10 bg-cover bg-center"
+                          style={{ backgroundImage: `url("${photoUrl.replace(/"/g, "%22")}")` }}
+                        />
+                      ) : null}
+                      <StatusPill label="photo" ok={photoOk} />
+                    </div>
+                  </td>
+                  <td className="px-3 py-3">
+                    {priceOk ? (
+                      <span className="font-bold text-coffee">{formatEuro(item.salePriceInclVat)}</span>
+                    ) : (
+                      <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-bold text-red-700">NO PRICE</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-3 font-bold text-forest">{Number(item.vatRate || 0)}%</td>
+                  <td className="px-3 py-3"><StatusPill label="description" ok={descriptionOk} /></td>
+                  <td className="px-3 py-3"><StatusPill label="ingredients" ok={ingredientsOk} /></td>
                   <td className="px-3 py-3">
                     <span className={`rounded-full px-2 py-1 text-xs font-bold ${
                       item.isVisible !== false ? "bg-leaf/10 text-leaf" : "bg-coffee/10 text-coffee"
@@ -1254,11 +1377,12 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
                       )}
                     </div>
                   </td>
-                </tr>
-              ))}
+                  </tr>
+                );
+              })}
               {filteredProducts.length === 0 ? (
                 <tr>
-                  <td className="px-3 py-5 text-sm text-forest/65" colSpan={5}>
+                  <td className="px-3 py-5 text-sm text-forest/65" colSpan={9}>
                     No products match this search.
                   </td>
                 </tr>

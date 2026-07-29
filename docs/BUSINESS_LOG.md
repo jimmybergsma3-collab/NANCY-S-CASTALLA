@@ -1,7 +1,7 @@
 # Business Log: Nancy's Castalla
 
 **Doel:** actueel overzicht van zakelijke keuzes en hun motivatie.  
-**Peildatum:** 8 juli 2026
+**Peildatum:** 28 juli 2026
 **Eigenaar:** Nancy's Castalla
 
 Dit document legt uit waarom het bedrijf bepaalde product-, verkoop- en operationele keuzes maakt. Het is geen technisch changelog. De actuele functionele status staat in `../PROJECT_STATUS.md`. Wanneer een zakelijke keuze verandert, moet de oude keuze als vervangen worden gemarkeerd en moet de actuele keuze duidelijk bovenaan de betreffende sectie staan.
@@ -36,6 +36,32 @@ Dit document legt uit waarom het bedrijf bepaalde product-, verkoop- en operatio
 
 **Motivatie:** hierdoor hoeft productdata later niet opnieuw handmatig te worden ingevoerd, terwijl de klant alleen een zorgvuldig gekozen en verrijkt assortiment ziet. Foto's, beschrijvingen, klantverpakkingen en actuele verkoopprijzen worden toegevoegd voordat een product online gaat.
 
+### Tindale-producten offline houden
+
+**Keuze:** Tindale-producten blijven offline en mogen niet als publieke webshopproducten worden gepubliceerd zolang ze in La Nucia moeten worden opgehaald.
+
+**Motivatie:** Europ Foods bezorgt gratis en past daardoor beter bij de gecontroleerde pre-orderfase. Tindale vereist ophalen in La Nucia, wat extra tijd, planning en transportkosten veroorzaakt. De Tindale-catalogus mag intern beschikbaar blijven voor latere beoordeling, maar hoort nu niet in het live assortiment.
+
+**Gevolg voor de website:** Tindale-producten worden in de database op `draft` en `is_visible=false` gezet. De batchpublicatie blokkeert Tindale-importbatches, zodat ze niet per ongeluk online komen via de admin-importmodule.
+
+### Tindale-data mag wel worden verrijkt
+
+**Keuze:** Tindale-producten mogen intern worden aangevuld met correcte naam, verpakking, inkoopprijs, IVA, verkoopprijs, beschrijving en productinformatie, maar blijven standaard offline zolang de logistieke keuze niet verandert.
+
+**Motivatie:** de catalogus moet klaarstaan voor later gebruik, maar ophalen in La Nucia maakt Tindale minder geschikt voor de eerste dagelijkse webshop. Interne verrijking voorkomt haastwerk later zonder klanten nu producten te tonen die operationeel lastig leverbaar zijn.
+
+**Prijs- en verpakkingsregel:** Tindale beer, cider en soft-drink batches worden per volledige doos/tray verkocht. Quantity 1 betekent Ã©Ã©n volledige verpakking. De publieke prijs is de totaalprijs inclusief IVA, geen stuksprijs. Inkoopprijzen blijven intern en exclusief IVA.
+
+### Eurodrop als prijsreferentie voor Europ Foods
+
+**Keuze:** voor Europ Foods-producten wordt Eurodrop gebruikt als actuele consumentenprijsreferentie. Nancy's Castalla hanteert alleen bij betrouwbare matches de regel: actuele Eurodrop-consumentenprijs plus EUR 0,10.
+
+**Motivatie:** Eurodrop geeft een praktisch marktanker voor Nederlandse/Europese producten zonder een oude leveranciersprijslijst blind te volgen. De kleine opslag houdt de prijs herkenbaar en de marge/toeslag expliciet.
+
+**Grenzen:** bij onzekere productmatch, andere verpakking, ontbrekende Eurodrop-prijs, onbekende IVA of ontbrekende sales-unitbevestiging wordt geen prijs verzonnen. Het product blijft reviewwerk en mag niet bestelbaar worden alsof de prijs gecontroleerd is.
+
+**Uitzonderingen:** Kamstra-bolletjes zijn user-managed en worden niet via Eurodrop gecorrigeerd. Tindale-producten vallen nooit onder Eurodrop-prijsupdates.
+
 ### Leveranciersinformatie is intern
 
 **Keuze:** leveranciersnamen, leverancierscodes en inkoopprijzen worden niet publiek getoond.
@@ -59,6 +85,8 @@ Dit document legt uit waarom het bedrijf bepaalde product-, verkoop- en operatio
 **Keuze:** de leverancierseenheid en de verkoopeenheid worden afzonderlijk beheerd.
 
 **Motivatie:** een doos van 40 frikandellen is voor veel particuliere klanten te groot. Nancy's Castalla kan kleinere pakketten van bijvoorbeeld 4, 8 of 12 stuks aanbieden. De kostprijs per stuk en verkoopprijs per klantverpakking moeten daarom expliciet kunnen worden vastgelegd.
+
+**Technische verkoopregel:** de prijs op de webshop geldt altijd voor exact de getoonde klantverpakking. Als een product per unit geprijsd is maar de klant een pakket kiest, rekent de server met `aantal pakketten x units per pakket x actuele unitprijs`. Voorbeeld: Magners 12 x 568 ml met EUR 3,00 per fles wordt EUR 36,00 per gekozen verpakking van 12. Er mag geen verborgen stuksprijs als hoofdaanbod verschijnen wanneer het product per doos/tray wordt verkocht.
 
 ### Geen verplichte 50%-margeregel
 
@@ -88,7 +116,7 @@ Dit document legt uit waarom het bedrijf bepaalde product-, verkoop- en operatio
 
 **Motivatie:** deze methoden zijn eenvoudig, lokaal herkenbaar en vereisen geen complete betaalcheckout. De klant ontvangt instructies nadat de order is gecontroleerd.
 
-**Operationele gegevens:** Bizum gebruikt `+34 644 21 22 57`. WhatsApp-klantenservice gebruikt `+34 644 05 97 69`. Bankoverschrijving gebruikt rekeninghouder `NANCYS CASTALLA`, IBAN `ES89 2100 1460 6002 0010 3972` en BIC `CAIXESBBXXX`. Laat deze gegevens voor officieel gebruik nog door Nancy/boekhouder bevestigen.
+**Operationele gegevens:** Bizum gebruikt `+34 644 21 22 57`. WhatsApp-klantenservice gebruikt `+34 644 05 97 69`. Bankoverschrijving gebruikt rekeninghouder `NANCYS CASTALLA`, IBAN `ES89 2100 1460 6002 0010 3972` en BIC `CAIXESBBXXX`. Gebruik het Bizum-nummer nooit als WhatsApp-link en het WhatsApp-nummer nooit als Bizum-betaalnummer. Controleer operationeel nog dat betalingen daadwerkelijk binnenkomen en boekhoudkundig correct verwerkt worden.
 
 ### Betaalvoorkeur vastleggen zonder online afrekening
 
@@ -108,7 +136,7 @@ Dit document legt uit waarom het bedrijf bepaalde product-, verkoop- en operatio
 
 **Keuze:** een normale factuur wordt vanuit een geschikte order gemaakt en gebruikt onveranderlijke klant-, product-, prijs-, IVA- en betaalmethodesnapshots. De factuur is Spaans/Engels en toont de fiscale gegevens uit de centrale bedrijfsconfiguratie.
 
-**Motivatie:** administratie moet de situatie op factuurdatum bewaren, ook wanneer klant- of productdata later wijzigt. EÃ©n normale factuur per order voorkomt dubbele boeking; correcties en creditnota's worden pas in een volgende fase toegevoegd.
+**Motivatie:** administratie moet de situatie op factuurdatum bewaren, ook wanneer klant- of productdata later wijzigt. Maximaal één actieve normale factuur per order voorkomt dubbele boeking; historische `void`-facturen blijven bewaard en formele creditnota's worden pas in een volgende fase toegevoegd.
 
 ## Afhalen en bezorgen
 

@@ -1,6 +1,6 @@
 # Projectstatus: Nancy's Castalla
 
-**Peildatum:** 18 juli 2026
+**Peildatum:** 28 juli 2026
 **Fase:** productie-MVP / pre-orderfase
 **Productiedomein:** `https://www.nancys.es`
 **Bronnen voor deze status:** volledige Git-geschiedenis vanaf de eerste webshopcommit, actuele routes, services, migraties en documentatie.
@@ -14,13 +14,14 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 | Publieke webshop | Operationeel | Home, categorieën, zoeken, productdetail, winkelmand en checkout bestaan in vijf locales. |
 | Pre-orders | Operationeel | Pre-order is bestelbaar bij voorraad nul; coming-soon is geblokkeerd. |
 | Klantaccount | Operationeel | Registratie loopt via de centrale serverroute, toont een duidelijke bevestigings- en spammapmelding, ondersteunt resend na 60 seconden, en bevat login, herstel, profiel, orderhistorie, orderdetails en eigen factuurdownload. Accountbevestigingsmail blijft afhankelijk van Supabase SMTP/Resend/DNS-configuratie. |
-| Orders | Operationeel | Serverprijzen, IVA, idempotency, orderregels, ordernummer, klantkoppeling en adminbeheer. Admin kan orderregels corrigeren voordat voorraad is gecommit, betaling is ontvangen of een definitieve factuur bestaat. E-mail is secundair en blokkeert orderopslag niet. |
+| Orders | Operationeel | Serverprijzen, IVA, idempotency, orderregels, ordernummer, klantkoppeling en adminbeheer. Admin kan orderregels corrigeren voordat betaling is ontvangen, levering definitief is of een verzonden/betaalde factuur bestaat. E-mail is secundair en blokkeert orderopslag niet. |
 | Voorraad | Operationeel met beperking | Afboeken bij bevestiging en terugboeken bij annulering; geen reservering tijdens status `new`. |
 | Facturatie | Operationeel voor normale facturen | Maximaal één actieve factuur per order, snapshots, Spaans/Engelse PDF, admin- en klantdownload, e-mail. Een nog niet verzonden/onbetaalde factuur kan via een gecontroleerde adminactie op `void` worden gezet voor ordercorrectie; nummer en regels blijven historisch zichtbaar en worden niet hergebruikt. |
 | E-mail | Operationeel mits extern geconfigureerd | Resend voor order/factuur met professionele responsive HTML, plain-text fallback en correcte Reply-To; Supabase SMTP voor accountmail; geen queue of automatische retry. |
 | Admin | Gemengd | Producten, orders, voorraad en facturen functioneel; Orders/Customers laden backwards-compatible wanneer cleanupkolommen in productie nog ontbreken en tonen altijd JSON-fouten met diagnose-id. Overige modules variëren van overzicht tot voorbereiding. |
-| Leveranciersimport | Operationeel voor draftimport | Migratie `202607120001` staat live. Tindale en Europ Foods kunnen via dry-run en confirmed import naar draftproducten/supplier offers, zonder voorraadmutaties of automatische publicatie. |
-| Sales-unit prijsveiligheid | Code gereed, migratie handmatig uitvoeren | Geïmporteerde leveranciersproducten moeten expliciet sales unit en prijsbasis bevestigd hebben voordat ze publiek zichtbaar of bestelbaar zijn. De live Magners-incidentproducten zijn al teruggezet naar draft/onzichtbaar. |
+| Leveranciersimport | Operationeel voor draftimport | Migratie `202607120001` staat live. Tindale en Europ Foods kunnen via dry-run en confirmed import naar draftproducten/supplier offers. Tindale blijft bewust offline omdat ophalen in La Nucia nodig is; Europ Foods is de publicatiekandidaat omdat gratis bezorging mogelijk is. |
+| Sales-unit prijsveiligheid | Code gereed, productiecontrole nodig | Geïmporteerde leveranciersproducten moeten expliciet sales unit en prijsbasis bevestigd hebben voordat ze publiek zichtbaar of bestelbaar zijn. Meer-unit verpakkingen worden server-side als effectieve units berekend. |
+| Europ Foods/Eurodrop prijsreview | Lopend | Eurodrop is referentiebron voor Europ Foods-consumentenprijzen. Alleen betrouwbare matches krijgen `Eurodrop + EUR 0,10`; onzekere records blijven zonder verkoopprijs/review. De audit van 28 juli telt 107 verwerkt en 220 reviewrecords. |
 | Betaling | Handmatig | Alleen Bizum en bankoverschrijving zijn zichtbaar/selecteerbaar voor klanten. Stripe, kaart en contant staan niet actief in de klantflow. |
 | Bezorging | Gedeeltelijk | Beleid wordt getoond, maar minimum, radius en fee zijn niet volledig server-authoritatief. |
 | Tests/CI | Onvoldoende geautomatiseerd | Lint en build slagen; geen vaste geautomatiseerde regressiesuite of CI-gate. |
@@ -57,8 +58,10 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 - Productarchivering voor livegang: oude catalogus kan in bulk naar `archived` onder batch `IMPORT_2026_PRELAUNCH`, zonder producten, afbeeldingen, categorieën, codes, relaties of voorraadhistorie te verwijderen.
 - Vervolg-migratie `202607110003_product_catalogue_conflict_protection.sql` bereidt bescherming voor tegen gewone database-updates op archived producten; oude importbestanden of toekomstige importtools mogen ze niet stil overschrijven of heractiveren. Supplier code en EAN zijn duplicaatsignalen, geen unieke productsleutels.
 - Productbeheer toont standaard alleen actieve producten en heeft filters voor Active, Archived, Disabled, Draft en All; individuele archived producten kunnen veilig worden hersteld.
+- Productbeheer toont in de lijst directe kwaliteitsindicatoren voor foto, prijs, omschrijving, ingrediënten en IVA. Filters helpen om actieve producten zonder prijs, foto, omschrijving of ingrediënten snel te vinden.
 - Supplier Imports-module toegevoegd voor Europ Foods PDF en Tindale XLS/XLSX: leverancier selecteren, batchnaam, dry-run preview, conflicten/waarschuwingen, importgeschiedenis, confirmed import naar draft, publish approved batch en veilige rollback naar draft/archive.
 - `IMPORT_2026_LIVE_TINDALE_JULY` is in productie als draft geïmporteerd: 924 producten, 924 supplier offers, geen voorraadmutaties en geen live publicatie.
+- Tindale-producten blijven offline en worden door migratie `202607250001_keep_tindale_products_offline.sql` op `draft` en `is_visible=false` gehouden; Tindale-batches mogen niet via batchpublicatie online komen zolang ophalen in La Nucia nodig is.
 - `IMPORT_2026_LIVE_EUROPFOODS_JULY` is in productie als draft geïmporteerd: 713 veilige unieke producten, 713 supplier offers, 466 regels overgeslagen/conflict-review en 483 conflictregels.
 - Europ Foods-conflictlogica is aangescherpt: verschillende supplier codes of verpakkingen worden als geldige varianten behandeld, terwijl exacte herhalingen geen dubbele Nancy-producten maken en dezelfde supplier code met afwijkende naam/verpakking/prijs conflict-review blijft.
 - Supplier Imports heeft een herstelpaneel voor bestaande Europ Foods-conflicten. Pending conflictregels kunnen opnieuw worden geclassificeerd en geselecteerde importeerbare varianten kunnen alsnog als nieuwe hidden draftproducten met nieuwe NC-codes worden aangemaakt.
@@ -78,7 +81,7 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 ## Facturatie
 
 - Factuurcreatie vanuit factureerbare orders via transactionele databasefunctie.
-- Eén normale factuur per order door unieke databaseconstraint; globale oplopende teller met externe notatie `NC-{jaar}-{zes cijfers}`.
+- Maximaal één actieve normale factuur per order; historische `void`-facturen blijven gekoppeld zichtbaar en krijgen nooit een hergebruikt nummer. De globale teller gebruikt externe notatie `NC-{jaar}-{zes cijfers}`.
 - Onveranderlijke klant-, adres-, product-, prijs-, IVA- en betaalmethodesnapshots.
 - Professionele Spaans/Engelse PDF met logo, handelsnaam, titular/autónomo, NIF/NIE, factuur- en ordernummer, productregels, IVA per tarief en totalen.
 - Beveiligde admin- en klantspecifieke PDF-download.
@@ -103,10 +106,10 @@ Uitsluitend punten die nog daadwerkelijk openstaan voor betrouwbare eerste klant
 Aanvullende productiecontrole 12 juli 2026: Orders en Customers laden nu ook wanneer productie nog cleanup-/factuurseriekolommen uit `202607110001_admin_cleanup_and_invoice_series.sql` mist. Test-/archiefacties en nieuwe factuurserievelden blijven in dat geval beperkt totdat die migratie bewust in Supabase productie is uitgevoerd.
 
 1. Controleer in Vercel alle vereiste environmentvariabelen voor Production én Preview, zonder waarden in Git te zetten.
-2. Controleer in de backoffice de geïmporteerde Tindale- en Europ Foods-draftproducten: verkoopprijs, IVA, categorie, verpakking en afbeelding/placeholder.
+2. Werk de Europ Foods/Eurodrop-reviewlijst af: 220 niet-bevestigde records hebben nog handmatige match-, prijs-, verpakking-, IVA-, categorie- en beeldcontrole nodig. Houd Tindale-producten offline zolang ophalen in La Nucia nodig is.
 3. Voer één volledige productieflow uit met een nieuw klantaccount: verificatie, login, checkout, adminbevestiging, voorraadmutatie, factuur, PDF, e-mail, klantdownload en annulering/terugboeking.
 4. Controleer Resend-domein, SPF, DKIM, DMARC, API-key en Supabase Custom SMTP; verifieer ontvangst van account-, order-, status- en factuurmails.
-5. Bevestig operationeel dat Bizum `+34 644 21 22 57` en bankrekening `ES89 2100 1460 6002 0010 3972` correct zijn voor klantbetalingen.
+5. Controleer operationeel met Nancy/boekhouder dat betalingen daadwerkelijk binnenkomen via Bizum `+34 644 21 22 57` en bankrekening `ES89 2100 1460 6002 0010 3972`.
 6. Laat fiscale gegevens, factuurlayout, nummerreeks en teksten vóór officieel gebruik controleren door een Spaanse gestor/boekhouder.
 7. Maak bezorgminimum, bezorgkosten en leveringsgebied server-side autoritatief of communiceer tijdens de pre-orderfase expliciet dat bezorgkosten handmatig worden bevestigd.
 8. Voeg rate limiting/botbescherming toe aan adminlogin, registratie, ordercreatie, profielmutaties en uploads.
@@ -114,10 +117,10 @@ Aanvullende productiecontrole 12 juli 2026: Orders en Customers laden nu ook wan
 10. Voeg geautomatiseerde regressietests en een CI-gate voor lint/build toe; behandel de bekende dependency-auditmeldingen gericht.
 11. Beslis of open orders voorraad moeten reserveren; tot die tijd moet admin beschikbaarheid controleren vóór bevestiging.
 12. Controleer juridische teksten, privacy/cookiebeleid, bewaartermijnen, allergeneninformatie en consumentenvoorwaarden met passende deskundigen.
-13. Gebruik het Europ Foods recovery-paneel om geldige overgeslagen varianten als draft te importeren, los daarna resterende importconflicten en reviewflags op, en publiceer alleen producten die `ready_for_publish` zijn en een gecontroleerde verkoopprijs, IVA, categorie en verpakking hebben.
+13. Gebruik het Europ Foods recovery-paneel om geldige overgeslagen varianten als draft te importeren, los daarna resterende importconflicten en reviewflags op, en publiceer alleen producten met gecontroleerde verkoopprijs, IVA, categorie, verpakking, sales unit en prijsbasis.
 14. Voer migratie `202607120002_sales_unit_price_basis_safety.sql` handmatig uit in Supabase productie zodat databasepublicatie dezelfde sales-unit prijsveiligheid afdwingt als de applicatiecode.
-15. Voer migratie `202607180001_admin_order_corrections.sql` handmatig uit in Supabase productie voordat admin-ordercorrecties en invoice-voiding live gebruikt worden.
-16. Voer na publicatie van een kleine selectie een echte cart/order-smoketest uit met Bizum en bankoverschrijving.
+15. Voer migratie `202607250001_keep_tindale_products_offline.sql` handmatig uit in Supabase productie als deze nog niet aantoonbaar live staat, zodat Tindale-producten offline blijven en Tindale-batches niet per ongeluk gepubliceerd kunnen worden.
+16. Voer na publicatie van een kleine Europ Foods-selectie een echte cart/order-smoketest uit met Bizum en bankoverschrijving.
 
 ## Niet blokkerend voor de eerste gecontroleerde pre-orders
 
@@ -141,6 +144,8 @@ Op 13 juli 2026 is het bestaande productbeheer uitgebreid en daarna gecorrigeerd
 
 Op 16 juli 2026 is een publieke i18n-audit uitgevoerd zonder productdata of Supabase-records te wijzigen. Verouderde teksten die nog spraken over geen checkout, geen database en geen accounts zijn vervangen door de actuele orderrequest/cart-flow. De Zweedse/Scandinavische klantteksten zijn aangevuld met natuurlijk Zweeds, checkout-foutmeldingen komen nu volledig uit het cart-woordenboek, en de productnaam-/beschrijvingshelpers herkennen meer veilige importvarianten zonder onbekende producten automatisch te vertalen. `npm run lint` voert nu eerst een automatische i18n-structuurcontrole uit; `npm run lint` en `npm run build` zijn succesvol uitgevoerd.
 
-Op 18 juli 2026 is admin-ordercorrectie voorbereid voor de pre-orderpraktijk: orders zijn aanvraagregels totdat Nancy beschikbaarheid, vervanging, verpakking, prijzen en IVA heeft gecontroleerd. De backoffice kan orderregels vóór definitieve facturatie server-side vervangen of aanpassen, inclusief productzoekactie en auditreden. Orders zijn vergrendeld zodra er een actieve factuur bestaat, betaling `paid` is, voorraad is gecommit of de order is geleverd/geannuleerd. Een nog niet verzonden/onbetaalde factuur kan gecontroleerd op `void` worden gezet voor correctie; factuur en invoice_items blijven bestaan, de factuursnapshot wordt in de auditlog bewaard en het factuurnummer wordt niet hergebruikt. Nieuwe migratie `202607180001_admin_order_corrections.sql` moet handmatig in Supabase worden uitgevoerd.
+Op 18 juli 2026 is admin-ordercorrectie voorbereid en daarna in productie gemigreerd voor de pre-orderpraktijk. Orders zijn aanvraagregels totdat Nancy beschikbaarheid, vervanging, verpakking, prijzen en IVA heeft gecontroleerd. De backoffice kan orderregels vóór definitieve facturatie server-side vervangen of aanpassen, inclusief productzoekactie en auditreden. De zichtbare UI gebruikt één knop `Order aanpassen`; een nog niet verzonden/onbetaalde factuur wordt intern op `void` gezet, factuur en invoice_items blijven bestaan, de factuursnapshot wordt in de auditlog bewaard en het factuurnummer wordt niet hergebruikt.
 
 Aanvulling 18 juli 2026: dezelfde migratie onderscheidt nu twee voorraadcorrecties. Normale voorraadcommits met aantoonbare negatieve `sale`-movements kunnen via positieve `correction_release`-movements worden teruggeboekt voordat orderregels worden gecorrigeerd. Legacy/bug-orders met `inventory_committed=true` maar exact nul `inventory_movements` krijgen een aparte adminactie die alleen de foutieve commit-vlag reset, zonder productvoorraad of movements te wijzigen, en dit volledig audit met orderregels, stocksnapshot, actor en reden.
+
+Op 28 juli 2026 is de Europ Foods/Eurodrop-prijsreview gedocumenteerd als vaste werkwijze. Eurodrop-consumentenprijzen mogen alleen op Europ Foods-producten worden toegepast bij betrouwbare matches; Nancy's verkoopprijs is dan `Eurodrop + EUR 0,10` inclusief IVA. Onzekere matches, afwijkende verpakking, ontbrekende foto/omschrijving/ingrediënten/allergenen of twijfel over IVA blijven reviewwerk. De gegenereerde audit `outputs/europfoods-eurodrop-final-audit-20260728.*` controleerde 327 records: 327 gevonden, 0 duplicaat-/supplierconflicten, 107 verwerkt, 220 niet bevestigd, 326 zonder echte foto, 210 zonder bruikbare beschrijving en 263 zonder ingrediënten.

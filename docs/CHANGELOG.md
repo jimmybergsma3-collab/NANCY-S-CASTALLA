@@ -12,6 +12,9 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Documentatie
 
+- Alle technische MD-bestanden opnieuw gesynchroniseerd naar peildatum 28 juli 2026, met de actuele regels voor Eurodrop/Europ Foods-prijsreview, Tindale-offlinebeleid, sales-unit/packaging, IVA-controle, ordercorrecties en handmatige betaalmethoden.
+- `AI_CONTEXT.md`, `PROJECT_STATUS.md`, `TECHNICAL_HANDOVER.md`, `BUSINESS_LOG.md`, `ROADMAP.md` en `DECISIONS.md` zijn opgeschoond zodat uitgevoerde ordercorrectiemigratie `202607180001` niet meer als open livegangblokker wordt genoemd.
+- Eurodrop-audituitkomst van 28 juli 2026 vastgelegd: 327 gecontroleerde records, 107 verwerkt, 220 review/niet-bevestigd, met expliciete regel dat onzekere prijs- of verpakkingsmatches niet automatisch worden gepubliceerd.
 - Volledige Git-geschiedenis en actuele codebase opnieuw vergeleken met alle projectdocumentatie.
 - Nieuw `PROJECT_STATUS.md` toegevoegd met een statusmatrix, afgeronde mijlpalen en uitsluitend werkelijke TODO's vóór livegang.
 - README, technische overdracht, roadmap, businesslog, beslislog en AI-context gesynchroniseerd met de huidige webshop-, admin-, order-, voorraad-, factuur- en e-mailfunctionaliteit.
@@ -19,6 +22,9 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Toegevoegd
 
+- Migratie `202607250001_keep_tindale_products_offline.sql` om Tindale-producten offline te houden: bestaande Tindale-producten worden teruggezet naar `draft`/`is_visible=false` en Tindale-batchpublicatie wordt database-side geblokkeerd zolang ophalen in La Nucia nodig is.
+- Server-side adminproductcontrole blokkeert individuele publicatie van Tindale-producten; ze kunnen nog als draft worden bewaard, maar niet actief en zichtbaar online worden gezet.
+- Migratie `202607250002_activate_selected_europfoods_coming_soon.sql` om de door Nancy geselecteerde Europ Foods-producten zichtbaar te maken als `coming-soon`, zonder prijs of foto, met `Description coming soon.` en zo goed mogelijke categorie-indeling op basis van de Europ Foods PAG-sectie.
 - Admin-ordercorrectie vóór definitieve facturatie: orderregels kunnen in `/{locale}/admin` worden verwijderd, aantallen kunnen worden aangepast en vervangende producten kunnen via server-side productzoekactie worden toegevoegd.
 - Migratie `202607180001_admin_order_corrections.sql` met RPC's `replace_order_items_for_admin` en `reset_invoice_for_order_correction`. Deze functies blokkeren correcties bij betaalde, geleverde, geannuleerde, voorraad-gecommitte of actief gefactureerde orders en schrijven verplichte auditmetadata met actor en reden.
 - Gecontroleerde actie `Factuur intrekken voor ordercorrectie` voor nog niet verzonden/onbetaalde facturen. De factuur krijgt status `void`, `invoice_items` blijven bestaan, het oude nummer blijft zichtbaar en de admin maakt daarna een nieuwe factuur met nieuw nummer.
@@ -73,6 +79,10 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Verbeterd
 
+- Documentatie verduidelijkt dat package options server-side als effectieve units worden berekend, bijvoorbeeld `1 verpakking x 12 flessen x EUR 3,00 = EUR 36,00`, en dat `order_items.quantity` het aantal gekozen klantverpakkingen bewaart.
+- Documentatie verduidelijkt dat `ready_for_publish` publieke publicatie bewaakt, maar een reeds actief/zichtbaar/verkoopveilig product niet als enige reden mag blokkeren in admin-ordercorrecties.
+- Livegang- en roadmapdocumentatie richt productpublicatie nu op Europ Foods; Tindale blijft intern beschikbaar maar niet publiek bestelbaar vanwege ophaallogistiek in La Nucia.
+- Publieke catalogusfilter staat actieve zichtbare `coming-soon` producten toe zonder sales-unit/prijsbevestiging; ze blijven niet bestelbaar totdat de status en prijs later bewust worden aangepast.
 - Admin-ordercorrectie is vereenvoudigd naar één zichtbare knop `Order aanpassen`. Een nog niet verzonden/onbetaalde factuur wordt intern veilig ingetrokken, een legacy `inventory_committed`-vlag zonder movements wordt intern hersteld, en de admin ziet daarna direct de editor met één actie `Wijzigingen opslaan`.
 - `ready_for_publish` blokkeert geen admin-ordercorrectie meer voor actieve, zichtbare, correct geprijsde producten met bevestigde IVA/verkoopeenheid; de vlag blijft bedoeld voor publieke publicatiecontrole.
 - Admin productzoekactie `mode=order-search` levert alleen actieve, zichtbare en sales-unit-veilige producten aan de ordercorrectie-editor. Browserwaarden voor prijs, IVA en totaal worden genegeerd; de order-service valideert verpakkingen en rekent actuele bedragen opnieuw uit.

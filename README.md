@@ -2,7 +2,7 @@
 
 Meertalige Next.js-webwinkel en backoffice voor Nancy's Castalla, gericht op internationale foodproducten, pre-orders, afhalen in Castalla en lokale bezorging.
 
-**Huidige fase:** productie-MVP / pre-orderfase. De kernflow van catalogus naar winkelmand, server-gevalideerde bestelaanvraag, klantaccount, adminorderbeheer en PDF-factuur is gebouwd. De resterende livegangpunten zijn vooral productieconfiguratie, end-to-end verificatie, bezorgberekening en operationele beveiliging. Zie [`PROJECT_STATUS.md`](PROJECT_STATUS.md) voor de actuele go-live-status.
+**Huidige fase:** productie-MVP / pre-orderfase. De kernflow van catalogus naar winkelmand, server-gevalideerde bestelaanvraag, klantaccount, adminorderbeheer, ordercorrectie en PDF-factuur is gebouwd. De resterende livegangpunten zijn vooral productieconfiguratie, end-to-end verificatie, productreview/prijzen, bezorgberekening en operationele beveiliging. Zie [`PROJECT_STATUS.md`](PROJECT_STATUS.md) voor de actuele go-live-status.
 
 ## Documentatie
 
@@ -68,9 +68,10 @@ Databasewijzigingen staan chronologisch in `supabase/migrations`. Deze migraties
 - Meertalige catalogus voor `en`, `nl`, `de`, `es` en `sv`.
 - Producten zoeken, filteren, openen, delen en met verpakkingskeuze aan de winkelmand toevoegen.
 - Pre-orders blijven bestelbaar bij voorraad nul; `coming-soon` is geblokkeerd; beschikbare voorraadproducten worden server-side gecontroleerd.
-- De server herberekent prijzen, IVA en totalen en maakt orders idempotent aan in Supabase.
+- De server herberekent prijzen, verpakkingsaantallen, IVA en totalen en maakt orders idempotent aan in Supabase.
 - Klanten kunnen registreren, inloggen, hun profiel beheren, orders openen en eigen facturen downloaden.
 - Admin kan producten, voorraad, orders, orderregels, notities, statussen, betaalstatussen en facturen beheren.
+- Leveranciersimports blijven standaard draft; Europ Foods/Eurodrop-prijzen worden alleen bij betrouwbare match toegepast, Tindale blijft standaard offline zolang de logistiek dat vereist.
 - Facturen worden transactioneel uit orders opgebouwd, als Spaans/Engelse PDF gegenereerd en via Resend verzonden.
 
 Niet iedere zichtbare backofficemodule is al volledig transactioneel. Zie `PROJECT_STATUS.md` voor het precieze onderscheid tussen operationeel, gedeeltelijk en voorbereid.

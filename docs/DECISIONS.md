@@ -1,9 +1,43 @@
 # Technische beslissingen: Nancy's Castalla
 
 **Formaat:** chronologisch Architecture Decision Log  
-**Peildatum:** 18 juli 2026
+**Peildatum:** 28 juli 2026
 
 Dit document legt belangrijke technische beslissingen en hun motivatie vast. Het beschrijft geen volledige codegeschiedenis; daarvoor dient `CHANGELOG.md`. Nieuwe besluiten worden onder de juiste datum toegevoegd. Wanneer een besluit wordt vervangen, blijft het oude besluit staan met een verwijzing naar het nieuwe besluit.
+
+## 2026-07-28
+
+### Eurodrop-prijsupdate is gecontroleerde referentie, geen automatische import
+
+**Besluit:** Eurodrop wordt alleen gebruikt als actuele consumentenprijsreferentie voor Europ Foods-producten. Een verkoopprijs mag alleen worden gezet bij een betrouwbare product- en verpakkingsmatch. De zakelijke regel is `Eurodrop-prijs + EUR 0,10`. Als de match, verpakking, IVA of bronprijs onzeker is, blijft het product zonder verkoopprijs/review en wordt er niets gegokt.
+
+**Waarom:** supplier code, naam en verpakking zijn niet betrouwbaar genoeg als automatische upsert- of merge-sleutel. Een verkeerde match kan leiden tot een product dat als doos wordt verkocht tegen een stukprijs, of tot verkeerde IVA/productinformatie.
+
+**Gevolg:** de audit van 28 juli 2026 (`outputs/europfoods-eurodrop-final-audit-20260728.*`) is een operationeel controlebestand. De documentatieregel blijft leidend: geen verkoopprijs zonder betrouwbare match en geen Eurodrop-correctie op Tindale of user-managed Kamstra-producten.
+
+### Package options bepalen effectieve orderunits
+
+**Besluit:** ordervalidatie, admin-ordercorrectie, factuurregels en toekomstige voorraadcommit moeten gekozen package options server-side valideren en rekenen met `effective_units = gekozen aantal verpakkingen x gevalideerde package_quantity`.
+
+**Waarom:** producten kunnen een unitprijs hebben maar als pakket worden gekozen. `NC-03263` Magners is het referentievoorbeeld: EUR 3,00 per fles, pakket 12 stuks, totaal EUR 36,00. De browser mag `packageQuantity` niet blind bepalen en een pakket van 12 mag niet als 1 unit worden gefactureerd.
+
+**Gevolg:** `order_items.quantity` betekent aantal gekozen klantverpakkingen, `package_quantity` betekent units per verpakking, `package_label` is de zichtbare verkoopeenheid en `sale_price_incl_vat` blijft de afgesproken unitprijssnapshot.
+
+### Ready-for-publish is geen extra blokkade voor veilige ordercorrectie
+
+**Besluit:** `ready_for_publish` blijft bedoeld voor publieke publicatie en importreview. Bij admin-ordercorrecties mag een reeds actief, zichtbaar, correct geprijsd product met geldige IVA, bevestigde sales unit en bevestigde prijsbasis niet uitsluitend door `ready_for_publish=false` worden geblokkeerd.
+
+**Waarom:** een echte klantorder moet operationeel kunnen worden gecorrigeerd met een verkoopveilig product, ook wanneer de publicatie-reviewvlag administratief achterloopt.
+
+## 2026-07-25
+
+### Tindale-producten offline houden
+
+**Besluit:** Tindale-producten blijven `draft` en `is_visible=false` zolang ze in La Nucia moeten worden opgehaald. De databasepublicatiefunctie `publish_approved_import_batch` blokkeert Tindale-importbatches expliciet.
+
+**Waarom:** Europ Foods bezorgt gratis en past daardoor beter bij de gecontroleerde pre-orderfase. Tindale veroorzaakt extra ophaaltijd, planning en transportkosten. De catalogus mag intern bewaard blijven, maar hoort nu niet in het publieke assortiment.
+
+**Gevolg:** migratie `202607250001_keep_tindale_products_offline.sql` moet in Supabase productie uitgevoerd of aantoonbaar gecontroleerd zijn. Publicatie- en livegangtaken richten zich op gecontroleerde Europ Foods-producten.
 
 ## 2026-07-18
 
@@ -43,7 +77,7 @@ Dit document legt belangrijke technische beslissingen en hun motivatie vast. Het
 
 **Besluit:** alleen een betaalproviderstructuur voorbereiden; geen Stripe-package of checkout activeren.
 
-**Waarom:** pre-orders worden handmatig bevestigd en betaling loopt eerst via Bizum, overschrijving of contant. Een abstractie maakt latere integratie mogelijk zonder de order-UI volledig te herbouwen.
+**Waarom:** pre-orders worden handmatig bevestigd en betaling loopt eerst via Bizum of overschrijving. Een abstractie maakt latere integratie mogelijk zonder de order-UI volledig te herbouwen.
 
 ## 2026-06-24 tot 2026-06-28
 

@@ -1,7 +1,7 @@
 ﻿# Technisch overdrachtsrapport: Nancy's Castalla
 
 **Documentstatus:** actuele technische situatie  
-**Peildatum:** 16 juli 2026
+**Peildatum:** 28 juli 2026
 **Productiedomein:** `https://www.nancys.es`  
 **Repository:** `jimmybergsma3-collab/NANCY-S-CASTALLA`  
 **Doelgroep:** ontwikkelaars, beheerders en technische partners die het project zonder voorafgaande broncodekennis moeten kunnen overnemen.
@@ -60,7 +60,7 @@ De applicatie is online als productie-implementatie op Vercel, maar functioneel 
 | Online betaling | Niet actief | Bizum en bankoverschrijving worden handmatig afgehandeld; contant, kaart en Stripe zijn niet zichtbaar/selecteerbaar voor klanten |
 | Inkoop/rapportages | Gedeeltelijk | Inkoop is overzicht/voorbereiding; rapportages tonen basistellingen en betaalde omzet |
 | Facturatie | Werkend na migratie | Orderfactuur, snapshots, PDF, klantdownload en Resend-verzending; nog geen creditnota of boekhoudexport |
-| Sales-unit prijsveiligheid | Applicatiecode aanwezig; migratie handmatig uitvoeren | Leveranciersdoosprijs, bron-eenheidsprijs en publieke verkoopeenheid zijn gescheiden zodat importproducten niet per ongeluk met doosverpakking tegen eenheidsprijs live gaan. |
+| Sales-unit prijsveiligheid | Applicatiecode aanwezig; productiecontrole nodig | Leveranciersdoosprijs, bron-eenheidsprijs en publieke verkoopeenheid zijn gescheiden zodat importproducten niet per ongeluk met doosverpakking tegen eenheidsprijs live gaan. Package options worden server-side als effectieve units berekend. |
 
 ## 1.3 Productie versus development
 
@@ -79,7 +79,8 @@ De applicatie is online als productie-implementatie op Vercel, maar functioneel 
 6. Resterende productinhoud, backoffice en compliance professioneel vertalen en controleren.
 7. Product- en categorie-SEO, structured data en volledige sitemap.
 8. Rate limiting, individuele admins/MFA, geautomatiseerde tests, CI, monitoring, auditlogging en operationele runbooks.
-9. Handmatig uitvoeren van `supabase/migrations/202607120002_sales_unit_price_basis_safety.sql` in Supabase productie voor database-level blokkade op ongecontroleerde sales-unit/prijsbasis.
+9. Handmatig uitvoeren of aantoonbaar controleren van `supabase/migrations/202607120002_sales_unit_price_basis_safety.sql` in Supabase productie voor database-level blokkade op ongecontroleerde sales-unit/prijsbasis.
+10. Handmatig uitvoeren of aantoonbaar controleren van `supabase/migrations/202607250001_keep_tindale_products_offline.sql` in Supabase productie zodat Tindale-producten offline blijven en Tindale-batches niet per ongeluk gepubliceerd kunnen worden.
 
 ---
 
@@ -120,6 +121,8 @@ Webpack is gekozen nadat Turbopack tijdens ontwikkeling instabiele chunk- en wor
 De i18n-validator is bewust licht gehouden en draait vóór ESLint. Hij laadt de centrale i18n-woordenboeken, vergelijkt alle locales met de Engelse bronstructuur, blokkeert lege vertalingen en detecteert kapotte accent-encoding in de i18n-bronbestanden.
 
 Databasewijzigingen staan in `supabase/migrations` en moeten bewust in Supabase productie worden uitgevoerd. Let extra op bij leveranciersimports: leveranciersprijzen zijn geen publieke verkoopprijzen. Vanaf migratie `202607120002_sales_unit_price_basis_safety.sql` bewaart `products` aparte velden voor leverancierdoosprijs, bron-eenheidsprijs, aantal per doos, bronverpakking, publieke verkoopeenheid, sales-unit quantity en twee adminreviewvinkjes. De applicatiecode blokkeert geïmporteerde producten uit `IMPORT_2026_LIVE_%` in publieke queries, cartvalidatie en adminpublicatie wanneer deze prijsbasis niet gecontroleerd is.
+
+De order- en factuurlaag gebruikt dezelfde verkoopeenheidregel: de browser kiest een package option, maar de server valideert die optie opnieuw tegen de actuele productdata. De financiële berekening gebruikt `effective_units = order quantity x package_quantity`. `order_items.quantity` is het aantal gekozen klantverpakkingen, `package_quantity` het aantal units per verpakking en `sale_price_incl_vat` de unitprijssnapshot. Producten met `package_quantity=1` gedragen zich hetzelfde als voorheen.
 
 ## 2.2 Motivatie
 
@@ -390,7 +393,7 @@ RLS: ingeschakeld.
 
 **Doel:** onveranderlijke verkoopfactuurkop gekoppeld aan een order en klant.
 
-Kolommen omvatten UUID, oplopend uniek factuurnummer, order/ordernummer, klant, klant-/adres-/taalsnapshot, optioneel klant-NIF/CIF/NIE, bedrijfsnaam en fiscaal adres, status, betaalmethode, totalen excl. btw/btw/incl. btw, uitgiftedatum, e-mailtijdstip en timestamps. Een partiele unieke index op `order_id` staat maximaal Ã©Ã©n normale factuur per order toe.
+Kolommen omvatten UUID, oplopend uniek factuurnummer, order/ordernummer, klant, klant-/adres-/taalsnapshot, optioneel klant-NIF/CIF/NIE, bedrijfsnaam en fiscaal adres, status, betaalmethode, totalen excl. btw/btw/incl. btw, uitgiftedatum, e-mailtijdstip, voidmetadata en timestamps. Een partiele unieke index op `order_id` staat maximaal één actieve niet-void factuur per order toe; historische `void`-facturen en hun regels blijven bestaan.
 
 ## 4.10 `invoice_items`
 
@@ -539,7 +542,7 @@ Adminpagina's gebruiken `requireAdmin`; admin-API's gebruiken `isAdminSession`. 
 - Publiek: alleen zichtbare producten en openbare content.
 - Service-role: uitsluitend server-side voor databasehandelingen.
 
-Er zijn nog geen adminrollen, individuele medewerkers, MFA, permissions, sessieoverzicht of auditlog. Dit gedeelde adminmodel is acceptabel voor een zeer kleine start, maar niet voor een groeiend team.
+Er zijn nog geen adminrollen, individuele medewerkers, MFA, permissions of sessieoverzicht. `admin_audit_log` bestaat voor cleanup-, import- en ordercorrectieacties, maar is nog geen volledige applicatiebrede audittrail voor alle adminhandelingen. Dit gedeelde adminmodel is acceptabel voor een zeer kleine start, maar niet voor een groeiend team.
 
 ---
 
@@ -562,6 +565,7 @@ Aanwezige functies:
 - Automatisch volgend productnummer in formaat `NC-00001`.
 - Product toevoegen, selecteren, wijzigen en veilig archiveren. De admin delete-actie voert geen fysieke database-delete meer uit.
 - Mobiele snelle productinvoer via `Snel product toevoegen` op dezelfde pagina. De primaire flow zoekt server-side bestaande imported products met actieve `supplier_product_offers` en werkt het bestaande product af zonder nieuwe NC-code, supplier offer, import batch of bronmetadata te maken. De secundaire flow `Nieuw handmatig product` maakt alleen voor producten buiten leverancierslijsten een nieuw handmatig product. De drawer gebruikt dezelfde `products`-tabel, Supabase Storage-upload en `/api/admin/products` route, zonder nieuwe tabellen of voorraadmutaties. Concepten blijven `draft` en onzichtbaar; direct online vereist naam, verkoopeenheid, verkoopprijs incl. IVA, IVA-keuze, categorie, foto, sales-unitreview en prijsbasisreview.
+- De mobiele quick-edit gebruikt de bestaande productdetailvelden voor korte beschrijving, ingrediënten/allergenen, bereidingswijze en bewaaradvies. Waarden die hier worden opgeslagen moeten in de volledige producteditor zichtbaar blijven en andersom. De iOS-upload gebruikt geen `capture`-attribuut, zodat Camera, Fotobibliotheek en Bestanden beschikbaar blijven.
 - Zoeken, filteren, statusoverzicht en paginering voor grote catalogi.
 - Standaardfilter op actieve producten, plus filters voor `active`, `archived`, `disabled`, `draft` en `all`.
 - Meerdere categorieÃ«n per product.
@@ -575,6 +579,7 @@ Aanwezige functies:
 - Actief/verborgen, featured en nieuw.
 - Afbeeldings-URL of bestand uploaden naar Supabase Storage.
 - IngrediÃ«nten, gebruiksaanwijzing, bewaring en extra informatie.
+- Lijstindicatoren voor foto, prijs, omschrijving, ingrediënten en IVA, plus filters voor onder meer zonder prijs, zonder foto, zonder omschrijving, zonder ingrediënten en leverancier. Placeholderbeelden tellen niet als echte productfoto.
 
 De prijshelper kan btw, winst en marge tonen. De oude automatische 50%-regel is geen verplichte verkoopprijs meer; de beheerder bepaalt de verkoopprijs.
 
@@ -637,6 +642,20 @@ De module `/{locale}/admin/imports` is bedoeld voor de nieuwe livecatalogus en w
 - Rollback roept `rollback_import_batch_to_draft` aan en zet batchproducten naar draft/archive plus supplier offers inactive, zonder harde delete.
 
 Deze module stuurt geen service-role sleutel naar de browser en verandert geen orders, facturen, klanten, auth of voorraadmutaties.
+
+## 6.6b Europ Foods/Eurodrop prijs- en productreview
+
+Eurodrop is sinds 28 juli 2026 de referentiebron voor consumentenverkoopprijzen van Europ Foods-producten. Dit is geen algemene importbron en geen automatische upsert. De regels:
+
+- Alleen toepassen op producten met supplier `Europfoods`/`Europ Foods`.
+- Tindale-producten en user-managed Kamstra-bolletjes vallen buiten deze batchlogica.
+- Verkoopprijs mag alleen worden gezet bij betrouwbare match op product, verpakking en inhoud.
+- De verkoopprijs is `Eurodrop consumentenprijs + EUR 0,10`, inclusief IVA.
+- Bij twijfel blijft `sale_price_incl_vat` leeg/0 en blijft het product reviewwerk.
+- Supplier code, naam en verpakking zijn matching-signalen; ze mogen geen archived of ander product stil overschrijven.
+- Eurodrop-prijzen zijn nooit inkoopprijzen.
+
+De audit `outputs/europfoods-eurodrop-final-audit-20260728.*` controleerde 327 actieve/reviewrecords uit de actuele CSV: 327 records gevonden, 0 duplicaat- of supplierconflicten, 107 verwerkt, 220 niet bevestigd/review, 326 zonder echte foto, 210 zonder bruikbare beschrijving, 263 zonder ingrediënten en 327 met allergenenreview. Dit rapport helpt operationeel prioriteren; migraties en code blijven de technische bron.
 
 ## 6.7 Facturatie en btw
 
@@ -840,7 +859,7 @@ Geeft orders terug die via `customer_id` aan de ingelogde Auth-user gekoppeld zi
 
 ### `POST /api/auth/register`
 
-Oudere server-side registratieroute. De actuele registratiecomponent gebruikt rechtstreeks Supabase JS. Deze dubbele implementatie moet worden geconsolideerd om afwijkend gedrag te voorkomen.
+Actuele server-side registratieroute. De registratiecomponent gebruikt deze route zodat Supabase Auth-signup, locale, redirect-URL en klantmetadata centraal worden verwerkt. De route retourneert gestructureerde fouten en zorgt dat accountbevestiging naar de productiebase-URL kan verwijzen wanneer de Supabase/Resend-configuratie correct staat.
 
 ## 9.4 Adminauth
 
@@ -876,9 +895,9 @@ Ondersteunt productcreatie/upsert, wijziging, veilige archivering en restore. In
 
 ### `/api/admin/orders`
 
-`GET` leest maximaal 500 orders inclusief geneste `order_items` en alle gekoppelde facturen, inclusief historische `void`-facturen. Het resultaat wordt verrijkt met naam, e-mail, telefoon, adres en taal uit `customers`. `PATCH` wijzigt status of betaalstatus, slaat interne notities op, markeert testorders en archiveert/herstelt orders. `PATCH action=replace_items` vervangt orderregels voor een pre-invoice correctie: de browser stuurt alleen productcode, verpakking en aantal, waarna `replaceOrderItemsForCorrection` actuele producten server-side valideert, bedragen opnieuw berekent en de RPC `replace_order_items_for_admin` aanroept. `PATCH action=reset_invoice_for_correction` roept `reset_invoice_for_order_correction` aan om een nog niet verzonden/onbetaalde actieve factuur op status `void` te zetten voordat orderregels worden gecorrigeerd. `PATCH action=void_invoice_release_inventory_for_correction` behandelt normale voorraadcommits met bestaande negatieve `sale`-movements en schrijft positieve `correction_release`-movements. `PATCH action=reset_inventory_commit_flag_without_movement` is uitsluitend voor legacy-orders met `inventory_committed=true` en nul movements; deze actie reset alleen de vlag, maakt geen voorraadmutatie en audit orderregels plus stocksnapshot. `DELETE` bestaat uitsluitend voor expliciete testorders en roept `safe_delete_test_order` aan. Alle acties vereisen een geldige adminsessie. Statusmutaties gebruiken de database-RPC voor atomische voorraadtransities; belangrijke statussen kunnen een klantmail activeren.
+`GET` leest maximaal 500 orders inclusief geneste `order_items` en alle gekoppelde facturen, inclusief historische `void`-facturen. Het resultaat wordt verrijkt met naam, e-mail, telefoon, adres en taal uit `customers`. `PATCH` wijzigt status of betaalstatus, slaat interne notities op, markeert testorders en archiveert/herstelt orders. `PATCH action=replace_items` vervangt orderregels voor een pre-invoice correctie: de browser stuurt alleen productcode, verpakking en aantal, waarna `replaceOrderItemsForCorrection` actuele producten server-side valideert, package options opnieuw ophaalt, effectieve units berekent, bedragen opnieuw berekent en de RPC `replace_order_items_for_admin` aanroept. `PATCH action=reset_invoice_for_correction` roept `reset_invoice_for_order_correction` aan om een nog niet verzonden/onbetaalde actieve factuur op status `void` te zetten voordat orderregels worden gecorrigeerd. `PATCH action=void_invoice_release_inventory_for_correction` behandelt normale voorraadcommits met bestaande negatieve `sale`-movements en schrijft positieve `correction_release`-movements. `PATCH action=reset_inventory_commit_flag_without_movement` is uitsluitend voor legacy-orders met `inventory_committed=true` en nul movements; deze actie reset alleen de vlag, maakt geen voorraadmutatie en audit orderregels plus stocksnapshot. De zichtbare admin-UI hoort deze interne acties te verbergen achter één flow `Order aanpassen` met één correctiereden. `DELETE` bestaat uitsluitend voor expliciete testorders en roept `safe_delete_test_order` aan. Alle acties vereisen een geldige adminsessie. Statusmutaties gebruiken de database-RPC voor atomische voorraadtransities; belangrijke statussen kunnen een klantmail activeren.
 
-De ordercorrectie-RPC's staan in migratie `202607180001_admin_order_corrections.sql`. Ze blokkeren correcties bij `cancelled`/`delivered`, `payment_status='paid'`, actieve/verzonden/vergrendelde facturen of onveilig gecommitte voorraad. Normale gecommitte voorraad kan alleen worden vrijgegeven wanneer tracked orderregels exact overeenkomen met bestaande negatieve `sale`-movements; anders blokkeert de RPC. Legacy-orders met foutieve commitvlag en nul movements gebruiken een aparte vlag-reset zonder voorraadmutatie. Mutaties vereisen `admin_audit_log`, actor, reden en waar relevant verwachte `updated_at`-revisie. De functies zijn alleen voor `service_role` uitvoerbaar; publieke en authenticated rollen krijgen geen execute-recht.
+De ordercorrectie-RPC's staan in migratie `202607180001_admin_order_corrections.sql`; volgens productiecontrole is deze migratie uitgevoerd. Ze blokkeren correcties bij `cancelled`/`delivered`, `payment_status='paid'`, actieve/verzonden/vergrendelde facturen of onveilig gecommitte voorraad. Normale gecommitte voorraad kan alleen worden vrijgegeven wanneer tracked orderregels exact overeenkomen met bestaande negatieve `sale`-movements; anders blokkeert de RPC. Legacy-orders met foutieve commitvlag en nul movements gebruiken een aparte vlag-reset zonder voorraadmutatie. Mutaties vereisen `admin_audit_log`, actor, reden en waar relevant verwachte `updated_at`-revisie. De functies zijn alleen voor `service_role` uitvoerbaar; publieke en authenticated rollen krijgen geen execute-recht.
 
 ### `/api/admin/invoices`
 
@@ -1338,11 +1357,10 @@ Klantnaam, e-mail, telefoon, adres en orderhistorie zijn persoonsgegevens. Bij v
 
 - WhatsApp-orders worden niet automatisch in de database geregistreerd.
 - Klantadres wordt niet als ordersnapshot gemodelleerd.
-- Account toont beperkte orderdetails.
+- Account toont orderdetails en factuurdownload, maar nog geen volledige statushistorie of herhaalbestelling.
 - De cart gebruikt browseropslag en synchroniseert niet tussen apparaten of browsers.
 - Geen online betaling.
-- Bankrekening is placeholder.
-- Bizum-nummer kan nog het oude telefoonnummer zijn en moet zakelijk worden bevestigd.
+- Bizum- en bankgegevens zijn centraal ingesteld, maar ontvangst/tenaamstelling en boekhoudkundige verwerking moeten operationeel worden gecontroleerd.
 - Contactformulier en FAQ ontbreken.
 - Orderstatusovergangen vormen nog geen strikte state machine.
 - `processing` voor `confirmed` kan voorraadlogica omzeilen totdat een bevestiging plaatsvindt.
@@ -1364,7 +1382,7 @@ Klantnaam, e-mail, telefoon, adres en orderhistorie zijn persoonsgegevens. Bij v
 
 - Geen outbox/queue of automatische retry.
 - Geen per-event mailaudit.
-- Geen expliciete Reply-To.
+- Reply-To is ingericht voor branded order-/factuurmails; er is nog geen volledige per-event mailaudit/outbox.
 - Auth- en ordertemplates zijn niet volledig meertalig.
 - Supabase-templatewijzigingen moeten handmatig worden gepubliceerd.
 - Geen monitoring op bounced/complained e-mail.
@@ -1392,7 +1410,7 @@ De operationele samenvatting met **Afgeronde mijlpalen** en **TODO vÃ³Ã³r li
 3. Voeg rate limiting toe aan auth, admin en orderendpoints.
 4. Maak bezorgminimum, fee en orderadres server-authoritatief.
 5. Voeg een formele order-state-machine en volledige statushistorie toe; bestaande status- en betaalstatusacties blijven behouden.
-6. Controleer/actualiseer Bizum en bankrekening.
+6. Controleer operationeel Bizum- en bankontvangsten, tenaamstelling en administratieve verwerking.
 7. Voeg logging, request-ID's, foutmonitoring en e-mailalerts toe.
 8. Maak productqueries databasegericht en gepagineerd.
 

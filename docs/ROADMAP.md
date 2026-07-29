@@ -1,6 +1,6 @@
 # Roadmap: Nancy's Castalla
 
-**Peildatum:** 12 juli 2026
+**Peildatum:** 28 juli 2026
 **Status:** levende roadmap
 
 Deze roadmap bevat alleen toekomstig werk. Afgeronde functionaliteit staat in `CHANGELOG.md` en `PROJECT_STATUS.md`; technische details staan in `TECHNICAL_HANDOVER.md`.
@@ -14,7 +14,7 @@ Deze roadmap bevat alleen toekomstig werk. Afgeronde functionaliteit staat in `C
 - [ ] Test op productie één volledige nieuwe-klantflow inclusief accountmail, ordermail, statusmail en factuurmail.
 - [ ] Controleer Resend-domein, SPF, DKIM, DMARC, API-key, Supabase SMTP en bounce-/complaintgedrag.
 - [x] Zakelijk Bizum-nummer en bankrekening in centrale configuratie zetten.
-- [ ] Controleer operationeel met Nancy/boekhouder dat Bizum- en bankgegevens exact correct zijn.
+- [ ] Controleer operationeel met Nancy/boekhouder dat Bizum- en bankbetalingen correct binnenkomen en boekhoudkundig goed worden verwerkt.
 - [ ] Laat Spaanse factuurgegevens en teksten door gestor/boekhouder valideren.
 - [ ] Leg een eenvoudige releasechecklist vast voor Vercel, Supabase, Resend, DNS, lint, build en smoke-test.
 
@@ -29,7 +29,8 @@ Deze roadmap bevat alleen toekomstig werk. Afgeronde functionaliteit staat in `C
 
 ### Orders, voorraad en bezorging
 
-- [ ] Controleer en publiceer een kleine selectie geïmporteerde Tindale/Europ Foods-draftproducten na prijs-, IVA-, categorie- en verpakkingsreview.
+- [ ] Werk de Europ Foods/Eurodrop-reviewlijst af: 220 niet-bevestigde records vragen nog handmatige match-, prijs-, IVA-, categorie-, verpakking-, foto-, omschrijving-, ingrediënten- en allergenencontrole.
+- [ ] Publiceer alleen een kleine gecontroleerde Europ Foods-selectie nadat verkoopprijs, IVA, categorie, sales unit en prijsbasis expliciet kloppen. Houd Tindale-producten offline zolang ophalen in La Nucia nodig is.
 - [ ] Server-side bezorgminimum, bezorgkosten en leveringsgebied berekenen en afdwingen.
 - [ ] Apart onveranderlijk afleveradres-snapshot op orders opslaan.
 - [ ] Formele order-state-machine en statushistorie toevoegen.
@@ -44,12 +45,14 @@ Deze roadmap bevat alleen toekomstig werk. Afgeronde functionaliteit staat in `C
 - [ ] Categorie, zoekresultaten en admincatalogus server-side pagineren en filteren.
 - [ ] Indexen voor zichtbaarheid, categorieën en zoekgebruik meten en optimaliseren.
 - [ ] Productafbeeldingen voorzien van thumbnails en responsive formaten.
+- [ ] De 326 actieve/reviewproducten zonder echte foto uit de Eurodrop-audit gericht verrijken met eigen of leverancier-goedgekeurde afbeeldingen.
 - [ ] Monitoring voor errors, performance en externe integraties toevoegen.
 
 ### Klantbeleving en compliance
 
 - [ ] Volledige productinhoud en resterende interface/backoffice professioneel vertalen.
 - [ ] Allergenen- en voedselinformatie structureren en operationeel controleren.
+- [ ] Productbeschrijvingen, ingrediënten en allergenen voor Europ Foods en geselecteerde Tindale-producten systematisch aanvullen; geen AI-claims of ongecontroleerde allergenen publiceren.
 - [ ] Privacy-, cookie-, retentie-, verwijderings- en consumentenprocessen juridisch valideren.
 - [ ] Product- en categorie-URL's aan sitemap toevoegen en JSON-LD voor LocalBusiness/Product/Offer/BreadcrumbList bouwen.
 - [ ] Orderstatushistorie en herhaalbestelling in klantaccount toevoegen.

@@ -1,7 +1,7 @@
 ﻿# AI Context: Nancy's Castalla
 
 **Doel:** snelle, zelfstandige projectcontext voor ChatGPT, Codex en andere AI-assistenten.  
-**Laatst bijgewerkt:** 16 juli 2026
+**Laatst bijgewerkt:** 28 juli 2026
 **Productie:** `https://www.nancys.es`
 
 Lees dit bestand voordat je een wijziging plant of uitvoert. Gebruik voor diepere details de documenten in `/docs`:
@@ -153,6 +153,8 @@ Producten hebben naast voorraadstatus (`available`, `preorder`, `coming-soon`) o
 
 Nieuwe leveranciersimports gebruiken migratie `202607120001_supplier_import_workflow.sql`. Deze staat in productie en voegt import runs, supplier offers, reviewvelden en veilige batch-RPC's toe. De adminroute `/{locale}/admin/imports` ondersteunt dry-run previews en confirmed import naar draft voor Europ Foods PDF en Tindale XLS/XLSX. Dry-runs schrijven niets. Confirmed import maakt uitsluitend `product_status='draft'`, `is_visible=false`, `featured=false`, `stock_quantity=0` en nieuwe unieke `NC-xxxxx`-codes aan. Bestanden van leveranciers mogen niet in Git worden gezet. Op 12 juli 2026 zijn `IMPORT_2026_LIVE_TINDALE_JULY` en `IMPORT_2026_LIVE_EUROPFOODS_JULY` naar draft geÃ¯mporteerd; er zijn geen producten automatisch gepubliceerd.
 
+Tindale-producten moeten offline blijven zolang ze in La Nucia moeten worden opgehaald. Europ Foods is de huidige publicatiekandidaat omdat gratis bezorging mogelijk is. Migratie `202607250001_keep_tindale_products_offline.sql` zet Tindale-producten terug naar `draft`/`is_visible=false` en blokkeert Tindale-batchpublicatie via `publish_approved_import_batch`.
+
 Europ Foods-conflictherstel staat in de Supplier Imports-module. De bronidentiteit is leverancier + supplier code + productnaam + verpakking + doosprijs + eenheidsprijs. Daardoor mogen varianten zoals `8775 MAGNERS CIDER 24x500ml` en `8780 MAGNERS CIDER 12x568ml` naast elkaar als aparte draftproducten bestaan. Exacte herhalingen worden niet dubbel aangemaakt, dezelfde supplier code met afwijkende inhoud blijft conflict-review, en archived producten worden nooit automatisch gewijzigd of hersteld.
 
 Sales-unit prijsveiligheid is verplicht voor alle nieuwe live leveranciersimports. Leveranciersvelden blijven gescheiden van publieke verkoopvelden:
@@ -166,6 +168,10 @@ Sales-unit prijsveiligheid is verplicht voor alle nieuwe live leveranciersimport
 - `sales_unit_confirmed` en `price_basis_confirmed`: adminreviewvinkjes.
 
 Zet nooit automatisch `salePriceInclVat` gelijk aan de leveranciers-eenheidsprijs wanneer de publieke verpakking nog een doos/case toont. Geïmporteerde producten uit `IMPORT_2026_LIVE_%` mogen pas publiek zichtbaar of bestelbaar zijn wanneer sales unit, prijsbasis, verpakking, btw, categorie en verkoopprijs handmatig gecontroleerd zijn. Cart/order-validatie blokkeert producten die deze controle missen. Migratie `202607120002_sales_unit_price_basis_safety.sql` voegt databasevelden en database-level publicatiebescherming toe; voer deze handmatig in Supabase uit als productie hem nog niet heeft.
+
+Voor Europ Foods/Eurodrop geldt vanaf 28 juli 2026 een expliciet prijs- en matchingbeleid. Eurodrop is alleen referentiebron voor consumentenverkoopprijzen van Europ Foods-producten. Nancy's verkoopprijs wordt alleen gezet bij een betrouwbare match en is dan `actuele Eurodrop-consumentenprijs + EUR 0,10`. Bij onzekere match, afwijkende verpakking, ontbrekende Eurodrop-prijs of twijfel blijft de verkoopprijs leeg/0 en blijft het product reviewwerk. Supplier code, productnaam en verpakking zijn matching-signalen, geen automatische merge-sleutels. Kamstra-bolletjes zijn user-managed en vallen buiten de Eurodrop-prijsbatches. Tindale-producten vallen nooit onder Eurodrop-updates.
+
+De actuele Eurodrop-audit van 28 juli 2026 staat als gegenereerd rapport in `outputs/europfoods-eurodrop-final-audit-20260728.csv/json`. Samenvatting: 327 CSV-records gecontroleerd, 327 database-records gevonden, 0 duplicaat- of supplierconflicten, 107 reeds correct verwerkt, 220 blijven `NOT_CONFIRMED`/review, 326 zonder echte foto, 210 zonder bruikbare beschrijving, 263 zonder ingrediënten en alle 327 hebben allergenenreview nodig. Deze rapporten zijn operationele artefacten; de regels in dit MD-bestand blijven leidend.
 
 ## 6. Orderflow
 
@@ -189,7 +195,9 @@ Er zijn twee orderkanalen:
 
 Een databaseorder is in de pre-orderfase eerst een aanvraag. Nancy controleert daarna beschikbaarheid, vervangingen, aantallen, verpakking, IVA en verkoopprijs voordat de definitieve factuur wordt gemaakt. Admins mogen orderregels daarom corrigeren zolang er geen definitieve factuur bestaat, betaling niet `paid` is, voorraad niet is gecommit en de order niet `delivered` of `cancelled` is. De browser mag nooit prijzen of totalen bepalen: de admin-editor stuurt alleen productcode, verpakking en aantal naar `/api/admin/orders`; `replaceOrderItemsForCorrection` haalt actuele productdata server-side op, valideert bestelbaarheid en rekent subtotalen, IVA en totaal opnieuw uit.
 
-Als per ongeluk al een factuur is gemaakt, mag alleen een nog niet verzonden/onbetaalde/onverwerkte factuur via `reset_invoice_for_order_correction` op status `void` worden gezet. Het oude factuurrecord en de `invoice_items` blijven bestaan, voidreden/actor/datum worden op de factuur opgeslagen en een audit-snapshot bewaart de oorspronkelijke toestand. Het factuurnummer wordt nooit hergebruikt. Voer migratie `202607180001_admin_order_corrections.sql` handmatig uit voordat deze adminflow live gebruikt wordt.
+Als per ongeluk al een factuur is gemaakt, mag alleen een nog niet verzonden/onbetaalde/onverwerkte factuur via de vereenvoudigde adminflow worden ingetrokken. De zichtbare UI toont één knop `Order aanpassen`; intern zet de server de actieve factuur op `void`, bewaart factuur en `invoice_items`, slaat voidreden/actor/datum op en bewaart een audit-snapshot. Het factuurnummer wordt nooit hergebruikt. Migratie `202607180001_admin_order_corrections.sql` is volgens productiecontrole uitgevoerd.
+
+Ordercorrecties moeten package options server-side valideren. De browser stuurt alleen productcode, gekozen verpakking en aantal. De server controleert of de package option bij het product bestaat en rekent met `effective_units = order quantity x package_quantity`. Voorbeeld: `NC-03263` Magners 12 x 568 ml heeft EUR 3,00 per fles; één gekozen verpakking van 12 wordt EUR 36,00. `order_items.quantity` bewaart het aantal gekozen verpakkingen, `package_quantity` het aantal units per verpakking, `package_label` het klantlabel en `sale_price_incl_vat` de afgesproken unitprijssnapshot. Producten met `package_quantity=1` blijven ongewijzigd werken.
 
 Voor orders waarbij voorraad al gecommit is, zijn er twee expliciete correctiepaden. Normale commits met negatieve `sale`-movements worden alleen via `void_invoice_and_release_inventory_for_order_correction` vrijgegeven; deze maakt positieve `correction_release`-movements en zet daarna `inventory_committed=false`. Legacy/bug-orders met `inventory_committed=true` maar nul `inventory_movements` gebruiken uitsluitend `reset_inventory_commit_flag_without_movement`; die wijzigt geen voorraad en maakt geen movements, maar audit actor, reden, orderregels, stocksnapshot en bewijs dat movement count nul was.
 
@@ -262,6 +270,7 @@ Productbeheer ondersteunt onder meer:
 - Afbeeldingsupload naar Supabase Storage.
 - IngrediÃ«nten, instructies, bewaring en extra informatie.
 - Mobiele snelle productinvoer op `/{locale}/admin/products`: compacte drawer binnen dezelfde backoffice. Standaardflow is `Uit leverancierslijst`: zoek server-side bestaande imported products met supplier offer, werk het bestaande `products.id` af en behoud supplier, supplier code, supplier offer, import batch, bronverpakking en bronprijzen. Maak hierbij nooit een tweede productrecord of supplier offer. Secundaire flow `Nieuw handmatig product` mag alleen voor producten buiten leverancierslijsten een nieuwe NC-code maken. Beide flows gebruiken dezelfde `/api/admin/products`, maken geen voorraadmutatie en kunnen opslaan als `draft` of direct `active/is_visible=true` wanneer verplichte velden, foto, sales unit en prijsbasis compleet zijn.
+- De mobiele quick-edit toont ook de bestaande detailvelden korte beschrijving, ingrediënten/allergenen, bereidingswijze en bewaaradvies. De foto-upload gebruikt geen `capture`-attribuut, zodat iOS de normale keuze Camera, Fotobibliotheek of Bestanden toont.
 
 ## 9. Betaalmethodes
 
@@ -278,7 +287,7 @@ Niet actief:
 - Contant bij afhalen of bezorgen.
 - SumUp-integratie.
 
-Betaling wordt na handmatige orderbevestiging afgesproken via Bizum of bankoverschrijving. Stripe is niet geinstalleerd; alleen een providerstructuur is voorbereid. WhatsApp-klantenservice en Bizum-betaalnummer zijn gescheiden in `config/business.ts`.
+Betaling wordt na handmatige orderbevestiging afgesproken via Bizum of bankoverschrijving. Stripe is niet geinstalleerd; alleen een providerstructuur is voorbereid. WhatsApp-klantenservice en Bizum-betaalnummer zijn gescheiden in `config/business.ts`: WhatsApp `+34 644 05 97 69` / link `+34644059769`, Bizum `+34 644 21 22 57`, bankrekeninghouder `NANCYS CASTALLA`, IBAN `ES89 2100 1460 6002 0010 3972`, BIC `CAIXESBBXXX`. Gebruik deze nummers nooit door elkaar.
 
 ## 10. Bezorgbeleid
 
@@ -354,7 +363,7 @@ Verwijder geen bestaande functionaliteit, migratie of data-import omdat deze ver
 - Geen volledige product-/categoriesitemap of structured data.
 - Inkoop, facturatie en rapportages zijn nog gedeeltelijk.
 - Klantadres is nog geen apart onveranderlijk ordersnapshot.
-- Bizum en bankgegevens moeten zakelijk worden bevestigd.
+- Bizum- en bankgegevens staan centraal ingesteld; controleer operationeel nog ontvangst, tenaamstelling en boekhoudkundige verwerking.
 - Eerder gedeelde secrets moeten buiten Git worden geroteerd; neem ze nooit over in output.
 
 ## 14. Roadmap
