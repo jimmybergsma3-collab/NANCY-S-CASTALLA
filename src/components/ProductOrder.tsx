@@ -77,7 +77,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
 
           return (
             <article key={product.id} className="group min-w-0 overflow-hidden rounded-lg border border-forest/10 bg-white p-5 shadow-soft transition hover:-translate-y-0.5 hover:border-brass/50">
-              {!hideCardImages && product.imageUrl ? <Link className={`mb-4 block aspect-[4/3] overflow-hidden rounded-md bg-white ${compactCardImages ? "mx-auto w-full max-w-[320px]" : ""}`} href={productHref}><img alt={productName} className="block h-full w-full object-contain p-3" loading="lazy" src={product.imageUrl} /></Link> : null}
+              {!hideCardImages && product.imageUrl ? <Link className={`mb-4 grid h-48 place-items-center overflow-hidden rounded-md bg-white ${compactCardImages ? "mx-auto w-full max-w-[320px]" : ""}`} href={productHref}><img alt={productName} className="block max-h-40 max-w-[82%] object-contain" loading="lazy" src={product.imageUrl} /></Link> : null}
               <div className="flex items-start justify-between gap-4">
                 <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-coffee">{getProductCategories(product).map((item) => ui.categories[item]).join(" · ")}</p><Link href={productHref}><h3 className="mt-2 font-serif text-2xl font-bold text-forest transition group-hover:text-coffee">{productName}</h3></Link></div>
                 <span className="rounded-full bg-cream px-3 py-1 text-xs font-bold text-forest">{ui.statuses[product.stockStatus]}</span>
