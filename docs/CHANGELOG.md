@@ -62,6 +62,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 - Door admin geselecteerde actieve producten zonder verkoopprijs offline gezet via `202608090003_disable_selected_no_price_products.sql`.
 - Door admin geselecteerde actieve producten zonder productfoto offline gezet via `202608090004_disable_selected_no_photo_products.sql`.
 - Door admin geselecteerde actieve producten offline gezet via `202608090005_disable_selected_active_products.sql`.
+- Eurodrop-prijscheck uitgevoerd op de 100 resterende actieve Europ Foods-producten zonder prijs; 3 veilige SKU/verpakkingsmatches bijgewerkt met Eurodrop + EUR 0,20 via `202608090006_eurodrop_no_price_safe_matches.sql`, 97 blijven review.
 - Configureerbare `businessMode`, `invoiceSeries` en `invoiceTestSeries` in `config/business.ts`.
 - Admin auditlogging voor cleanup- en beheeracties zonder secrets.
 - Centrale Facebooklink in `config/business.ts` voor transactionele e-mails en toekomstige contactblokken.
