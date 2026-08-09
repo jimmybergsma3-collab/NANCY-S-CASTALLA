@@ -58,6 +58,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 - Productregels in losse adminfacturen hebben nu productzoeker met package-keuze, zodat producten zoals Magners direct vanuit het factuurformulier kunnen worden geselecteerd.
 - Klantbestellingen zijn voortaan beperkt tot geregistreerde en ingelogde klanten; gasten zien in de winkelmand een login/registratieblok en de order-API weigert verzoeken zonder geldig klanttoken.
 - Tindale-fotobatch van 29 juli 2026 vastgelegd met gecontroleerde verkoopprijzen per volledige doos/verpakking, sales-unit `case`, bevestigde prijsbasis en margegegevens; quantity 1 blijft een complete verkoopverpakking.
+- Laatste concurrentieprijsbatch voor Europ Foods no-price producten vastgelegd: 22 resterende producten gecontroleerd, 7 veilig geprijsd en 15 bewust ongeprijsd gelaten vanwege onvoldoende marge, onzekere verpakking of ontbrekende betrouwbare match.
 - Eerste batch concurrentieprijscontrole voor 15 actieve Europ Foods-producten zonder prijs: 4 veilige prijsupdates vastgelegd met online bron, inkoopprijs, marge en verpakkingcontrole.
 - Tweede batch concurrentieprijscontrole voor 20 actieve Europ Foods-producten zonder prijs: 3 veilige prijsupdates vastgelegd; producten met onzekere verpakking, te lage marge of ontbrekende actuele prijs zijn ongemoeid gelaten.
 - Derde batch concurrentieprijscontrole voor 20 actieve Europ Foods-producten zonder prijs: 1 veilige prijsupdate vastgelegd; lage-marge en onzekere foodserviceproducten blijven voor eindcontrole open.
