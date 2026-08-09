@@ -9,6 +9,7 @@ export type CartCopy = {
   name: string; email: string; phone: string; address: string; notes: string; paymentMethod: string; send: string; sending: string;
   orderError: string; orderSent: string; emailUnavailable: string; badgeLabel: string;
   missingFields: string; serviceUnavailable: string; invalidOrder: string; deliveryAddressRequired: string;
+  loginRequiredTitle: string; loginRequiredBody: string; login: string; register: string;
 };
 
 const copies: Record<Locale, CartCopy> = {
@@ -23,6 +24,7 @@ const copies: Record<Locale, CartCopy> = {
     emailUnavailable: "Email confirmation is temporarily unavailable.", badgeLabel: "items in cart", missingFields: "Please enter your name, email and at least one product.",
     serviceUnavailable: "Ordering is temporarily unavailable. Please contact us by WhatsApp.", invalidOrder: "Please check your cart and details before sending again.",
     deliveryAddressRequired: "Please enter a delivery address for local delivery.",
+    loginRequiredTitle: "Log in to order", loginRequiredBody: "Orders are only accepted from registered customers. This helps us prevent fake orders and confirm Bizum or bank transfer details safely.", login: "Log in", register: "Register",
   },
   nl: {
     title: "Winkelmand", cart: "Winkelmand", add: "In winkelmand", added: "Toegevoegd aan winkelmand", goToCart: "Bekijk winkelmand", empty: "Je winkelmand is leeg.", continueShopping: "Verder winkelen",
@@ -35,6 +37,7 @@ const copies: Record<Locale, CartCopy> = {
     emailUnavailable: "E-mailbevestiging is tijdelijk niet beschikbaar.", badgeLabel: "producten in winkelmand", missingFields: "Vul je naam, e-mail en minimaal één product in.",
     serviceUnavailable: "Bestellen is tijdelijk niet beschikbaar. Neem contact op via WhatsApp.", invalidOrder: "Controleer je winkelmand en gegevens voordat je opnieuw verstuurt.",
     deliveryAddressRequired: "Vul een bezorgadres in voor lokale bezorging.",
+    loginRequiredTitle: "Log in om te bestellen", loginRequiredBody: "Bestellingen worden alleen aangenomen van geregistreerde klanten. Zo voorkomen we nepbestellingen en kunnen we Bizum of bankoverschrijving veilig bevestigen.", login: "Inloggen", register: "Registreren",
   },
   de: {
     title: "Warenkorb", cart: "Warenkorb", add: "In den Warenkorb", added: "Zum Warenkorb hinzugefügt", goToCart: "Warenkorb ansehen", empty: "Ihr Warenkorb ist leer.", continueShopping: "Weiter einkaufen",
@@ -47,6 +50,7 @@ const copies: Record<Locale, CartCopy> = {
     emailUnavailable: "Die E-Mail-Bestätigung ist vorübergehend nicht verfügbar.", badgeLabel: "Artikel im Warenkorb", missingFields: "Bitte geben Sie Name, E-Mail und mindestens ein Produkt ein.",
     serviceUnavailable: "Bestellungen sind vorübergehend nicht verfügbar. Bitte kontaktieren Sie uns per WhatsApp.", invalidOrder: "Bitte prüfen Sie Warenkorb und Angaben, bevor Sie erneut senden.",
     deliveryAddressRequired: "Bitte geben Sie eine Lieferadresse für die lokale Lieferung ein.",
+    loginRequiredTitle: "Zum Bestellen einloggen", loginRequiredBody: "Bestellungen werden nur von registrierten Kunden angenommen. So vermeiden wir Fake-Bestellungen und können Bizum oder Banküberweisung sicher bestätigen.", login: "Einloggen", register: "Registrieren",
   },
   es: {
     title: "Carrito", cart: "Carrito", add: "Añadir al carrito", added: "Añadido al carrito", goToCart: "Ver carrito", empty: "Tu carrito está vacío.", continueShopping: "Seguir comprando",
@@ -59,6 +63,7 @@ const copies: Record<Locale, CartCopy> = {
     emailUnavailable: "La confirmación por correo no está disponible temporalmente.", badgeLabel: "productos en el carrito", missingFields: "Introduce tu nombre, correo y al menos un producto.",
     serviceUnavailable: "Los pedidos no están disponibles temporalmente. Contacta con nosotros por WhatsApp.", invalidOrder: "Revisa el carrito y tus datos antes de volver a enviar.",
     deliveryAddressRequired: "Introduce una dirección para la entrega local.",
+    loginRequiredTitle: "Inicia sesión para pedir", loginRequiredBody: "Solo aceptamos pedidos de clientes registrados. Así evitamos pedidos falsos y podemos confirmar Bizum o transferencia bancaria de forma segura.", login: "Iniciar sesión", register: "Registrarse",
   },
   sv: {
     title: "Varukorg", cart: "Varukorg", add: "Lägg i varukorgen", added: "Tillagd i varukorgen", goToCart: "Visa varukorg", empty: "Din varukorg är tom.", continueShopping: "Fortsätt handla",
@@ -71,6 +76,7 @@ const copies: Record<Locale, CartCopy> = {
     emailUnavailable: "E-postbekräftelse är tillfälligt otillgänglig.", badgeLabel: "varor i varukorgen", missingFields: "Fyll i namn, e-post och minst en produkt.",
     serviceUnavailable: "Beställning är tillfälligt otillgänglig. Kontakta oss via WhatsApp.", invalidOrder: "Kontrollera varukorgen och uppgifterna innan du skickar igen.",
     deliveryAddressRequired: "Ange en leveransadress för lokal leverans.",
+    loginRequiredTitle: "Logga in för att beställa", loginRequiredBody: "Beställningar tas bara emot från registrerade kunder. Det hjälper oss att undvika falska beställningar och bekräfta Bizum eller banköverföring tryggt.", login: "Logga in", register: "Registrera",
   },
 };
 

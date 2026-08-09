@@ -54,6 +54,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 - Compacter orderbeheer met zoekveld, status-, betaal-, datum- en test/real/archivefilters, bulkselectie voor testorders, testmarkering, archiveren en server-side veilige testorderverwijdering.
 - Factuurbeheer met filters voor productie, test, gearchiveerd en geannuleerd, plus markeer-test en archiveeracties zonder factuurnummers te wijzigen.
 - Losse passantenfacturen in factuurbeheer: admin kan zonder bestaande order klantgegevens, regels, IVA en betaalmethode invoeren, waarna de factuur in de normale serie wordt opgeslagen en als PDF beschikbaar is.
+- Klantbestellingen zijn voortaan beperkt tot geregistreerde en ingelogde klanten; gasten zien in de winkelmand een login/registratieblok en de order-API weigert verzoeken zonder geldig klanttoken.
 - Configureerbare `businessMode`, `invoiceSeries` en `invoiceTestSeries` in `config/business.ts`.
 - Admin auditlogging voor cleanup- en beheeracties zonder secrets.
 - Centrale Facebooklink in `config/business.ts` voor transactionele e-mails en toekomstige contactblokken.

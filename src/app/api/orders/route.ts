@@ -6,6 +6,7 @@ import type { OrderInput } from "@/types/backoffice";
 
 type OrderBody = Partial<OrderInput>;
 type OrderErrorCode =
+  | "auth_required"
   | "missing_fields"
   | "invalid_order"
   | "service_unavailable"
@@ -50,6 +51,14 @@ export async function POST(request: Request) {
   try {
     const authUser = await getCustomerAuthUser(request);
     console.info("order_api", { requestId, step: "auth_checked", hasAuthUser: Boolean(authUser?.id) });
+    if (!authUser?.id) {
+      return NextResponse.json({
+        ok: false,
+        errorCode: "auth_required",
+        message: "Please log in or register before sending an order.",
+        diagnosticId: requestId,
+      }, { status: 401 });
+    }
     const order = await createOrder({ ...body, customerName, customerEmail, lines: body.lines, authUserId: authUser?.id });
     if (!order.orderId || !order.orderNumber) {
       console.error("Order storage returned without a confirmed order id", {

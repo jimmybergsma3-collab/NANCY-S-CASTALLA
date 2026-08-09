@@ -40,12 +40,17 @@ export function CartView({ locale }: { locale: Locale }) {
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     let active = true;
     void (async () => {
       const { data } = await getSupabaseBrowserClient().auth.getSession();
-      if (!data.session || !active) return;
+      if (!active) return;
+      setIsAuthenticated(Boolean(data.session));
+      setSessionChecked(true);
+      if (!data.session) return;
       const response = await fetch("/api/account/profile", { headers: { Authorization: `Bearer ${data.session.access_token}` } });
       if (!response.ok || !active) return;
       const result = await response.json() as { profile?: { name?: string; email?: string; phone?: string; address?: string } };
@@ -83,6 +88,7 @@ export function CartView({ locale }: { locale: Locale }) {
   }
 
   function orderErrorMessage(code?: string, backendMessage?: string) {
+    if (code === "auth_required") return copy.loginRequiredBody;
     if (code === "missing_fields") return copy.missingFields;
     if (code === "service_unavailable") return copy.serviceUnavailable;
     if (code === "invalid_order") return copy.invalidOrder;
@@ -103,12 +109,13 @@ export function CartView({ locale }: { locale: Locale }) {
     try {
       const idempotencyKey = crypto.randomUUID();
       const { data } = await getSupabaseBrowserClient().auth.getSession();
+      if (!data.session) throw new Error(copy.loginRequiredBody);
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {}) },
         body: JSON.stringify({ customerName, customerEmail, customerPhone, fulfillment, paymentMethod, locale, notes: [fulfillment === "Local delivery" && customerAddress ? `${ui.order.address}: ${customerAddress}` : "", notes].filter(Boolean).join("\n\n"), idempotencyKey, lines: items.map((item) => ({ ...item, unit: item.packageLabel, salePriceInclVat: 0 })) }),
       });
-      const result = await response.json() as { ok: boolean; errorCode?: CartValidationCode | "missing_fields" | "service_unavailable" | "invalid_order" | "order_storage_unconfirmed" | "order_failed"; message?: string; orderId?: string; emailed?: boolean; diagnosticId?: string };
+      const result = await response.json() as { ok: boolean; errorCode?: CartValidationCode | "auth_required" | "missing_fields" | "service_unavailable" | "invalid_order" | "order_storage_unconfirmed" | "order_failed"; message?: string; orderId?: string; emailed?: boolean; diagnosticId?: string };
       if (!response.ok || !result.ok) throw new Error(orderErrorMessage(result.errorCode, result.message));
       setStatus("sent");
       setMessage(`${copy.orderSent}${result.orderId ? ` ${result.orderId}.` : ""}${result.emailed ? "" : ` ${copy.emailUnavailable}`}`);
@@ -147,7 +154,18 @@ export function CartView({ locale }: { locale: Locale }) {
         <h2 className="font-serif text-2xl font-bold text-forest">{copy.checkout}</h2><p className="mt-2 text-sm leading-6 text-forest/70">{copy.checkoutIntro}</p>
         <div className="mt-4 space-y-2 border-y border-forest/15 py-4 text-sm text-forest"><div className="flex justify-between"><span>{copy.subtotal}</span><strong>{formatEuro(validation?.subtotalExVat ?? 0)}</strong></div><div className="flex justify-between"><span>{copy.vat}</span><strong>{formatEuro(validation?.vatTotal ?? 0)}</strong></div><div className="flex justify-between text-lg"><span className="font-bold">{copy.total}</span><strong>{formatEuro(validation?.total ?? 0)}</strong></div></div>
         <div className="mt-4 grid grid-cols-2 gap-1 rounded-full bg-white p-1">{(["Collection", "Local delivery"] as const).map((option) => <button className={`rounded-full px-3 py-2 text-sm font-bold ${fulfillment === option ? "bg-forest text-cream" : "text-forest"}`} key={option} type="button" onClick={() => setFulfillment(option)}>{option === "Collection" ? copy.collection : copy.delivery}</button>)}</div>
-        <form className="mt-5 space-y-3" onSubmit={submitOrder}>
+        {!sessionChecked ? <p className="mt-5 rounded-lg bg-white p-4 text-sm font-bold text-forest/70">{copy.validating}</p> : null}
+        {sessionChecked && !isAuthenticated ? (
+          <div className="mt-5 rounded-lg border border-brass/30 bg-white p-4">
+            <h3 className="font-serif text-xl font-bold text-forest">{copy.loginRequiredTitle}</h3>
+            <p className="mt-2 text-sm leading-6 text-forest/70">{copy.loginRequiredBody}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link className="rounded-full bg-forest px-4 py-2 text-sm font-bold text-cream" href={`/${locale}/login`}>{copy.login}</Link>
+              <Link className="rounded-full border border-forest/15 bg-linen px-4 py-2 text-sm font-bold text-forest" href={`/${locale}/register`}>{copy.register}</Link>
+            </div>
+          </div>
+        ) : null}
+        {isAuthenticated ? <form className="mt-5 space-y-3" onSubmit={submitOrder}>
           <input className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm" onChange={(event) => setCustomerName(event.target.value)} placeholder={copy.name} required value={customerName} />
           <input className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm" onChange={(event) => setCustomerEmail(event.target.value)} placeholder={copy.email} required type="email" value={customerEmail} />
           <input autoComplete="tel" className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm" inputMode="tel" onBlur={() => setCustomerPhone(formatCustomerPhone(customerPhone))} onChange={(event) => setCustomerPhone(event.target.value)} placeholder={copy.phone} type="tel" value={customerPhone} />
@@ -160,7 +178,7 @@ export function CartView({ locale }: { locale: Locale }) {
           </select>
           <textarea className="min-h-20 w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm" onChange={(event) => setNotes(event.target.value)} placeholder={fulfillment === "Collection" ? pickupNotesPlaceholder[locale] : copy.notes} value={notes} />
           <button className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-forest px-5 py-3 text-sm font-bold text-cream disabled:opacity-40" disabled={!canCheckout || status === "sending"} type="submit"><Send size={17} />{status === "sending" ? copy.sending : copy.send}</button>
-        </form>
+        </form> : null}
         {message ? <p className={`mt-4 flex items-start gap-2 text-sm ${status === "error" ? "text-red-700" : "text-forest"}`}>{status === "sent" ? <CheckCircle2 className="shrink-0" size={18} /> : null}{message}</p> : null}
       </aside>
     </div>
