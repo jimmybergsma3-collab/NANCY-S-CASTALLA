@@ -148,7 +148,7 @@ function isSimpleSalesUnit(value?: Product["salesUnitType"]) {
 }
 
 function hasProductPrice(product: Product) {
-  return Number(product.salePriceInclVat) > 0 && Number(product.price) > 0;
+  return Number(product.salePriceInclVat) > 0;
 }
 
 function isPlaceholderImage(value: string) {
