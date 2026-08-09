@@ -61,6 +61,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 - Eerste batch concurrentieprijscontrole voor 15 actieve Europ Foods-producten zonder prijs: 4 veilige prijsupdates vastgelegd met online bron, inkoopprijs, marge en verpakkingcontrole.
 - Tweede batch concurrentieprijscontrole voor 20 actieve Europ Foods-producten zonder prijs: 3 veilige prijsupdates vastgelegd; producten met onzekere verpakking, te lage marge of ontbrekende actuele prijs zijn ongemoeid gelaten.
 - Derde batch concurrentieprijscontrole voor 20 actieve Europ Foods-producten zonder prijs: 1 veilige prijsupdate vastgelegd; lage-marge en onzekere foodserviceproducten blijven voor eindcontrole open.
+- Vierde batch concurrentieprijscontrole voor 20 actieve Europ Foods-producten zonder prijs: 5 veilige prijsupdates vastgelegd met bronprijzen en margecontrole.
 - Actieve bulk-/horecaproducten met duidelijke verkoopverpakking boven 3,5 kg offline gezet via `202608090002_disable_bulk_products_over_3_5kg.sql`.
 - Door admin geselecteerde actieve producten zonder verkoopprijs offline gezet via `202608090003_disable_selected_no_price_products.sql`.
 - Door admin geselecteerde actieve producten zonder productfoto offline gezet via `202608090004_disable_selected_no_photo_products.sql`.
