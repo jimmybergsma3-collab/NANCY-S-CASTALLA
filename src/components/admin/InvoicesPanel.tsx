@@ -5,7 +5,8 @@ import { Archive, Download, Mail, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { businessConfig } from "@/config/business";
 import { invoiceLabel } from "@/lib/invoice-format";
 import { formatEuro } from "@/lib/pricing";
-import type { BackofficeInvoice } from "@/types/backoffice";
+import type { BackofficeCustomer, BackofficeInvoice } from "@/types/backoffice";
+import type { Product, ProductPackageOption } from "@/types/product";
 
 const filters = ["all", "production", "test", "archived", "cancelled"] as const;
 const paymentMethods = ["pending", "bizum", "bank-transfer", "cash", "card"] as const;
@@ -20,6 +21,7 @@ type ManualInvoiceLine = {
 };
 
 type ManualCustomer = {
+  customerId: string;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
@@ -28,6 +30,11 @@ type ManualCustomer = {
   customerCompanyName: string;
   customerFiscalAddress: string;
   paymentMethod: string;
+};
+
+type OrderSearchProduct = Product & {
+  orderSearchAllowed?: boolean;
+  orderSearchBlockers?: string[];
 };
 
 const emptyLine = (): ManualInvoiceLine => ({
@@ -39,6 +46,10 @@ const emptyLine = (): ManualInvoiceLine => ({
   vatRate: "10",
 });
 
+function productPackages(product: Product): ProductPackageOption[] {
+  return product.packageOptions?.length ? product.packageOptions : [{ label: product.unit, quantity: 1, salePriceInclVat: product.salePriceInclVat }];
+}
+
 export function InvoicesPanel() {
   const [invoices, setInvoices] = useState<BackofficeInvoice[]>([]);
   const [message, setMessage] = useState("Loading invoices...");
@@ -46,6 +57,7 @@ export function InvoicesPanel() {
   const [filter, setFilter] = useState<(typeof filters)[number]>("all");
   const [manualOpen, setManualOpen] = useState(false);
   const [manualCustomer, setManualCustomer] = useState({
+    customerId: "",
     customerName: "",
     customerEmail: "",
     customerPhone: "",
@@ -56,6 +68,12 @@ export function InvoicesPanel() {
     paymentMethod: "pending",
   });
   const [manualLines, setManualLines] = useState<ManualInvoiceLine[]>([emptyLine()]);
+  const [customers, setCustomers] = useState<BackofficeCustomer[]>([]);
+  const [customerQuery, setCustomerQuery] = useState("");
+  const [customerLoading, setCustomerLoading] = useState(false);
+  const [productResults, setProductResults] = useState<OrderSearchProduct[]>([]);
+  const [productLoading, setProductLoading] = useState(false);
+  const [productSearchLine, setProductSearchLine] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/invoices")
@@ -63,6 +81,16 @@ export function InvoicesPanel() {
       .then((rows) => { setInvoices(rows); setMessage(""); })
       .catch((error) => setMessage(error instanceof Error ? error.message : "Invoices could not be loaded."));
   }, []);
+
+  useEffect(() => {
+    if (!manualOpen || customers.length) return;
+    queueMicrotask(() => setCustomerLoading(true));
+    fetch("/api/admin/customers")
+      .then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.message); return data.customers ?? []; })
+      .then((rows) => setCustomers(rows))
+      .catch((error) => setMessage(error instanceof Error ? error.message : "Customers could not be loaded."))
+      .finally(() => setCustomerLoading(false));
+  }, [customers.length, manualOpen]);
 
   const filteredInvoices = useMemo(() => invoices.filter((invoice) => {
     if (filter === "production") return !invoice.is_test && !invoice.archived_at;
@@ -126,8 +154,11 @@ export function InvoicesPanel() {
     setSending("");
     if (!response.ok) { setMessage(data.message ?? "Manual invoice could not be created."); return; }
     setInvoices((current) => [data.invoice, ...current]);
-    setManualCustomer({ customerName: "", customerEmail: "", customerPhone: "", billingAddress: "", customerFiscalId: "", customerCompanyName: "", customerFiscalAddress: "", paymentMethod: "pending" });
+    setManualCustomer({ customerId: "", customerName: "", customerEmail: "", customerPhone: "", billingAddress: "", customerFiscalId: "", customerCompanyName: "", customerFiscalAddress: "", paymentMethod: "pending" });
     setManualLines([emptyLine()]);
+    setCustomerQuery("");
+    setProductResults([]);
+    setProductSearchLine(null);
     setManualOpen(false);
     setMessage("Manual invoice created.");
   }
@@ -140,11 +171,40 @@ export function InvoicesPanel() {
       <p className="mb-4 rounded-md border border-brass/30 bg-cream p-3 text-sm font-bold text-coffee">Production series: {businessConfig.invoiceSeries}. Test series: {businessConfig.invoiceTestSeries}. Existing invoice numbers are never changed automatically.</p>
       <ManualInvoiceForm
         customer={manualCustomer}
+        customerLoading={customerLoading}
+        customerQuery={customerQuery}
+        customerResults={customers}
         lines={manualLines}
         onCreate={createManualInvoice}
         onCustomerChange={setManualCustomer}
+        onCustomerQueryChange={setCustomerQuery}
         onLineChange={setManualLines}
         open={manualOpen}
+        productLoading={productLoading}
+        productResults={productResults}
+        productSearchLine={productSearchLine}
+        searchProducts={async (lineIndex, query) => {
+          const trimmed = query.trim();
+          if (trimmed.length < 2) {
+            setMessage("Typ minimaal 2 tekens om producten te zoeken.");
+            return;
+          }
+          setProductLoading(true);
+          setProductSearchLine(lineIndex);
+          setMessage("");
+          try {
+            const response = await fetch(`/api/admin/products?mode=order-search&q=${encodeURIComponent(trimmed)}`);
+            const data = await response.json() as { products?: OrderSearchProduct[]; message?: string };
+            if (!response.ok) throw new Error(data.message || "Product search failed.");
+            setProductResults(data.products ?? []);
+            if (!data.products?.length) setMessage(`Geen producten gevonden voor "${trimmed}".`);
+          } catch (error) {
+            setProductResults([]);
+            setMessage(error instanceof Error ? error.message : "Product search failed.");
+          } finally {
+            setProductLoading(false);
+          }
+        }}
         saving={sending === "manual"}
         setOpen={setManualOpen}
       />
@@ -165,28 +225,70 @@ export function InvoicesPanel() {
 
 function ManualInvoiceForm({
   customer,
+  customerLoading,
+  customerQuery,
+  customerResults,
   lines,
   onCreate,
   onCustomerChange,
+  onCustomerQueryChange,
   onLineChange,
   open,
+  productLoading,
+  productResults,
+  productSearchLine,
+  searchProducts,
   saving,
   setOpen,
 }: {
   customer: ManualCustomer;
+  customerLoading: boolean;
+  customerQuery: string;
+  customerResults: BackofficeCustomer[];
   lines: ManualInvoiceLine[];
   onCreate: () => Promise<void>;
   onCustomerChange: (value: ManualCustomer) => void;
+  onCustomerQueryChange: (value: string) => void;
   onLineChange: (value: ManualInvoiceLine[]) => void;
   open: boolean;
+  productLoading: boolean;
+  productResults: OrderSearchProduct[];
+  productSearchLine: number | null;
+  searchProducts: (lineIndex: number, query: string) => Promise<void>;
   saving: boolean;
   setOpen: (value: boolean) => void;
 }) {
   const estimatedTotal = lines.reduce((sum, line) => sum + (Number(line.quantity) || 0) * (Number(line.unitPriceInclVat) || 0), 0);
   const canSave = customer.customerName.trim() && lines.some((line) => line.productName.trim() && Number(line.quantity) > 0 && Number(line.unitPriceInclVat) >= 0);
+  const customerMatches = customerQuery.trim().length < 2 ? [] : customerResults.filter((item) => {
+    const query = customerQuery.trim().toLowerCase();
+    return [item.name, item.email, item.phone, item.address].join(" ").toLowerCase().includes(query);
+  }).slice(0, 8);
 
   function updateLine(index: number, patch: Partial<ManualInvoiceLine>) {
     onLineChange(lines.map((line, lineIndex) => lineIndex === index ? { ...line, ...patch } : line));
+  }
+
+  function selectCustomer(selected: BackofficeCustomer) {
+    onCustomerChange({
+      ...customer,
+      customerId: selected.id,
+      customerName: selected.name || "",
+      customerEmail: selected.email || "",
+      customerPhone: selected.phone || "",
+      billingAddress: selected.address || "",
+    });
+    onCustomerQueryChange(`${selected.name} ${selected.email}`.trim());
+  }
+
+  function selectProduct(lineIndex: number, product: Product, option: ProductPackageOption) {
+    updateLine(lineIndex, {
+      productId: product.id,
+      productName: product.name,
+      packageLabel: option.label,
+      unitPriceInclVat: String(Number(option.salePriceInclVat || product.salePriceInclVat || 0).toFixed(2)),
+      vatRate: String(Number(product.vatRate) || 0),
+    });
   }
 
   return <section className="mb-4 rounded-md border border-forest/10 bg-white p-4">
@@ -198,6 +300,20 @@ function ManualInvoiceForm({
       <button className="inline-flex min-h-10 items-center gap-2 rounded-md bg-forest px-4 py-2 text-sm font-bold text-cream" onClick={() => setOpen(!open)} type="button"><Plus size={16}/>{open ? "Sluiten" : "Nieuwe factuur"}</button>
     </div>
     {open ? <div className="mt-4 grid gap-4">
+      <div className="rounded-md border border-forest/10 bg-linen p-3">
+        <label className="grid gap-1 text-xs font-bold text-forest/70">Bestaande klant zoeken
+          <input className="rounded-md border border-forest/15 px-3 py-2 text-sm text-forest" onChange={(event) => onCustomerQueryChange(event.target.value)} placeholder="Zoek naam, e-mail, telefoon of adres" value={customerQuery} />
+        </label>
+        {customerLoading ? <p className="mt-2 text-xs font-bold text-forest/60">Klanten laden...</p> : null}
+        {customerMatches.length ? <div className="mt-2 grid gap-2">
+          {customerMatches.map((match) => <button className="rounded-md border border-forest/10 bg-white p-3 text-left text-sm hover:border-forest/40" key={match.id} onClick={() => selectCustomer(match)} type="button">
+            <strong className="text-forest">{match.name}</strong>
+            <span className="ml-2 text-xs text-forest/60">{match.email}</span>
+            <span className="mt-1 block text-xs text-forest/55">{[match.phone, match.address].filter(Boolean).join(" · ") || "Geen extra gegevens"}</span>
+          </button>)}
+        </div> : customerQuery.trim().length >= 2 ? <p className="mt-2 text-xs text-forest/60">Geen klant gevonden. Je kunt de gegevens handmatig invullen.</p> : null}
+        {customer.customerId ? <p className="mt-2 text-xs font-bold text-coffee">Gekoppeld aan klantrecord: {customer.customerName}</p> : null}
+      </div>
       <div className="grid gap-3 md:grid-cols-2">
         <Field label="Naam" value={customer.customerName} onChange={(value) => onCustomerChange({ ...customer, customerName: value })} required />
         <Field label="E-mail optioneel" type="email" value={customer.customerEmail} onChange={(value) => onCustomerChange({ ...customer, customerEmail: value })} />
@@ -221,6 +337,24 @@ function ManualInvoiceForm({
           <Field label="Prijs incl." min="0" step="0.01" type="number" value={line.unitPriceInclVat} onChange={(value) => updateLine(index, { unitPriceInclVat: value })} required />
           <Field label="IVA %" min="0" step="1" type="number" value={line.vatRate} onChange={(value) => updateLine(index, { vatRate: value })} required />
           <button aria-label="Remove line" className="mt-5 inline-flex h-10 w-10 items-center justify-center rounded-md border border-forest/15 text-forest disabled:opacity-40" disabled={lines.length === 1} onClick={() => onLineChange(lines.filter((_, lineIndex) => lineIndex !== index))} type="button"><Trash2 size={16}/></button>
+          <div className="md:col-span-7">
+            <button className="rounded-md border border-forest/15 bg-white px-3 py-2 text-xs font-bold text-forest disabled:opacity-50" disabled={productLoading && productSearchLine === index} onClick={() => void searchProducts(index, line.productName || line.productId)} type="button">{productLoading && productSearchLine === index ? "Zoeken..." : "Zoek product"}</button>
+            {productSearchLine === index && productResults.length ? <div className="mt-2 grid gap-2">
+              {productResults.map((product) => {
+                const blockers = product.orderSearchBlockers ?? [];
+                const allowed = product.orderSearchAllowed !== false && blockers.length === 0;
+                return <article className="rounded-md border border-forest/10 bg-white p-3" key={product.id}>
+                  <p className="text-xs font-bold text-coffee">{product.id}{product.supplierCode ? ` · Supplier ${product.supplierCode}` : ""}</p>
+                  <h4 className="font-bold text-forest">{product.name}</h4>
+                  <p className="text-xs text-forest/60">{product.unit} · IVA {product.vatRate}% · {formatEuro(Number(product.salePriceInclVat))}</p>
+                  {!allowed ? <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-bold text-amber-900">Niet toe te voegen: {blockers.join(" ")}</p> : null}
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {productPackages(product).map((option) => <button className="rounded-md border border-forest/15 bg-linen px-3 py-2 text-xs font-bold text-forest disabled:cursor-not-allowed disabled:opacity-40" disabled={!allowed} key={`${product.id}-${option.label}-${option.quantity}`} onClick={() => selectProduct(index, product, option)} type="button">Kies: {option.label} · {formatEuro(option.salePriceInclVat)}</button>)}
+                  </div>
+                </article>;
+              })}
+            </div> : null}
+          </div>
         </div>)}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">

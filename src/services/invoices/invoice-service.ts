@@ -10,6 +10,7 @@ export class InvoiceError extends Error {
 const invoiceSelect = "*,invoice_items(*)";
 
 export type ManualInvoiceInput = {
+  customerId?: string;
   customerName: string;
   customerEmail?: string;
   customerPhone?: string;
@@ -114,6 +115,7 @@ export async function createManualInvoice(input: ManualInvoiceInput) {
       total_vat: totalVat,
       total_incl_vat: totalInclVat,
       issued_at: new Date().toISOString(),
+      customer_id: input.customerId?.trim() || null,
       customer_name: customerName,
       customer_email: input.customerEmail?.trim().toLowerCase() || "",
       customer_phone: input.customerPhone?.trim() || "",

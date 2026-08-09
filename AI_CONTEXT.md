@@ -27,7 +27,7 @@ De software bestaat uit:
 - Product-, prijs-, order- en voorraadbeheer.
 - Voorbereidingen voor inkoop, facturatie, betalingen en externe integraties.
 
-De huidige fase is een productie-MVP/pre-orderfase. Catalogus, cart, server-gevalideerde orders, klantaccount, adminorderbeheer, voorraadtransities, normale PDF-facturen en losse passantenfacturen zijn gebouwd. Niet alle voorbereide backofficemodules zijn volledig transactioneel en productieconfiguratie moet voor onbeheerde livegang end-to-end worden bewezen.
+De huidige fase is een productie-MVP/pre-orderfase. Catalogus, cart, server-gevalideerde orders, klantaccount, adminorderbeheer, voorraadtransities, normale PDF-facturen en losse admin/passantenfacturen zijn gebouwd. Losse adminfacturen kunnen handmatig worden ingevoerd, aan bestaande klanten worden gekoppeld en productregels kunnen via admin-productzoeker/package-keuze worden gevuld. Niet alle voorbereide backofficemodules zijn volledig transactioneel en productieconfiguratie moet voor onbeheerde livegang end-to-end worden bewezen.
 
 ## 2. Doelgroep
 
