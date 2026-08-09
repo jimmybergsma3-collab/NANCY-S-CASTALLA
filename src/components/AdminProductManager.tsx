@@ -110,14 +110,14 @@ function createBlankQuickProduct(products: Product[]): QuickProductForm {
 
 function inferSalesUnitType(unit: string): Product["salesUnitType"] {
   const normalized = unit.trim().toLowerCase();
-  if (/^\d+\s*[xÃ—]\s*\d+/.test(normalized) || /\b\d+\s*(stuks|pcs|units)\b/.test(normalized)) return "case";
+  if (/^\d+\s*[x×]\s*\d+/.test(normalized) || /\b\d+\s*(stuks|pcs|units)\b/.test(normalized)) return "case";
   if (/\bkg\b/.test(normalized)) return "per_kg";
   return "per_unit";
 }
 
 function inferSalesUnitQuantity(unit: string, salesUnitType: Product["salesUnitType"]) {
   if (salesUnitType !== "case" && salesUnitType !== "custom_pack") return 0;
-  const match = unit.trim().toLowerCase().match(/^(\d+)\s*[xÃ—]|\b(\d+)\s*(stuks|pcs|units)\b/);
+  const match = unit.trim().toLowerCase().match(/^(\d+)\s*[x×]|\b(\d+)\s*(stuks|pcs|units)\b/);
   return Number(match?.[1] || match?.[2] || 1);
 }
 
@@ -784,7 +784,7 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-forest/65">Kies een leverancier en zoek een bestaand geÃ¯mporteerd product.</p>
+                    <p className="text-sm text-forest/65">Kies een leverancier en zoek een bestaand geïmporteerd product.</p>
                   )}
                 </div>
               ) : null}
@@ -837,8 +837,8 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
                   <Field help="Optioneel. Kort en klantvriendelijk." label="Korte beschrijving">
                     <textarea className="min-h-24 w-full rounded-lg border border-forest/15 bg-white px-4 py-3 text-base" onChange={(event) => updateQuick("description", event.target.value)} placeholder="Korte tekst voor de productkaart." value={quickProduct.description} />
                   </Field>
-                  <Field help="Optioneel. Neem dit over van het etiket of de leverancier." label="IngrediÃ«nten / allergenen">
-                    <textarea className="min-h-28 w-full rounded-lg border border-forest/15 bg-white px-4 py-3 text-base" onChange={(event) => updateQuick("ingredients", event.target.value)} placeholder="IngrediÃ«nten en allergenen..." value={quickProduct.ingredients} />
+                  <Field help="Optioneel. Neem dit over van het etiket of de leverancier." label="Ingrediënten / allergenen">
+                    <textarea className="min-h-28 w-full rounded-lg border border-forest/15 bg-white px-4 py-3 text-base" onChange={(event) => updateQuick("ingredients", event.target.value)} placeholder="Ingrediënten en allergenen..." value={quickProduct.ingredients} />
                   </Field>
                   <Field help="Optioneel. Bereidingsinstructies voor oven, pan, frituur of airfryer." label="Bereidingswijze">
                     <textarea className="min-h-28 w-full rounded-lg border border-forest/15 bg-white px-4 py-3 text-base" onChange={(event) => updateQuick("directions", event.target.value)} placeholder="Bereidingswijze..." value={quickProduct.directions} />

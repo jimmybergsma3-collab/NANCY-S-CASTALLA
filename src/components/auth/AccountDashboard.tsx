@@ -46,6 +46,14 @@ const dateLocales: Record<Locale, string> = {
   sv: "sv-SE",
 };
 
+const fulfilmentCopy: Record<Locale, Record<string, string>> = {
+  en: { Collection: "Collection", "Local delivery": "Local delivery" },
+  nl: { Collection: "Afhalen", "Local delivery": "Lokale bezorging" },
+  de: { Collection: "Abholung", "Local delivery": "Lokale Lieferung" },
+  es: { Collection: "Recogida", "Local delivery": "Entrega local" },
+  sv: { Collection: "Hämtning", "Local delivery": "Lokal leverans" },
+};
+
 const orderCopy: Record<Locale, { details: string; products: string; package: string; quantity: string; vat: string; subtotal: string; total: string; fulfilment: string; paymentMethod: string; notes: string; invoice: string; download: string; downloading: string; downloadFailed: string }> = {
   en: { details: "Order details", products: "Products", package: "Package", quantity: "Quantity", vat: "VAT", subtotal: "Subtotal excl. VAT", total: "Total incl. VAT", fulfilment: "Collection / delivery", paymentMethod: "Payment method", notes: "Notes", invoice: "Invoice", download: "Download PDF", downloading: "Downloading...", downloadFailed: "The invoice could not be downloaded." },
   nl: { details: "Besteldetails", products: "Producten", package: "Verpakking", quantity: "Aantal", vat: "Btw", subtotal: "Subtotaal excl. btw", total: "Totaal incl. btw", fulfilment: "Afhalen / bezorgen", paymentMethod: "Betaalmethode", notes: "Opmerkingen", invoice: "Factuur", download: "PDF downloaden", downloading: "Downloaden...", downloadFailed: "De factuur kon niet worden gedownload." },
@@ -56,6 +64,10 @@ const orderCopy: Record<Locale, { details: string; products: string; package: st
 
 function emptyProfile(locale: Locale): Profile {
   return { name: "", email: "", phone: "", address: "", language: locale };
+}
+
+function fulfilmentLabel(value: string | undefined, locale: Locale) {
+  return value ? fulfilmentCopy[locale][value] ?? value : "-";
 }
 
 function profileFromSession(session: Session, locale: Locale, resultProfile?: Partial<Profile>): Profile {
@@ -237,7 +249,7 @@ export function AccountDashboard({ locale }: { locale: Locale }) {
                 </button>
                 {openOrderId === order.id ? <div className="border-t border-forest/10 bg-linen/50 p-4">
                   <h3 className="font-serif text-xl font-bold text-forest">{ordersCopy.details}</h3>
-                  <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2"><div><dt className="font-bold text-forest/60">{ordersCopy.fulfilment}</dt><dd>{order.delivery_method || order.fulfillment || "-"}</dd></div><div><dt className="font-bold text-forest/60">{ordersCopy.paymentMethod}</dt><dd>{paymentMethodLabel(order.payment_method, locale)}</dd></div><div><dt className="font-bold text-forest/60">{ordersCopy.notes}</dt><dd>{order.notes || "-"}</dd></div></dl>
+                  <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2"><div><dt className="font-bold text-forest/60">{ordersCopy.fulfilment}</dt><dd>{fulfilmentLabel(order.delivery_method || order.fulfillment, locale)}</dd></div><div><dt className="font-bold text-forest/60">{ordersCopy.paymentMethod}</dt><dd>{paymentMethodLabel(order.payment_method, locale)}</dd></div><div><dt className="font-bold text-forest/60">{ordersCopy.notes}</dt><dd>{order.notes || "-"}</dd></div></dl>
                   <h4 className="mt-5 font-bold text-forest">{ordersCopy.products}</h4>
                   <div className="mt-2 grid gap-2">{(order.order_items ?? []).map((item) => <div className="rounded-md border border-forest/10 bg-white p-3 text-sm" key={item.id}><div className="flex justify-between gap-3"><strong>{translateProductName(item.product_name, locale)}</strong><strong>€{Number(item.line_total_incl_vat).toFixed(2)}</strong></div><div className="mt-2 flex flex-wrap gap-2 text-xs text-forest"><span className="rounded-md bg-linen px-2 py-1 font-bold">{ordersCopy.package}: {item.package_label || item.unit}</span><span className="rounded-md bg-cream px-2 py-1">{item.product_id || "-"}</span><span className="rounded-md bg-cream px-2 py-1">{ordersCopy.quantity}: {item.quantity}</span><span className="rounded-md bg-cream px-2 py-1">{ordersCopy.vat}: {Number(item.vat_rate)}%</span></div></div>)}</div>
                   <div className="ml-auto mt-4 max-w-sm space-y-2 border-t border-forest/10 pt-3 text-sm"><div className="flex justify-between"><span>{ordersCopy.subtotal}</span><strong>€{Number(order.subtotal_ex_vat).toFixed(2)}</strong></div><div className="flex justify-between"><span>{ordersCopy.vat}</span><strong>€{Number(order.vat_total).toFixed(2)}</strong></div><div className="flex justify-between text-base"><span className="font-bold">{ordersCopy.total}</span><strong>€{Number(order.total).toFixed(2)}</strong></div></div>

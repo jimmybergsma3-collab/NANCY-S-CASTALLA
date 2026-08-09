@@ -22,6 +22,8 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Toegevoegd
 
+- PWA-installatieprompt voor klanten toegevoegd met taalteksten voor Engels, Nederlands, Duits, Spaans en Zweeds; Android/Chrome gebruikt de browser-installatieprompt en iOS toont een beginscherm-instructie.
+- Service worker en verbeterd webmanifest toegevoegd zodat Nancy's Castalla beter als telefoon-app installeerbaar is.
 - Migratie `202607250001_keep_tindale_products_offline.sql` om Tindale-producten offline te houden: bestaande Tindale-producten worden teruggezet naar `draft`/`is_visible=false` en Tindale-batchpublicatie wordt database-side geblokkeerd zolang ophalen in La Nucia nodig is.
 - Server-side adminproductcontrole blokkeert individuele publicatie van Tindale-producten; ze kunnen nog als draft worden bewaard, maar niet actief en zichtbaar online worden gezet.
 - Migratie `202607250002_activate_selected_europfoods_coming_soon.sql` om de door Nancy geselecteerde Europ Foods-producten zichtbaar te maken als `coming-soon`, zonder prijs of foto, met `Description coming soon.` en zo goed mogelijke categorie-indeling op basis van de Europ Foods PAG-sectie.
@@ -108,6 +110,8 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Verbeterd
 
+- Productkaarten tonen in elke klanttaal een taal-eigen producttekst; wanneer de database geen echte vertaling per taal bevat, gebruikt de site een lokale producttekst met productnaam, verpakking en bestelcontext in plaats van `Translation coming soon`.
+- Klantgerichte orderfouten en orderhistorie lekken geen ruwe Engelse backend- of fulfilmenttekst meer wanneer een klant Nederlands, Duits, Spaans of Zweeds gebruikt.
 - Admin productbeheer telt en labelt `Online` nu met exact dezelfde controle als de publieke webshop, inclusief sales-unitveiligheid. Producten die wel zichtbaar zijn aangevinkt maar door de webshop worden geblokkeerd krijgen een aparte `Blocked` status en filter.
 - Documentatie verduidelijkt dat package options server-side als effectieve units worden berekend, bijvoorbeeld `1 verpakking x 12 flessen x EUR 3,00 = EUR 36,00`, en dat `order_items.quantity` het aantal gekozen klantverpakkingen bewaart.
 - Documentatie verduidelijkt dat `ready_for_publish` publieke publicatie bewaakt, maar een reeds actief/zichtbaar/verkoopveilig product niet als enige reden mag blokkeren in admin-ordercorrecties.
@@ -192,6 +196,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Opgelost
 
+- Taal-audit opgeschoond: resterende mojibake-accenten in productbeheer hersteld en publieke productdetails tonen geen losse vertaling-volgt-meldingen meer.
 - Laatste omschrijvingsbatch afgerond: de resterende 19 actieve webshopproducten kregen een klantgerichte productomschrijving zonder `additional_info` te vullen; actieve webshopproducten zonder omschrijving: 0.
 - Derde omschrijvingsbatch afgerond: nog eens 25 actieve webshopproducten kregen een korte klantgerichte productomschrijving zonder `additional_info` te vullen; resterende actieve webshopproducten zonder omschrijving: 19.
 - Tweede omschrijvingsbatch afgerond: nog eens 25 actieve webshopproducten kregen een korte klantgerichte productomschrijving zonder `additional_info` te vullen; resterende actieve webshopproducten zonder omschrijving: 44.

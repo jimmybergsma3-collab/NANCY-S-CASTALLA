@@ -1,14 +1,8 @@
 import type { Locale } from "@/i18n/config";
 import type { Product, ProductCategory } from "@/types/product";
 import { getProductCategories } from "@/lib/product-categories";
-
-const translationSoon: Record<Locale, string> = {
-  en: "Translation coming soon.",
-  nl: "Vertaling volgt binnenkort.",
-  de: "Übersetzung folgt in Kürze.",
-  es: "Traducción próximamente.",
-  sv: "Översättning kommer snart.",
-};
+import { getCustomerDisplayUnit } from "@/lib/product-packaging";
+import { translateProductName } from "@/lib/product-translations";
 
 const categoryFallbacks: Record<ProductCategory, Record<Locale, string>> = {
   "Dutch products": {
@@ -209,6 +203,29 @@ function isImportedPlaceholder(text: string) {
   return /^(description coming soon\.|imported|dutch bakery product).+$/i.test(text);
 }
 
+function looksEnglish(text: string) {
+  return /\b(available|ready|drink|sauce|with|for|from|pack|bottle|can|cider|beer|frozen|suitable|contains)\b/i.test(text);
+}
+
+function looksDutch(text: string) {
+  return /\b(een|het|de|met|voor|verpakt|geleverd|lekker|geschikt|saus|drank|fles|doos|blik|gram|liter)\b/i.test(text);
+}
+
+function localizedGenericDescription(product: Product, locale: Locale) {
+  const name = translateProductName(product.name, locale);
+  const unit = getCustomerDisplayUnit(product);
+
+  const copy: Record<Locale, string> = {
+    en: `${name} is available from Nancy's Castalla by pre-order. Sold as ${unit}. We confirm availability and payment details after your request.`,
+    nl: `${name} is beschikbaar bij Nancy's Castalla als voorbestelling. Verkocht als ${unit}. We bevestigen beschikbaarheid en betaalgegevens na je aanvraag.`,
+    de: `${name} ist bei Nancy's Castalla auf Vorbestellung erhältlich. Verkauft als ${unit}. Wir bestätigen Verfügbarkeit und Zahlungsdetails nach Ihrer Anfrage.`,
+    es: `${name} está disponible en Nancy's Castalla por prepedido. Se vende como ${unit}. Confirmamos disponibilidad y datos de pago después de tu solicitud.`,
+    sv: `${name} kan förbeställas hos Nancy's Castalla. Säljs som ${unit}. Vi bekräftar tillgänglighet och betalningsuppgifter efter din förfrågan.`,
+  };
+
+  return copy[locale];
+}
+
 export function getPublicProductDescription(product: Product, locale: Locale = "en") {
   const key = knownDescriptionKey(product.name);
   const known = key ? knownDescriptions[key]?.[locale] : undefined;
@@ -216,16 +233,26 @@ export function getPublicProductDescription(product: Product, locale: Locale = "
 
   const text = product.description?.trim() ?? "";
   if (text && !isImportedPlaceholder(text)) {
-    return locale === "en" ? text : translationSoon[locale];
+    if (locale === "en" && looksEnglish(text)) return text;
+    if (locale === "nl" && looksDutch(text)) return text;
+    return localizedGenericDescription(product, locale);
   }
 
   const categories = getProductCategories(product);
   const fallbackCategory = categories[0] ?? product.category;
-  return categoryFallbacks[fallbackCategory]?.[locale] ?? translationSoon[locale];
+  return categoryFallbacks[fallbackCategory]?.[locale] ?? localizedGenericDescription(product, locale);
 }
+
+const originalLabelCopy: Record<Locale, string> = {
+  en: "Original label text:",
+  nl: "Originele etiketinformatie:",
+  de: "Originale Etikettangaben:",
+  es: "Información original de la etiqueta:",
+  sv: "Original märkningstext:",
+};
 
 export function getPublicProductDetailText(text: string | undefined, locale: Locale) {
   const value = text?.trim() ?? "";
   if (!value) return "";
-  return locale === "en" ? value : translationSoon[locale];
+  return locale === "en" ? value : `${originalLabelCopy[locale]} ${value}`;
 }

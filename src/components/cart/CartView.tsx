@@ -87,13 +87,12 @@ export function CartView({ locale }: { locale: Locale }) {
     return copy.validationError;
   }
 
-  function orderErrorMessage(code?: string, backendMessage?: string) {
+  function orderErrorMessage(code?: string) {
     if (code === "auth_required") return copy.loginRequiredBody;
     if (code === "missing_fields") return copy.missingFields;
     if (code === "service_unavailable") return copy.serviceUnavailable;
     if (code === "invalid_order") return copy.invalidOrder;
     if (code && ["coming_soon", "insufficient_stock", "package_unavailable", "product_unavailable", "price_basis_review"].includes(code)) return availabilityMessage(code as CartValidationCode);
-    if (backendMessage) return backendMessage;
     return copy.orderError;
   }
 
@@ -116,7 +115,7 @@ export function CartView({ locale }: { locale: Locale }) {
         body: JSON.stringify({ customerName, customerEmail, customerPhone, fulfillment, paymentMethod, locale, notes: [fulfillment === "Local delivery" && customerAddress ? `${ui.order.address}: ${customerAddress}` : "", notes].filter(Boolean).join("\n\n"), idempotencyKey, lines: items.map((item) => ({ ...item, unit: item.packageLabel, salePriceInclVat: 0 })) }),
       });
       const result = await response.json() as { ok: boolean; errorCode?: CartValidationCode | "auth_required" | "missing_fields" | "service_unavailable" | "invalid_order" | "order_storage_unconfirmed" | "order_failed"; message?: string; orderId?: string; emailed?: boolean; diagnosticId?: string };
-      if (!response.ok || !result.ok) throw new Error(orderErrorMessage(result.errorCode, result.message));
+      if (!response.ok || !result.ok) throw new Error(orderErrorMessage(result.errorCode));
       setStatus("sent");
       setMessage(`${copy.orderSent}${result.orderId ? ` ${result.orderId}.` : ""}${result.emailed ? "" : ` ${copy.emailUnavailable}`}`);
       clear();

@@ -4,6 +4,7 @@ import { defaultLocale, isLocale, locales, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/config";
 import type { Metadata } from "next";
 import { LocalePreferenceSync } from "@/components/LocalePreferenceSync";
+import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -40,6 +41,7 @@ export default async function LocaleLayout({
       <Header locale={locale} />
       <main>{children}</main>
       <Footer locale={locale} />
+      <PwaInstallPrompt locale={locale} />
     </>
   );
 }
