@@ -59,7 +59,7 @@ De applicatie is online als productie-implementatie op Vercel, maar functioneel 
 | E-mail | Werkend mits extern correct ingesteld | Resend voor orders, Supabase Custom SMTP voor accounts |
 | Online betaling | Niet actief | Bizum en bankoverschrijving worden handmatig afgehandeld; contant, kaart en Stripe zijn niet zichtbaar/selecteerbaar voor klanten |
 | Inkoop/rapportages | Gedeeltelijk | Inkoop is overzicht/voorbereiding; rapportages tonen basistellingen en betaalde omzet |
-| Facturatie | Werkend na migratie | Orderfactuur, snapshots, PDF, klantdownload en Resend-verzending; nog geen creditnota of boekhoudexport |
+| Facturatie | Werkend na migratie | Orderfactuur, losse passantenfactuur, snapshots, PDF, klantdownload en Resend-verzending; nog geen creditnota of boekhoudexport |
 | Sales-unit prijsveiligheid | Applicatiecode aanwezig; productiecontrole nodig | Leveranciersdoosprijs, bron-eenheidsprijs en publieke verkoopeenheid zijn gescheiden zodat importproducten niet per ongeluk met doosverpakking tegen eenheidsprijs live gaan. Package options worden server-side als effectieve units berekend. |
 
 ## 1.3 Productie versus development
@@ -393,7 +393,7 @@ RLS: ingeschakeld.
 
 **Doel:** onveranderlijke verkoopfactuurkop gekoppeld aan een order en klant.
 
-Kolommen omvatten UUID, oplopend uniek factuurnummer, order/ordernummer, klant, klant-/adres-/taalsnapshot, optioneel klant-NIF/CIF/NIE, bedrijfsnaam en fiscaal adres, status, betaalmethode, totalen excl. btw/btw/incl. btw, uitgiftedatum, e-mailtijdstip, voidmetadata en timestamps. Een partiele unieke index op `order_id` staat maximaal één actieve niet-void factuur per order toe; historische `void`-facturen en hun regels blijven bestaan.
+Kolommen omvatten UUID, oplopend uniek factuurnummer, optionele order/ordernummer, klant, klant-/adres-/taalsnapshot, optioneel klant-NIF/CIF/NIE, bedrijfsnaam en fiscaal adres, status, betaalmethode, totalen excl. btw/btw/incl. btw, uitgiftedatum, e-mailtijdstip, voidmetadata en timestamps. Een partiele unieke index op `order_id` staat maximaal één actieve niet-void factuur per order toe; historische `void`-facturen en hun regels blijven bestaan. Passantenfacturen gebruiken geen order-id.
 
 ## 4.10 `invoice_items`
 

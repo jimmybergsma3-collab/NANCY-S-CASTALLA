@@ -11,10 +11,6 @@ export function isCaseLikePackage(value = "") {
   return /(?:^|\b)(?:\d+\s*[x×]\s*\d+|x\s*(?:2|4|6|8|10|12|20|24|36|40|48|72|80|100)\b|(?:2|4|6|8|10|12|20|24|36|40|48|72|80|100)\s*(?:pcs|st|units|x)\b)/i.test(value);
 }
 
-function near(a: number, b: number) {
-  return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= Math.max(0.08, b * 0.12);
-}
-
 function positive(value: unknown) {
   const number = Number(value ?? 0);
   return Number.isFinite(number) && number > 0 ? number : 0;
@@ -54,7 +50,6 @@ export function evaluateSalesUnitSafety(product: Product, offer?: SalesUnitSafet
   }
 
   if (salesUnitType === "single") {
-    if (caseLikePublic) return { ok: false, reason: "Public package still looks like a case while sales unit is single." };
     if (unitPrice > 0 && salePrice < unitPrice) return { ok: false, reason: "Single sale price is below supplier unit cost." };
   }
 
@@ -65,10 +60,6 @@ export function evaluateSalesUnitSafety(product: Product, offer?: SalesUnitSafet
 
   if ((caseLikePublic || caseLikeSource) && casePrice > 0 && salePrice < casePrice && salesUnitType === "case") {
     return { ok: false, reason: "Case-like product cannot be sold below case cost." };
-  }
-
-  if (caseLikePublic && unitPrice > 0 && near(salePrice, unitPrice) && salesUnitType !== "single") {
-    return { ok: false, reason: "Public package looks like a case but selling price looks like supplier unit price." };
   }
 
   if (caseQuantity > 1 && salesUnitType === "case" && salesUnitQuantity > 0 && salesUnitQuantity !== caseQuantity) {

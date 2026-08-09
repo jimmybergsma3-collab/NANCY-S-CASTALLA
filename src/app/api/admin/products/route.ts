@@ -5,7 +5,7 @@ import { archiveCurrentCatalogue, createProduct, deleteProduct, getProducts, res
 import { hasSupabaseAdmin } from "@/lib/env";
 import type { Product } from "@/types/product";
 import { getEffectivePackageOptions } from "@/lib/product-packaging";
-import { evaluateSalesUnitSafety, isCaseLikePackage, isSupplierImportProduct } from "@/lib/sales-unit-safety";
+import { evaluateSalesUnitSafety, isSupplierImportProduct } from "@/lib/sales-unit-safety";
 import { supabaseAdminFetch } from "@/lib/supabase-rest";
 import { logAdminAction } from "@/services/admin/audit-service";
 
@@ -33,9 +33,6 @@ function validateOnlineProduct(product: Product) {
   if (!product.imageUrl?.trim()) return "A product photo is required before publishing.";
   if (!product.salesUnitType) return "Public sales unit type must be confirmed before publishing.";
   if (!product.salesUnitConfirmed || !product.priceBasisConfirmed) return "Sales unit and price basis must be confirmed before publishing.";
-  if (isCaseLikePackage(product.unit) && product.salesUnitType === "per_unit") {
-    return "Package looks like a case. Choose case or custom pack as public sales unit.";
-  }
   return "";
 }
 
@@ -221,8 +218,8 @@ export async function POST(request: Request) {
     unitCost: Number(body.unitCost || body.costPriceExVat),
     salesUnitType: body.salesUnitType ?? "",
     salesUnitQuantity: isSimpleSalesUnit(body.salesUnitType) ? 1 : Number(body.salesUnitQuantity ?? 0),
-    salesUnitConfirmed: isSimpleSalesUnit(body.salesUnitType) ? true : Boolean(body.salesUnitConfirmed),
-    priceBasisConfirmed: isSimpleSalesUnit(body.salesUnitType) ? true : Boolean(body.priceBasisConfirmed),
+    salesUnitConfirmed: Boolean(body.salesUnitConfirmed),
+    priceBasisConfirmed: Boolean(body.priceBasisConfirmed),
     supplierCasePrice: Number(body.supplierCasePrice || body.costPriceExVat || 0),
     supplierUnitPrice: Number(body.supplierUnitPrice || body.unitCost || 0),
     supplierCaseQuantity: Number(body.supplierCaseQuantity ?? 0),

@@ -132,7 +132,7 @@ export type BackofficeInvoiceItem = {
 };
 
 export type BackofficeInvoice = InvoiceSummary & {
-  order_id: string;
+  order_id?: string | null;
   customer_id?: string;
   customer_name: string;
   customer_email: string;

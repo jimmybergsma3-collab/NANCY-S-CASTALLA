@@ -27,7 +27,7 @@ De software bestaat uit:
 - Product-, prijs-, order- en voorraadbeheer.
 - Voorbereidingen voor inkoop, facturatie, betalingen en externe integraties.
 
-De huidige fase is een productie-MVP/pre-orderfase. Catalogus, cart, server-gevalideerde orders, klantaccount, adminorderbeheer, voorraadtransities en normale PDF-facturen zijn gebouwd. Niet alle voorbereide backofficemodules zijn volledig transactioneel en productieconfiguratie moet voor onbeheerde livegang end-to-end worden bewezen.
+De huidige fase is een productie-MVP/pre-orderfase. Catalogus, cart, server-gevalideerde orders, klantaccount, adminorderbeheer, voorraadtransities, normale PDF-facturen en losse passantenfacturen zijn gebouwd. Niet alle voorbereide backofficemodules zijn volledig transactioneel en productieconfiguratie moet voor onbeheerde livegang end-to-end worden bewezen.
 
 ## 2. Doelgroep
 
@@ -246,7 +246,7 @@ Het orderoverzicht is aanklikbaar en opent per order een responsieve detailweerg
 
 Admin kan ordernotities afzonderlijk opslaan. Statuswijzigingen naar bevestigd, klaar voor afhalen, onderweg en afgeleverd versturen een gerichte klantmail; `payment_status=paid` verstuurt een aparte betalingsbevestiging. Resend-fouten worden server-side gelogd en aan de beheerinterface teruggegeven zonder order of factuur te verwijderen.
 
-Facturen worden intern uit een order aangemaakt via een transactionele databasefunctie. Alleen bevestigde, afhaalgerede, afgeleverde of betaalde orders zijn factureerbaar. Een unieke orderindex voorkomt dubbele facturen. Facturen bewaren eigen klant-, adres-, orderregel-, prijs-, betaalmethode- en btw-snapshots, krijgen een oplopend `INV-000001`-nummer en zijn als branded PDF downloadbaar. Admin kan de PDF via Resend mailen; een mailfout verwijdert de factuur niet. Klanten zien en downloaden uitsluitend facturen die via hun `customer_id` bij hun eigen order horen.
+Facturen worden intern uit een order aangemaakt via een transactionele databasefunctie. Alleen bevestigde, afhaalgerede, afgeleverde of betaalde orders zijn factureerbaar. Een unieke orderindex voorkomt dubbele facturen. Daarnaast kan admin in de facturatiemodule een losse factuur voor een passant aanmaken zonder webshoporder, met handmatige klantgegevens, factuurregels, IVA, betaalmethode, PDF-download en optionele e-mail wanneer een e-mailadres is ingevuld. Facturen bewaren eigen klant-, adres-, orderregel-, prijs-, betaalmethode- en btw-snapshots, krijgen een oplopend `INV-000001`-nummer en zijn als branded PDF downloadbaar. Admin kan de PDF via Resend mailen; een mailfout verwijdert de factuur niet. Klanten zien en downloaden uitsluitend facturen die via hun `customer_id` bij hun eigen order horen.
 
 Factuurnummers gebruiken de bestaande unieke globale identity en worden extern weergegeven als `NC-{jaar}-{zes cijfers}`, bijvoorbeeld `NC-2026-000002`. De PDF is Spaans/Engels, gebruikt Spaanse bedragnotatie, groepeert IVA per tarief, toont de betaalmethode als menselijk label en leest verkopergegevens uit `config/business.ts`. `NANCY'S CASTALLA` staat prominent als handelsnaam; `JIMMY BERGSMA` staat kleiner als titular/autÃ³nomo met NIF/NIE `Y8875740P` en het centrale adres. De titular staat ook in Terms/disclaimer. Laat inhoud en fiscale gegevens vÃ³Ã³r officieel gebruik controleren door een gestor/boekhouder.
 

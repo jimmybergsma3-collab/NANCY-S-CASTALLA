@@ -53,6 +53,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 - Klantenbeheer met detailpaneel, zoeken, filters voor actief/gearchiveerd/test/met account/zonder account, veilige archiefactie en geblokkeerde delete voor echte accounts, orders en facturen.
 - Compacter orderbeheer met zoekveld, status-, betaal-, datum- en test/real/archivefilters, bulkselectie voor testorders, testmarkering, archiveren en server-side veilige testorderverwijdering.
 - Factuurbeheer met filters voor productie, test, gearchiveerd en geannuleerd, plus markeer-test en archiveeracties zonder factuurnummers te wijzigen.
+- Losse passantenfacturen in factuurbeheer: admin kan zonder bestaande order klantgegevens, regels, IVA en betaalmethode invoeren, waarna de factuur in de normale serie wordt opgeslagen en als PDF beschikbaar is.
 - Configureerbare `businessMode`, `invoiceSeries` en `invoiceTestSeries` in `config/business.ts`.
 - Admin auditlogging voor cleanup- en beheeracties zonder secrets.
 - Centrale Facebooklink in `config/business.ts` voor transactionele e-mails en toekomstige contactblokken.
@@ -83,6 +84,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 - Documentatie verduidelijkt dat `ready_for_publish` publieke publicatie bewaakt, maar een reeds actief/zichtbaar/verkoopveilig product niet als enige reden mag blokkeren in admin-ordercorrecties.
 - Livegang- en roadmapdocumentatie richt productpublicatie nu op Europ Foods; Tindale blijft intern beschikbaar maar niet publiek bestelbaar vanwege ophaallogistiek in La Nucia.
 - Publieke catalogusfilter staat actieve zichtbare `coming-soon` producten toe zonder sales-unit/prijsbevestiging; ze blijven niet bestelbaar totdat de status en prijs later bewust worden aangepast.
+- Productbeheer laat de beheerder nu zelf de publieke verkoopeenheid bevestigen. De automatische blokkade op basis van doosachtige verpakkingstekst is uit de admin-save gehaald, zodat gecontroleerde productupdates niet meer vastlopen op een tekstinferentie.
 - Admin-ordercorrectie is vereenvoudigd naar één zichtbare knop `Order aanpassen`. Een nog niet verzonden/onbetaalde factuur wordt intern veilig ingetrokken, een legacy `inventory_committed`-vlag zonder movements wordt intern hersteld, en de admin ziet daarna direct de editor met één actie `Wijzigingen opslaan`.
 - `ready_for_publish` blokkeert geen admin-ordercorrectie meer voor actieve, zichtbare, correct geprijsde producten met bevestigde IVA/verkoopeenheid; de vlag blijft bedoeld voor publieke publicatiecontrole.
 - Admin productzoekactie `mode=order-search` levert alleen actieve, zichtbare en sales-unit-veilige producten aan de ordercorrectie-editor. Browserwaarden voor prijs, IVA en totaal worden genegeerd; de order-service valideert verpakkingen en rekent actuele bedragen opnieuw uit.

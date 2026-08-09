@@ -233,7 +233,6 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
   const supplierPackQuantity = getSupplierPackQuantity(product.packSize);
   const calculatedUnitCost = calculateUnitCost(product.costPriceExVat, product.packSize);
   const salesUnitSafety = evaluateSalesUnitSafety(product);
-  const simpleSalesUnit = isSimpleSalesUnit(product.salesUnitType);
   const isEditing = products.some((item) => item.id === product.id);
   const productCategories = useMemo(() => ["All", ...availableProductCategories], []);
   const supplierNames = useMemo(() => {
@@ -674,8 +673,6 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
             ...current,
             salesUnitType,
             salesUnitQuantity: 1,
-            salesUnitConfirmed: true,
-            priceBasisConfirmed: true,
           };
         }
         return { ...current, salesUnitType };
@@ -1016,29 +1013,23 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
               <option value="per_unit">Per unit</option>
             </select>
           </Field>
-          {simpleSalesUnit ? (
-            <div className="rounded-lg border border-leaf/20 bg-leaf/5 px-3 py-3 text-sm font-bold text-forest">
-              Verkoopcontrole automatisch geregeld voor dit type.
-            </div>
-          ) : (
-            <>
-              <Field help="For case: supplier units per case. For custom pack: number of units sold to customer." label="Sales unit quantity">
-                <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("salesUnitQuantity", Number(event.target.value))} placeholder="24" step="1" type="number" value={product.salesUnitQuantity ?? 0} />
-              </Field>
-              <Field help="Tick only after checking that the public package, sales unit and selling price all match." label="Sales unit reviewed">
-                <label className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
-                  <input checked={product.salesUnitConfirmed ?? false} onChange={(event) => update("salesUnitConfirmed", event.target.checked)} type="checkbox" />
-                  Sales unit confirmed
-                </label>
-              </Field>
-              <Field help="Tick only after checking that selling price is for the public sales unit, not the supplier unit price by mistake." label="Price basis reviewed">
-                <label className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
-                  <input checked={product.priceBasisConfirmed ?? false} onChange={(event) => update("priceBasisConfirmed", event.target.checked)} type="checkbox" />
-                  Price basis confirmed
-                </label>
-              </Field>
-            </>
-          )}
+          {!isSimpleSalesUnit(product.salesUnitType) ? (
+            <Field help="For case: supplier units per case. For custom pack: number of units sold to customer." label="Sales unit quantity">
+              <input className="w-full rounded-lg border px-3 py-2" onChange={(event) => update("salesUnitQuantity", Number(event.target.value))} placeholder="24" step="1" type="number" value={product.salesUnitQuantity ?? 0} />
+            </Field>
+          ) : null}
+          <Field help="Tick only after checking that the public package, sales unit and selling price all match." label="Sales unit reviewed">
+            <label className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
+              <input checked={product.salesUnitConfirmed ?? false} onChange={(event) => update("salesUnitConfirmed", event.target.checked)} type="checkbox" />
+              Sales unit confirmed
+            </label>
+          </Field>
+          <Field help="Tick only after checking that selling price is for the public sales unit, not the supplier unit price by mistake." label="Price basis reviewed">
+            <label className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
+              <input checked={product.priceBasisConfirmed ?? false} onChange={(event) => update("priceBasisConfirmed", event.target.checked)} type="checkbox" />
+              Price basis confirmed
+            </label>
+          </Field>
           <Field help="Tick when the product is approved for order editing and public sale after price, IVA, category, package and image checks." label="Klaar voor publicatie">
             <label className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
               <input checked={product.readyForPublish ?? false} onChange={(event) => update("readyForPublish", event.target.checked)} type="checkbox" />
