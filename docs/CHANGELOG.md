@@ -68,6 +68,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 - Interne reviewnotities uit `Additional information` verwijderd bij actieve zichtbare producten; ingrediëntenbatches vullen dit klantgerichte veld voortaan niet meer.
 - Zesde ingrediëntenbatch voor 20 actieve Tindale-producten aangevuld met ingrediënten, bewaarinstructie en gebruiksinstructie zonder `Additional information` te vullen.
 - Zevende ingrediëntenbatch voor 20 actieve producten aangevuld met ingrediënten, bewaarinstructie en gebruiksinstructie; `Additional information` is voor deze batch leeg gehouden.
+- Achtste ingrediëntenbatch voor 20 actieve producten aangevuld met ingrediënten, bewaarinstructie en gebruiksinstructie; `Additional information` is voor deze batch leeg gehouden.
 - Eerste batch concurrentieprijscontrole voor 15 actieve Europ Foods-producten zonder prijs: 4 veilige prijsupdates vastgelegd met online bron, inkoopprijs, marge en verpakkingcontrole.
 - Tweede batch concurrentieprijscontrole voor 20 actieve Europ Foods-producten zonder prijs: 3 veilige prijsupdates vastgelegd; producten met onzekere verpakking, te lage marge of ontbrekende actuele prijs zijn ongemoeid gelaten.
 - Derde batch concurrentieprijscontrole voor 20 actieve Europ Foods-producten zonder prijs: 1 veilige prijsupdate vastgelegd; lage-marge en onzekere foodserviceproducten blijven voor eindcontrole open.
