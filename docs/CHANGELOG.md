@@ -192,6 +192,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Opgelost
 
+- Derde omschrijvingsbatch afgerond: nog eens 25 actieve webshopproducten kregen een korte klantgerichte productomschrijving zonder `additional_info` te vullen; resterende actieve webshopproducten zonder omschrijving: 19.
 - Tweede omschrijvingsbatch afgerond: nog eens 25 actieve webshopproducten kregen een korte klantgerichte productomschrijving zonder `additional_info` te vullen; resterende actieve webshopproducten zonder omschrijving: 44.
 - Eerste omschrijvingsbatch afgerond: 25 actieve webshopproducten kregen een korte klantgerichte productomschrijving zonder `additional_info` te vullen; resterende actieve webshopproducten zonder omschrijving: 69.
 - Admin/webshop-zichtbaarheidsverschil hersteld: 10 Europ Foods-producten met correcte prijs en verpakking kregen sales-unit `single`; `NC-02773 Honey Roast Parsnips 1kg` is offline gezet omdat de verkoopprijs onder inkoop lag. Controle daarna: 267 admin online en 267 webshop online, 0 verschillen.
