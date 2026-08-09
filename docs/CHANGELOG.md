@@ -60,6 +60,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 - Tindale-fotobatch van 29 juli 2026 vastgelegd met gecontroleerde verkoopprijzen per volledige doos/verpakking, sales-unit `case`, bevestigde prijsbasis en margegegevens; quantity 1 blijft een complete verkoopverpakking.
 - Actieve bulk-/horecaproducten met duidelijke verkoopverpakking boven 3,5 kg offline gezet via `202608090002_disable_bulk_products_over_3_5kg.sql`.
 - Door admin geselecteerde actieve producten zonder verkoopprijs offline gezet via `202608090003_disable_selected_no_price_products.sql`.
+- Door admin geselecteerde actieve producten zonder productfoto offline gezet via `202608090004_disable_selected_no_photo_products.sql`.
 - Configureerbare `businessMode`, `invoiceSeries` en `invoiceTestSeries` in `config/business.ts`.
 - Admin auditlogging voor cleanup- en beheeracties zonder secrets.
 - Centrale Facebooklink in `config/business.ts` voor transactionele e-mails en toekomstige contactblokken.
