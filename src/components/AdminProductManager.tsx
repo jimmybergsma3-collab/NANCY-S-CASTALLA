@@ -177,6 +177,16 @@ function hasProductIngredients(product: Product) {
   return Boolean(product.ingredients?.trim());
 }
 
+function isProductWebshopOnline(product: Product) {
+  if (product.isVisible !== true || (product.lifecycleStatus ?? "active") !== "active") return false;
+  if (product.stockStatus === "coming-soon") return true;
+  return evaluateSalesUnitSafety(product).ok;
+}
+
+function isProductMarkedVisibleButBlocked(product: Product) {
+  return product.isVisible === true && (product.lifecycleStatus ?? "active") === "active" && !isProductWebshopOnline(product);
+}
+
 function StatusPill({ ok, label }: { ok: boolean; label: string }) {
   return (
     <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-1 text-xs font-bold ${ok ? "bg-leaf/10 text-leaf" : "bg-red-50 text-red-700"}`}>
@@ -254,10 +264,11 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
   }, [products]);
   const activeCount = products.filter((item) => (item.lifecycleStatus ?? "active") === "active").length;
   const archivedCount = products.filter((item) => item.lifecycleStatus === "archived").length;
-  const onlineCount = products.filter((item) => item.isVisible !== false && (item.lifecycleStatus ?? "active") === "active").length;
+  const onlineCount = products.filter(isProductWebshopOnline).length;
+  const blockedOnlineCount = products.filter(isProductMarkedVisibleButBlocked).length;
   const duplicateCount = products.filter((item) => duplicateKeys.has(`${item.supplier.trim().toLowerCase()}|${item.supplierCode.trim().toLowerCase()}`)).length;
   const productSupplierFilters = useMemo(() => ["All", ...Array.from(new Set(products.map((item) => item.supplier.trim()).filter(Boolean))).sort()], [products]);
-  const activeProducts = products.filter((item) => (item.lifecycleStatus ?? "active") === "active" && item.isVisible !== false);
+  const activeProducts = products.filter(isProductWebshopOnline);
   const missingPriceCount = activeProducts.filter((item) => !hasProductPrice(item)).length;
   const missingPhotoCount = activeProducts.filter((item) => !hasProductPhoto(item)).length;
   const missingDescriptionCount = activeProducts.filter((item) => !hasProductDescription(item)).length;
@@ -275,7 +286,7 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
       const matchesCategory = categoryFilter === "All" || productMatchesCategory(item, categoryFilter as Product["category"]);
       const matchesStatus = statusFilter === "All" || (item.lifecycleStatus ?? "active") === statusFilter;
       const matchesVisibility = visibilityFilter === "All" ||
-        (visibilityFilter === "Online" ? item.isVisible !== false : item.isVisible === false);
+        (visibilityFilter === "Online" ? isProductWebshopOnline(item) : !isProductWebshopOnline(item));
       const duplicateKey = `${item.supplier.trim().toLowerCase()}|${item.supplierCode.trim().toLowerCase()}`;
       const matchesDuplicate = duplicateFilter === "All" || duplicateKeys.has(duplicateKey);
       const matchesSupplier = supplierFilter === "All" || item.supplier === supplierFilter;
@@ -285,6 +296,7 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
         (qualityFilter === "missing-photo" && !hasProductPhoto(item)) ||
         (qualityFilter === "missing-description" && !hasProductDescription(item)) ||
         (qualityFilter === "missing-ingredients" && !hasProductIngredients(item)) ||
+        (qualityFilter === "blocked-online" && isProductMarkedVisibleButBlocked(item)) ||
         (qualityFilter === "active-only" && (item.lifecycleStatus ?? "active") === "active");
 
       return matchesQuery && matchesCategory && matchesStatus && matchesVisibility && matchesDuplicate && matchesSupplier && matchesQuality;
@@ -760,7 +772,7 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
                               <p className="text-sm font-bold text-forest">{item.name}</p>
                               <p className="mt-1 text-xs text-forest/60">{item.supplier} · {item.supplierCode || "no code"} · {item.id}</p>
                             </div>
-                            <span className={`rounded-full px-2 py-1 text-xs font-bold ${item.isVisible ? "bg-leaf/10 text-leaf" : "bg-coffee/10 text-coffee"}`}>{item.isVisible ? "Online" : item.lifecycleStatus ?? "draft"}</span>
+                            <span className={`rounded-full px-2 py-1 text-xs font-bold ${isProductWebshopOnline(item) ? "bg-leaf/10 text-leaf" : "bg-coffee/10 text-coffee"}`}>{isProductWebshopOnline(item) ? "Online" : item.lifecycleStatus ?? "draft"}</span>
                           </div>
                           <div className="mt-2 grid gap-1 text-xs text-forest/65">
                             <span>Bronverpakking: {item.sourcePackageText || item.packSize || item.unit || "-"}</span>
@@ -1210,6 +1222,15 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
             <span className="block text-lg">{missingIngredientsCount}</span>No ingredients
           </button>
         </div>
+        {blockedOnlineCount > 0 ? (
+          <button
+            className="mt-3 w-full rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-left text-sm font-bold text-red-700"
+            onClick={() => { setStatusFilter("active"); setVisibilityFilter("All"); setQualityFilter("blocked-online"); }}
+            type="button"
+          >
+            {blockedOnlineCount} marked visible but blocked from webshop
+          </button>
+        ) : null}
         <div className="mt-5 grid gap-3">
           <input
             className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm"
@@ -1267,6 +1288,7 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
               <option value="missing-photo">Without photo ({missingPhotoCount})</option>
               <option value="missing-description">Without description ({missingDescriptionCount})</option>
               <option value="missing-ingredients">Without ingredients ({missingIngredientsCount})</option>
+              <option value="blocked-online">Visible but blocked ({blockedOnlineCount})</option>
             </select>
             <select
               className="w-full rounded-lg border border-forest/15 bg-white px-3 py-2 text-sm"
@@ -1301,6 +1323,9 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
                 const descriptionOk = hasProductDescription(item);
                 const ingredientsOk = hasProductIngredients(item);
                 const photoUrl = getProductPhotoUrl(item);
+                const webshopOnline = isProductWebshopOnline(item);
+                const blockedOnline = isProductMarkedVisibleButBlocked(item);
+                const blockReason = blockedOnline ? evaluateSalesUnitSafety(item).reason : "";
 
                 return (
                 <tr
@@ -1346,11 +1371,19 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
                   <td className="px-3 py-3"><StatusPill label="description" ok={descriptionOk} /></td>
                   <td className="px-3 py-3"><StatusPill label="ingredients" ok={ingredientsOk} /></td>
                   <td className="px-3 py-3">
-                    <span className={`rounded-full px-2 py-1 text-xs font-bold ${
-                      item.isVisible !== false ? "bg-leaf/10 text-leaf" : "bg-coffee/10 text-coffee"
-                    }`}>
-                      {item.isVisible !== false ? "Online" : "Offline"}
+                    <span
+                      className={`rounded-full px-2 py-1 text-xs font-bold ${
+                        webshopOnline ? "bg-leaf/10 text-leaf" : blockedOnline ? "bg-red-50 text-red-700" : "bg-coffee/10 text-coffee"
+                      }`}
+                      title={blockReason}
+                    >
+                      {webshopOnline ? "Online" : blockedOnline ? "Blocked" : "Offline"}
                     </span>
+                    {blockedOnline ? (
+                      <div className="mt-1 max-w-40 text-[11px] font-bold text-red-700">
+                        {blockReason || "Not shown in webshop"}
+                      </div>
+                    ) : null}
                     <span className="ml-1 rounded-full bg-linen px-2 py-1 text-xs font-bold text-forest">
                       {item.lifecycleStatus ?? "active"}
                     </span>
@@ -1359,7 +1392,11 @@ export function AdminProductManager({ initialProducts }: { initialProducts: Prod
                   <td className="px-3 py-3">
                     <div className="flex justify-end gap-1">
                       <button className="grid h-9 w-9 place-items-center rounded-md border border-forest/15 text-forest hover:bg-linen" onClick={(event) => { event.stopPropagation(); setActiveProduct({ ...defaultProduct, ...item }); }} title="Edit product" type="button"><Pencil size={16} /></button>
-                      <Link className="grid h-9 w-9 place-items-center rounded-md border border-forest/15 text-forest hover:bg-linen" href={`/en/products/${encodeURIComponent(item.id)}`} onClick={(event) => event.stopPropagation()} target="_blank" title="Open product page"><ExternalLink size={16} /></Link>
+                      {webshopOnline ? (
+                        <Link className="grid h-9 w-9 place-items-center rounded-md border border-forest/15 text-forest hover:bg-linen" href={`/en/products/${encodeURIComponent(item.id)}`} onClick={(event) => event.stopPropagation()} target="_blank" title="Open product page"><ExternalLink size={16} /></Link>
+                      ) : (
+                        <button className="grid h-9 w-9 cursor-not-allowed place-items-center rounded-md border border-forest/10 text-forest/30" disabled title={blockReason || "Product is not shown in the webshop"} type="button"><ExternalLink size={16} /></button>
+                      )}
                       <button className="grid h-9 w-9 place-items-center rounded-md border border-forest/15 text-forest hover:bg-linen" onClick={(event) => { event.stopPropagation(); void toggleProductVisibility(item); }} title={item.isVisible !== false ? "Take offline" : "Put online"} type="button">{item.isVisible !== false ? <EyeOff size={16} /> : <Eye size={16} />}</button>
                       {item.lifecycleStatus === "archived" ? (
                         <button className="grid h-9 w-9 place-items-center rounded-md border border-leaf/20 text-leaf hover:bg-leaf/10" onClick={(event) => { event.stopPropagation(); void restoreProduct(item); }} title="Restore archived product" type="button"><RotateCcw size={16} /></button>

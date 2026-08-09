@@ -108,6 +108,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Verbeterd
 
+- Admin productbeheer telt en labelt `Online` nu met exact dezelfde controle als de publieke webshop, inclusief sales-unitveiligheid. Producten die wel zichtbaar zijn aangevinkt maar door de webshop worden geblokkeerd krijgen een aparte `Blocked` status en filter.
 - Documentatie verduidelijkt dat package options server-side als effectieve units worden berekend, bijvoorbeeld `1 verpakking x 12 flessen x EUR 3,00 = EUR 36,00`, en dat `order_items.quantity` het aantal gekozen klantverpakkingen bewaart.
 - Documentatie verduidelijkt dat `ready_for_publish` publieke publicatie bewaakt, maar een reeds actief/zichtbaar/verkoopveilig product niet als enige reden mag blokkeren in admin-ordercorrecties.
 - Livegang- en roadmapdocumentatie richt productpublicatie nu op Europ Foods; Tindale blijft intern beschikbaar maar niet publiek bestelbaar vanwege ophaallogistiek in La Nucia.
@@ -191,6 +192,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Opgelost
 
+- Admin/webshop-zichtbaarheidsverschil hersteld: 10 Europ Foods-producten met correcte prijs en verpakking kregen sales-unit `single`; `NC-02773 Honey Roast Parsnips 1kg` is offline gezet omdat de verkoopprijs onder inkoop lag. Controle daarna: 267 admin online en 267 webshop online, 0 verschillen.
 - `POST /api/orders` behandelt een RPC-resultaat met `order_id=null` of ontbrekend ordernummer niet meer als succesvolle orderopslag. De service controleert bij idempotency-retries nu eerst of de bestaande order werkelijk bestaat en retourneert anders een duidelijke `order_storage_unconfirmed` fout met diagnose-id.
 - De Supabase RPC `create_validated_order` vangt `unique_violation` alleen nog als idempotency-herhaling af wanneer er aantoonbaar een bestaande order met id en ordernummer is; andere unieke fouten worden niet langer als `already_existed=true` met null ids teruggegeven.
 - De checkout gebruikt per nieuwe verzendpoging een verse idempotency-key, zodat een mislukte poging niet stil een volgende echte bestelling kan wegvangen.
