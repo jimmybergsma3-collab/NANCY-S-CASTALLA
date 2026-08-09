@@ -57,6 +57,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 - Losse adminfacturen kunnen nu ook aan een bestaande klant worden gekoppeld via klantzoeker; de factuur bewaart dan `customer_id` en vult naam, e-mail, telefoon en adres automatisch in.
 - Productregels in losse adminfacturen hebben nu productzoeker met package-keuze, zodat producten zoals Magners direct vanuit het factuurformulier kunnen worden geselecteerd.
 - Klantbestellingen zijn voortaan beperkt tot geregistreerde en ingelogde klanten; gasten zien in de winkelmand een login/registratieblok en de order-API weigert verzoeken zonder geldig klanttoken.
+- Tindale-fotobatch van 29 juli 2026 vastgelegd met gecontroleerde verkoopprijzen per volledige doos/verpakking, sales-unit `case`, bevestigde prijsbasis en margegegevens; quantity 1 blijft een complete verkoopverpakking.
 - Configureerbare `businessMode`, `invoiceSeries` en `invoiceTestSeries` in `config/business.ts`.
 - Admin auditlogging voor cleanup- en beheeracties zonder secrets.
 - Centrale Facebooklink in `config/business.ts` voor transactionele e-mails en toekomstige contactblokken.
