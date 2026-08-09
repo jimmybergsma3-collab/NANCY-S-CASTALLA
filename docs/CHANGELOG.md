@@ -192,6 +192,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Opgelost
 
+- Laatste omschrijvingsbatch afgerond: de resterende 19 actieve webshopproducten kregen een klantgerichte productomschrijving zonder `additional_info` te vullen; actieve webshopproducten zonder omschrijving: 0.
 - Derde omschrijvingsbatch afgerond: nog eens 25 actieve webshopproducten kregen een korte klantgerichte productomschrijving zonder `additional_info` te vullen; resterende actieve webshopproducten zonder omschrijving: 19.
 - Tweede omschrijvingsbatch afgerond: nog eens 25 actieve webshopproducten kregen een korte klantgerichte productomschrijving zonder `additional_info` te vullen; resterende actieve webshopproducten zonder omschrijving: 44.
 - Eerste omschrijvingsbatch afgerond: 25 actieve webshopproducten kregen een korte klantgerichte productomschrijving zonder `additional_info` te vullen; resterende actieve webshopproducten zonder omschrijving: 69.
