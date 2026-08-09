@@ -64,6 +64,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 - Tweede ingrediëntenbatch voor 20 actieve Tindale-dranken aangevuld met ingrediënten, bewaarinstructie, gebruiksinstructie en bronverwijzing.
 - Derde ingrediëntenbatch voor 20 actieve Tindale-producten aangevuld met ingrediënten, bewaarinstructie, gebruiksinstructie en bronverwijzing.
 - Vierde ingrediëntenbatch voor 20 actieve Tindale-producten aangevuld met ingrediënten, bewaarinstructie, gebruiksinstructie en bronverwijzing.
+- Vijfde ingrediëntenbatch voor 20 actieve Tindale-producten aangevuld met ingrediënten, bewaarinstructie, gebruiksinstructie en bronverwijzing.
 - Eerste batch concurrentieprijscontrole voor 15 actieve Europ Foods-producten zonder prijs: 4 veilige prijsupdates vastgelegd met online bron, inkoopprijs, marge en verpakkingcontrole.
 - Tweede batch concurrentieprijscontrole voor 20 actieve Europ Foods-producten zonder prijs: 3 veilige prijsupdates vastgelegd; producten met onzekere verpakking, te lage marge of ontbrekende actuele prijs zijn ongemoeid gelaten.
 - Derde batch concurrentieprijscontrole voor 20 actieve Europ Foods-producten zonder prijs: 1 veilige prijsupdate vastgelegd; lage-marge en onzekere foodserviceproducten blijven voor eindcontrole open.
