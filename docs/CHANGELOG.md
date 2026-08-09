@@ -192,6 +192,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Opgelost
 
+- Eerste omschrijvingsbatch afgerond: 25 actieve webshopproducten kregen een korte klantgerichte productomschrijving zonder `additional_info` te vullen; resterende actieve webshopproducten zonder omschrijving: 69.
 - Admin/webshop-zichtbaarheidsverschil hersteld: 10 Europ Foods-producten met correcte prijs en verpakking kregen sales-unit `single`; `NC-02773 Honey Roast Parsnips 1kg` is offline gezet omdat de verkoopprijs onder inkoop lag. Controle daarna: 267 admin online en 267 webshop online, 0 verschillen.
 - `POST /api/orders` behandelt een RPC-resultaat met `order_id=null` of ontbrekend ordernummer niet meer als succesvolle orderopslag. De service controleert bij idempotency-retries nu eerst of de bestaande order werkelijk bestaat en retourneert anders een duidelijke `order_storage_unconfirmed` fout met diagnose-id.
 - De Supabase RPC `create_validated_order` vangt `unique_violation` alleen nog als idempotency-herhaling af wanneer er aantoonbaar een bestaande order met id en ordernummer is; andere unieke fouten worden niet langer als `already_existed=true` met null ids teruggegeven.
