@@ -1,4 +1,4 @@
-const CACHE_NAME = "nancys-castalla-v1";
+const CACHE_NAME = "nancys-castalla-v2";
 const CORE_ASSETS = [
   "/en",
   "/site.webmanifest",

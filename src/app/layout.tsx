@@ -5,6 +5,7 @@ import { CartProvider } from "@/components/cart/CartProvider";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.nancys.es"),
+  applicationName: "Nancy's Castalla",
   title: "Nancy's Castalla | International food, coffee and pre-orders",
   description:
     "International food Castalla, British food Castalla, Dutch snacks Castalla, expat food Castalla and bread order Castalla.",
@@ -24,6 +25,11 @@ export const metadata: Metadata = {
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   manifest: "/site.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Nancy's Castalla",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export const viewport: Viewport = {

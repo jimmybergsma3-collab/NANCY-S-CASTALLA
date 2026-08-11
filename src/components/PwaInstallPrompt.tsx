@@ -21,10 +21,16 @@ function isIosSafari() {
   return /iphone|ipad|ipod/i.test(ua) && /safari/i.test(ua) && !/crios|fxios|edgios/i.test(ua);
 }
 
+function isMobileBrowser() {
+  const ua = window.navigator.userAgent;
+  return /android|iphone|ipad|ipod|mobile/i.test(ua) || window.innerWidth < 768;
+}
+
 export function PwaInstallPrompt({ locale }: { locale: Locale }) {
   const copy = getPwaCopy(locale);
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [showIosHint, setShowIosHint] = useState(false);
+  const [showManualHint, setShowManualHint] = useState(false);
 
   useEffect(() => {
     if (isStandalone() || window.localStorage.getItem(dismissedKey) === "1") return;
@@ -36,13 +42,18 @@ export function PwaInstallPrompt({ locale }: { locale: Locale }) {
     const onBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
       setInstallEvent(event as BeforeInstallPromptEvent);
+      setShowManualHint(false);
     };
 
     window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
     const iosHintTimer = window.setTimeout(() => setShowIosHint(isIosSafari()), 0);
+    const mobileHintTimer = window.setTimeout(() => {
+      if (!isIosSafari() && isMobileBrowser()) setShowManualHint(true);
+    }, 1500);
 
     return () => {
       window.clearTimeout(iosHintTimer);
+      window.clearTimeout(mobileHintTimer);
       window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
     };
   }, []);
@@ -51,6 +62,7 @@ export function PwaInstallPrompt({ locale }: { locale: Locale }) {
     window.localStorage.setItem(dismissedKey, "1");
     setInstallEvent(null);
     setShowIosHint(false);
+    setShowManualHint(false);
   }
 
   async function install() {
@@ -60,7 +72,10 @@ export function PwaInstallPrompt({ locale }: { locale: Locale }) {
     dismiss();
   }
 
-  if (!installEvent && !showIosHint) return null;
+  if (!installEvent && !showIosHint && !showManualHint) return null;
+
+  const title = installEvent ? copy.title : showIosHint ? copy.iosTitle : copy.manualTitle;
+  const body = installEvent ? copy.body : showIosHint ? copy.iosBody : copy.manualBody;
 
   return (
     <div className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-md rounded-lg border border-forest/15 bg-white p-4 text-forest shadow-2xl">
@@ -69,8 +84,8 @@ export function PwaInstallPrompt({ locale }: { locale: Locale }) {
           <Download size={18} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-serif text-lg font-bold">{installEvent ? copy.title : copy.iosTitle}</p>
-          <p className="mt-1 text-sm leading-5 text-forest/70">{installEvent ? copy.body : copy.iosBody}</p>
+          <p className="font-serif text-lg font-bold">{title}</p>
+          <p className="mt-1 text-sm leading-5 text-forest/70">{body}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {installEvent ? (
               <button className="rounded-full bg-forest px-4 py-2 text-sm font-bold text-cream" onClick={() => void install()} type="button">
