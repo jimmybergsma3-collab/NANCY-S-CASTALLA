@@ -25,7 +25,7 @@ De software bestaat uit:
 - Klantregistratie, login, profiel en orderhistorie.
 - Een beveiligde admin/backoffice.
 - Product-, prijs-, order- en voorraadbeheer.
-- Voorbereidingen voor inkoop, facturatie, betalingen en externe integraties.
+- Operationele basis voor inkoop, leveranciersfacturen, goederenontvangst, voorraadmutaties na ontvangst, facturatie, betalingen en externe integraties.
 
 De huidige fase is een productie-MVP/pre-orderfase. Catalogus, cart, server-gevalideerde orders, klantaccount, adminorderbeheer, voorraadtransities, normale PDF-facturen en losse admin/passantenfacturen zijn gebouwd. Losse adminfacturen kunnen handmatig worden ingevoerd, aan bestaande klanten worden gekoppeld en productregels kunnen via admin-productzoeker/package-keuze worden gevuld. Niet alle voorbereide backofficemodules zijn volledig transactioneel en productieconfiguratie moet voor onbeheerde livegang end-to-end worden bewezen.
 
@@ -135,7 +135,7 @@ Belangrijke API's:
 | `order_items` | Product-, verpakking-, btw- en prijssnapshot per orderregel |
 | `inventory_movements` | Audittrail van voorraadmutaties |
 | `suppliers` | Leveranciersstamgegevens |
-| `purchase_orders` | Voorbereiding voor inkooporders |
+| `purchase_orders` | Inkooporders voor leveranciersbestellingen; aangevuld door `purchase_order_items`, `supplier_invoices`, `supplier_invoice_items`, `goods_receipts`, `goods_receipt_items` en `purchase_price_history` na migratie `202608120001_purchasing_supplier_invoice_workflow.sql` |
 | `invoices` | Verkoopfactuurkop, klant-/adres-snapshot, nummering en verzendstatus |
 | `invoice_items` | Onveranderlijke product-, prijs- en btw-snapshot per factuurregel |
 | `integration_settings` | Niet-geheime providerinstellingen |
@@ -151,7 +151,9 @@ Producten hebben naast voorraadstatus (`available`, `preorder`, `coming-soon`) o
 
 `products.id`/de Nancy-productcode is de enige publieke unieke productsleutel en blijft de URL-basis. `supplier_code` en `ean` zijn bewust niet uniek, omdat dezelfde leveranciercode of barcode in oude en nieuwe batches kan terugkomen. Gebruik deze velden alleen om mogelijke duplicaten te signaleren. Vervolg-migratie `202607110003_product_catalogue_conflict_protection.sql` beschermt archived producten op database-niveau tegen gewone updates, ook als een oud `on conflict (id) do update` importbestand per ongeluk opnieuw wordt uitgevoerd. Toekomstige imports moeten nieuwe records met een nieuwe Nancy-productcode aanmaken of expliciet overslaan/herstellen na handmatige keuze.
 
-Nieuwe leveranciersimports gebruiken migratie `202607120001_supplier_import_workflow.sql`. Deze staat in productie en voegt import runs, supplier offers, reviewvelden en veilige batch-RPC's toe. De adminroute `/{locale}/admin/imports` ondersteunt dry-run previews en confirmed import naar draft voor Europ Foods PDF en Tindale XLS/XLSX. Dry-runs schrijven niets. Confirmed import maakt uitsluitend `product_status='draft'`, `is_visible=false`, `featured=false`, `stock_quantity=0` en nieuwe unieke `NC-xxxxx`-codes aan. Bestanden van leveranciers mogen niet in Git worden gezet. Op 12 juli 2026 zijn `IMPORT_2026_LIVE_TINDALE_JULY` en `IMPORT_2026_LIVE_EUROPFOODS_JULY` naar draft geÃ¯mporteerd; er zijn geen producten automatisch gepubliceerd.
+Nieuwe leveranciersimports gebruiken migratie `202607120001_supplier_import_workflow.sql`. Deze staat in productie en voegt import runs, supplier offers, reviewvelden en veilige batch-RPC's toe. De adminroute `/{locale}/admin/imports` ondersteunt dry-run previews en confirmed import naar draft voor Europ Foods PDF en Tindale XLS/XLSX. Aanvullende PDF-lijsten kunnen veilig via `scripts/import-pdf-supplier-lists.mjs` worden verwerkt wanneer de parser expliciet voor de leverancier is ingericht. Dry-runs schrijven niets. Confirmed import maakt uitsluitend `product_status='draft'`, `is_visible=false`, `featured=false`, `stock_quantity=0` en nieuwe unieke `NC-xxxxx`-codes aan. Bestanden van leveranciers mogen niet in Git worden gezet. Op 12 juli 2026 zijn `IMPORT_2026_LIVE_TINDALE_JULY` en `IMPORT_2026_LIVE_EUROPFOODS_JULY` naar draft geÃ¯mporteerd. Op 30 juli 2026 zijn `IMPORT_2026_LIVE_HOLLANDSE_BAKKER_JULY` met 73 draftproducten/offers, `IMPORT_2026_LIVE_MESSIAEN_BEER_JULY` met 60 draftproducten/offers en `IMPORT_2026_LIVE_MESSIAEN_FOOD_JULY` met 386 draftproducten/offers en 8 conflicts toegevoegd. Er zijn geen producten automatisch gepubliceerd.
+
+De Hollandse Bakker- en Messiaen-imports zijn purchase-only. Bronprijzen worden alleen opgeslagen als inkoop- en supplier-offerdata. `sale_price_incl_vat` blijft 0 totdat Nancy handmatig verkoopprijs, IVA, categorie, sales unit, verpakking en afbeelding controleert. De oude archived Hollandse Bakker-catalogus blijft onaangetast; nieuwe Hollandse Bakker-records gebruiken nieuwe NC-codes en batch `IMPORT_2026_LIVE_HOLLANDSE_BAKKER_JULY`.
 
 Tindale-producten moeten offline blijven zolang ze in La Nucia moeten worden opgehaald. Europ Foods is de huidige publicatiekandidaat omdat gratis bezorging mogelijk is. Migratie `202607250001_keep_tindale_products_offline.sql` zet Tindale-producten terug naar `draft`/`is_visible=false` en blokkeert Tindale-batchpublicatie via `publish_approved_import_batch`.
 
@@ -170,6 +172,8 @@ Sales-unit prijsveiligheid is verplicht voor alle nieuwe live leveranciersimport
 Zet nooit automatisch `salePriceInclVat` gelijk aan de leveranciers-eenheidsprijs wanneer de publieke verpakking nog een doos/case toont. Geïmporteerde producten uit `IMPORT_2026_LIVE_%` mogen pas publiek zichtbaar of bestelbaar zijn wanneer sales unit, prijsbasis, verpakking, btw, categorie en verkoopprijs handmatig gecontroleerd zijn. Cart/order-validatie blokkeert producten die deze controle missen. Migratie `202607120002_sales_unit_price_basis_safety.sql` voegt databasevelden en database-level publicatiebescherming toe; voer deze handmatig in Supabase uit als productie hem nog niet heeft.
 
 Voor Europ Foods/Eurodrop geldt vanaf 28 juli 2026 een expliciet prijs- en matchingbeleid. Eurodrop is alleen referentiebron voor consumentenverkoopprijzen van Europ Foods-producten. Nancy's verkoopprijs wordt alleen gezet bij een betrouwbare match en is dan `actuele Eurodrop-consumentenprijs + EUR 0,10`. Bij onzekere match, afwijkende verpakking, ontbrekende Eurodrop-prijs of twijfel blijft de verkoopprijs leeg/0 en blijft het product reviewwerk. Supplier code, productnaam en verpakking zijn matching-signalen, geen automatische merge-sleutels. Kamstra-bolletjes zijn user-managed en vallen buiten de Eurodrop-prijsbatches. Tindale-producten vallen nooit onder Eurodrop-updates.
+
+Losse productfoto-imports zijn image-only. Gebruik daarvoor `scripts/link-product-photos.mjs`: het script zoekt een bestaand product via leverancier + `supplier_code`, uploadt de afbeelding naar Supabase Storage en mag alleen `image_url` en `images` wijzigen. Alleen wanneer de opdracht dat expliciet vraagt mag `--activate` ook `product_status='active'` en `is_visible=true` zetten. Foto-imports mogen nooit prijs, IVA, verpakking, voorraad, categorie, beschrijving, supplier offer of importmetadata wijzigen; losse bestandsnamen zijn geen prijsbron.
 
 De actuele Eurodrop-audit van 28 juli 2026 staat als gegenereerd rapport in `outputs/europfoods-eurodrop-final-audit-20260728.csv/json`. Samenvatting: 327 CSV-records gecontroleerd, 327 database-records gevonden, 0 duplicaat- of supplierconflicten, 107 reeds correct verwerkt, 220 blijven `NOT_CONFIRMED`/review, 326 zonder echte foto, 210 zonder bruikbare beschrijving, 263 zonder ingrediënten en alle 327 hebben allergenenreview nodig. Deze rapporten zijn operationele artefacten; de regels in dit MD-bestand blijven leidend.
 
@@ -362,7 +366,7 @@ Verwijder geen bestaande functionaliteit, migratie of data-import omdat deze ver
 - Account/order e-mails hebben geen volwaardige queue en retryflow.
 - Publieke interface, juridische basiscontent en transactionele order-/factuurmails zijn vertaald in de basislocales. Bekende productnamen worden klantgericht vertaald via een veilige helper op productkaarten, productdetail, zoeken, cart, ordermails, klantaccount en facturen. De helper normaliseert hoofdletters, accenten, leestekens en veelvoorkomende importvarianten, maar vertaalt nooit onbekende producten automatisch. Onbekende productnamen blijven de catalogusnaam; onbekende niet-Engelse beschrijvingen vallen terug op een korte locale-eigen melding. Backoffice en volledige productinhoud zijn nog niet volledig meertalig.
 - Geen volledige product-/categoriesitemap of structured data.
-- Inkoop, facturatie en rapportages zijn nog gedeeltelijk.
+- Inkoop, leveranciersfacturen, goederenontvangst en rapportages zijn lokaal operationeel voorbereid en worden productie-actief na handmatige uitvoering van migratie `202608120001_purchasing_supplier_invoice_workflow.sql`.
 - Klantadres is nog geen apart onveranderlijk ordersnapshot.
 - Bizum- en bankgegevens staan centraal ingesteld; controleer operationeel nog ontvangst, tenaamstelling en boekhoudkundige verwerking.
 - Eerder gedeelde secrets moeten buiten Git worden geroteerd; neem ze nooit over in output.
@@ -378,7 +382,7 @@ Actuele prioriteit:
 5. Strikte orderstatussen en voorraadreservering.
 6. Server-side bezorging en adressnapshots.
 7. Directe/gepagineerde productqueries en afbeeldingsoptimalisatie.
-8. Inkoopontvangst en volledig voorraadbeheer.
+8. Productie-uitvoering en controle van de nieuwe inkoop-/goederenontvangstmigratie.
 9. Creditnota's, boekhoudexport en online kaartbetaling boven op de interne factuurflow.
 10. Volledige vertalingen, SEO en compliance.
 11. POS, WhatsApp Business en overige integraties.

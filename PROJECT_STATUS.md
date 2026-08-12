@@ -1,6 +1,6 @@
 # Projectstatus: Nancy's Castalla
 
-**Peildatum:** 28 juli 2026
+**Peildatum:** 30 juli 2026
 **Fase:** productie-MVP / pre-orderfase
 **Productiedomein:** `https://www.nancys.es`
 **Bronnen voor deze status:** volledige Git-geschiedenis vanaf de eerste webshopcommit, actuele routes, services, migraties en documentatie.
@@ -18,8 +18,8 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 | Voorraad | Operationeel met beperking | Afboeken bij bevestiging en terugboeken bij annulering; geen reservering tijdens status `new`. |
 | Facturatie | Operationeel voor normale facturen | Maximaal één actieve factuur per order, snapshots, Spaans/Engelse PDF, admin- en klantdownload, e-mail. Een nog niet verzonden/onbetaalde factuur kan via een gecontroleerde adminactie op `void` worden gezet voor ordercorrectie; nummer en regels blijven historisch zichtbaar en worden niet hergebruikt. |
 | E-mail | Operationeel mits extern geconfigureerd | Resend voor order/factuur met professionele responsive HTML, plain-text fallback en correcte Reply-To; Supabase SMTP voor accountmail; geen queue of automatische retry. |
-| Admin | Gemengd | Producten, orders, voorraad en facturen functioneel; Orders/Customers laden backwards-compatible wanneer cleanupkolommen in productie nog ontbreken en tonen altijd JSON-fouten met diagnose-id. Overige modules variëren van overzicht tot voorbereiding. |
-| Leveranciersimport | Operationeel voor draftimport | Migratie `202607120001` staat live. Tindale en Europ Foods kunnen via dry-run en confirmed import naar draftproducten/supplier offers. Tindale blijft bewust offline omdat ophalen in La Nucia nodig is; Europ Foods is de publicatiekandidaat omdat gratis bezorging mogelijk is. |
+| Admin | Gemengd | Producten, orders, voorraad en facturen functioneel; Orders/Customers laden backwards-compatible wanneer cleanupkolommen in productie nog ontbreken en tonen altijd JSON-fouten met diagnose-id. Inkoop, leveranciersfacturen, goederenontvangst en rapportages zijn lokaal toegevoegd en wachten op handmatige migratie `202608120001_purchasing_supplier_invoice_workflow.sql`. |
+| Leveranciersimport | Operationeel voor draftimport | Migratie `202607120001` staat live. Tindale, Europ Foods, De Hollandse Bakker en Messiaen-lijsten kunnen veilig als draft/importbatch worden vastgelegd met supplier offers, reviewflags en zonder publieke verkoopprijs. Tindale blijft bewust offline zolang ophalen in La Nucia nodig is; importproducten blijven draft tot handmatige review. |
 | Sales-unit prijsveiligheid | Code gereed, productiecontrole nodig | Geïmporteerde leveranciersproducten moeten expliciet sales unit en prijsbasis bevestigd hebben voordat ze publiek zichtbaar of bestelbaar zijn. Meer-unit verpakkingen worden server-side als effectieve units berekend. |
 | Europ Foods/Eurodrop prijsreview | Lopend | Eurodrop is referentiebron voor Europ Foods-consumentenprijzen. Alleen betrouwbare matches krijgen `Eurodrop + EUR 0,10`; onzekere records blijven zonder verkoopprijs/review. De audit van 28 juli telt 107 verwerkt en 220 reviewrecords. |
 | Betaling | Handmatig | Alleen Bizum en bankoverschrijving zijn zichtbaar/selecteerbaar voor klanten. Stripe, kaart en contant staan niet actief in de klantflow. |
@@ -67,6 +67,7 @@ Nancy's Castalla heeft een werkende meertalige catalogus, persistente winkelmand
 - Supplier Imports heeft een herstelpaneel voor bestaande Europ Foods-conflicten. Pending conflictregels kunnen opnieuw worden geclassificeerd en geselecteerde importeerbare varianten kunnen alsnog als nieuwe hidden draftproducten met nieuwe NC-codes worden aangemaakt.
 - Sales-unit prijsveiligheid is toegevoegd na de Magners-controle: leveranciersdoosprijs, bron-eenheidsprijs en publieke verkoopeenheid worden apart opgeslagen en geïmporteerde producten blijven onzichtbaar/onbestelbaar totdat verpakking en prijsbasis expliciet zijn bevestigd.
 - Nieuwe importarchitectuur voorbereid met `product_import_runs`, `supplier_product_offers`, reviewvelden, transactionele Nancy-productcode-reservering vanaf de actuele hoogste `NC-xxxxx`, en batch-RPC's voor publiceren/rollback.
+- Op 30 juli 2026 zijn drie extra actuele leverancierslijsten als draft/onzichtbaar geïmporteerd zonder verkoopprijzen of voorraadmutaties: `IMPORT_2026_LIVE_HOLLANDSE_BAKKER_JULY` met 73 producten/offers, `IMPORT_2026_LIVE_MESSIAEN_BEER_JULY` met 60 producten/offers en `IMPORT_2026_LIVE_MESSIAEN_FOOD_JULY` met 386 producten/offers. Messiaen Food heeft 8 supplier-codeconflicten in `product_import_conflicts`; 1 exacte herhaalde bronregel is niet dubbel aangemaakt.
 - Categorieoverzicht, klantoverzicht, leveranciersoverzicht, inkooporderoverzicht, IVA-samenvatting, rapportagekaarten, instellingen en integratieregister.
 - Orderoverzicht en responsieve orderdetails met klantgegevens, adres, opmerkingen, regels, verpakking, aantallen, prijzen, IVA en totalen.
 - Status, betaalstatus en interne notities wijzigen; bellen, WhatsApp en e-mail openen.
@@ -121,10 +122,11 @@ Aanvullende productiecontrole 12 juli 2026: Orders en Customers laden nu ook wan
 14. Voer migratie `202607120002_sales_unit_price_basis_safety.sql` handmatig uit in Supabase productie zodat databasepublicatie dezelfde sales-unit prijsveiligheid afdwingt als de applicatiecode.
 15. Voer migratie `202607250001_keep_tindale_products_offline.sql` handmatig uit in Supabase productie als deze nog niet aantoonbaar live staat, zodat Tindale-producten offline blijven en Tindale-batches niet per ongeluk gepubliceerd kunnen worden.
 16. Voer na publicatie van een kleine Europ Foods-selectie een echte cart/order-smoketest uit met Bizum en bankoverschrijving.
+17. Review de nieuwe batches `IMPORT_2026_LIVE_HOLLANDSE_BAKKER_JULY`, `IMPORT_2026_LIVE_MESSIAEN_BEER_JULY` en `IMPORT_2026_LIVE_MESSIAEN_FOOD_JULY`: verkoopprijs, IVA, categorie, verpakking/sales unit, afbeelding en vertaling moeten handmatig worden gecontroleerd voordat iets gepubliceerd mag worden.
 
 ## Niet blokkerend voor de eerste gecontroleerde pre-orders
 
-- Volledig inkoopbeheer en goederenontvangst.
+- Handmatige productie-uitvoering en verificatie van `202608120001_purchasing_supplier_invoice_workflow.sql` voor inkoopbeheer en goederenontvangst.
 - Creditnota's, boekhoudexport en automatische betalingsmatching.
 - POS/SumUp/Stripe/WhatsApp Business-integraties.
 - Volledig vertaalde leveranciersinhoud en backoffice.
@@ -149,3 +151,43 @@ Op 18 juli 2026 is admin-ordercorrectie voorbereid en daarna in productie gemigr
 Aanvulling 18 juli 2026: dezelfde migratie onderscheidt nu twee voorraadcorrecties. Normale voorraadcommits met aantoonbare negatieve `sale`-movements kunnen via positieve `correction_release`-movements worden teruggeboekt voordat orderregels worden gecorrigeerd. Legacy/bug-orders met `inventory_committed=true` maar exact nul `inventory_movements` krijgen een aparte adminactie die alleen de foutieve commit-vlag reset, zonder productvoorraad of movements te wijzigen, en dit volledig audit met orderregels, stocksnapshot, actor en reden.
 
 Op 28 juli 2026 is de Europ Foods/Eurodrop-prijsreview gedocumenteerd als vaste werkwijze. Eurodrop-consumentenprijzen mogen alleen op Europ Foods-producten worden toegepast bij betrouwbare matches; Nancy's verkoopprijs is dan `Eurodrop + EUR 0,10` inclusief IVA. Onzekere matches, afwijkende verpakking, ontbrekende foto/omschrijving/ingrediënten/allergenen of twijfel over IVA blijven reviewwerk. De gegenereerde audit `outputs/europfoods-eurodrop-final-audit-20260728.*` controleerde 327 records: 327 gevonden, 0 duplicaat-/supplierconflicten, 107 verwerkt, 220 niet bevestigd, 326 zonder echte foto, 210 zonder bruikbare beschrijving en 263 zonder ingrediënten.
+
+Op 30 juli 2026 is onderzocht waarom na losse Tindale-fotokoppelingen verkoopprijzen zichtbaar waren. De betrokken producten hadden hun verkoopprijzen al vóór de foto-import in de database of waren eerder via expliciete Tindale-prijsopdrachten geprijsd; de foto-import-PATCHes wijzigden alleen `image_url` en `images`. Voor toekomstige losse fotobatches is `scripts/link-product-photos.mjs` toegevoegd met een harde allowlist: standaard alleen afbeeldingsvelden, en alleen bij expliciete `--activate` ook `product_status`/`is_visible`. Prijs, IVA, verpakking, voorraad, categorie, beschrijving en suppliermetadata mogen nooit via foto-import worden aangepast.
+
+Op 4 augustus 2026 is de Tindale-map `JUICES & CONCENTRATE` opnieuw als foto-only batch verwerkt met `scripts/link-product-photos.mjs`. De verwerking koppelde 61 afbeeldingen aan bestaande Tindale-producten en wijzigde uitsluitend `image_url` en `images`; prijzen, IVA, verpakking, voorraad, categorie, productnaam, beschrijvingen en zichtbaarheid zijn niet aangepast. De volgende aangeleverde bestanden hadden geen exacte productmatch op `supplier=Tindale` + `supplier_code` en moeten handmatig worden gecontroleerd voordat er een foto kan worden gekoppeld:
+
+| Supplier | Supplier code | Filename | Resultaat | Vervolgactie |
+| --- | --- | --- | --- | --- |
+| Tindale | 10937 | `10937.1.jpg-600x600.jpg` | PRODUCT_NOT_FOUND | Controleer of dit Tindale-product ontbreekt of onder een andere code bestaat. |
+| Tindale | 10939 | `10939.1.jpg-600x600.jpg` | PRODUCT_NOT_FOUND | Controleer of dit Tindale-product ontbreekt of onder een andere code bestaat. |
+| Tindale | 10941 | `10941.1.jpg-600x600.jpg` | PRODUCT_NOT_FOUND | Controleer of dit Tindale-product ontbreekt of onder een andere code bestaat. |
+| Tindale | 57066 | `57066.1.jpg-600x600.jpg` | PRODUCT_NOT_FOUND | Controleer of dit Tindale-product ontbreekt of onder een andere code bestaat. |
+| Tindale | 57067 | `57067.1.jpg-600x600.jpg` | PRODUCT_NOT_FOUND | Controleer of dit Tindale-product ontbreekt of onder een andere code bestaat. |
+
+Op 4 augustus 2026 zijn de Tindale-mappen `sparkling wines` en `SPIRITS & VARIOUS` als foto-only batches verwerkt met `scripts/link-product-photos.mjs`. De verwerking koppelde 16 afbeeldingen aan bestaande Tindale-producten en wijzigde uitsluitend `image_url` en `images`; prijzen, IVA, verpakking, voorraad, categorie, productnaam, beschrijvingen en zichtbaarheid zijn niet aangepast. Alle 4 sparkling-wines bestanden zijn gekoppeld. De volgende aangeleverde spirits/various-foto had geen exacte productmatch op `supplier=Tindale` + `supplier_code`:
+
+| Supplier | Supplier code | Filename | Resultaat | Vervolgactie |
+| --- | --- | --- | --- | --- |
+| Tindale | 13516 | `13516.jpg-600x600.jpg` | PRODUCT_NOT_FOUND | Controleer of dit Tindale-product ontbreekt of onder een andere code bestaat. |
+
+Op 4 augustus 2026 is de Tindale-map `DRINKS - SOFT DRINKS` als foto-only batch verwerkt met `scripts/link-product-photos.mjs`. De verwerking koppelde 51 aangeleverde afbeeldingsbestanden aan bestaande Tindale-producten en wijzigde uitsluitend `image_url` en `images`; prijzen, IVA, verpakking, voorraad, categorie, productnaam, beschrijvingen en zichtbaarheid zijn niet aangepast. Drie niet-numerieke bestandsnamen zijn expliciet gemapt: `cherry coke 330ml.1.jpg-600x600.jpg` naar supplier code `10919`, `dr pepper.1.jpg-600x600.jpg` naar supplier code `10905`, en `+.jpg` naar supplier code `57096`. De volgende aangeleverde soft-drinks-foto's hadden geen exacte productmatch op `supplier=Tindale` + `supplier_code`:
+
+| Supplier | Supplier code | Filename | Resultaat | Vervolgactie |
+| --- | --- | --- | --- | --- |
+| Tindale | 119136 | `119136.jpg-600x600.jpg` | PRODUCT_NOT_FOUND | Controleer of dit Tindale-product ontbreekt of onder een andere code bestaat. |
+| Tindale | 56195 | `56195.1.jpg-600x600.jpg` | PRODUCT_NOT_FOUND | Controleer of dit Tindale-product ontbreekt of onder een andere code bestaat. |
+
+Op 4 augustus 2026 zijn de Tindale-mappen `ciders`, `cereals` en `breads and naan` als foto-only batches verwerkt met `scripts/link-product-photos.mjs`. De verwerking koppelde 23 afbeeldingen aan bestaande Tindale-producten en wijzigde uitsluitend `image_url` en `images`; prijzen, IVA, verpakking, voorraad, categorie, productnaam, beschrijvingen en zichtbaarheid zijn niet aangepast. Vier niet-numerieke Kopparberg-bestandsnamen zijn expliciet gemapt: `kopp. Strawberry Lime.1.jpg-600x600.jpg` naar supplier code `12009`, `kopp. mixed fruit.1.jpg-600x600.jpg` naar `12052`, `kopp. wildberry.1.jpg-600x600.jpg` naar `12010`, en `kopp. pear.1.jpg-600x600.jpg` naar `12008`. Drie cereal-bestanden zonder artikelnummer zijn read-only gematcht op bestaande Tindale-producten: `WEETABIX_ORIGINAL_430.jpg-600x600.jpg` naar `11599`, `oats superfast-500g.2.png-600x600.jpg` naar `853`, en `mornflake crunchy raisin.1.jpg-600x600.jpg` naar `11102`. Alle `cereals`- en `breads and naan`-bestanden zijn gekoppeld. De volgende aangeleverde cider-foto had geen exacte productmatch op `supplier=Tindale` + `supplier_code`:
+
+| Supplier | Supplier code | Filename | Resultaat | Vervolgactie |
+| --- | --- | --- | --- | --- |
+| Tindale | 120110 | `120110.2.jpg-600x600.jpg` | PRODUCT_NOT_FOUND | Controleer of dit Tindale-product ontbreekt of onder een andere code bestaat. |
+
+Op 4 augustus 2026 zijn de Tindale-mappen `biscuits and crackers`, `beer ale` en `bakery` als foto-only batches verwerkt met `scripts/link-product-photos.mjs`. De verwerking koppelde 53 afbeeldingen aan bestaande Tindale-producten en wijzigde uitsluitend `image_url` en `images`; prijzen, IVA, verpakking, voorraad, categorie, productnaam, beschrijvingen en zichtbaarheid zijn niet aangepast. De kleine `115202.1.jpg-100x100.jpg` thumbnail is bewust niet verwerkt zodat de 600px-foto voor supplier code `115202` behouden blijft. Twee niet-numerieke beer-bestandsnamen zijn expliciet gemapt: `John Smith.1.jpg-600x600.jpg` naar supplier code `12006`, en `guiness can 440.1.jpg-600x600.jpg` naar supplier code `12033`. Alle `bakery`-bestanden zijn gekoppeld. De volgende aangeleverde foto's hadden geen exacte productmatch op `supplier=Tindale` + `supplier_code`:
+
+| Supplier | Supplier code | Filename | Resultaat | Vervolgactie |
+| --- | --- | --- | --- | --- |
+| Tindale | 115207 | `115207.jpg-600x600.jpg` | PRODUCT_NOT_FOUND | Controleer of dit Tindale-product ontbreekt of onder een andere code bestaat. |
+| Tindale | 12082 | `12082.1.jpg-600x600.jpg` | PRODUCT_NOT_FOUND | Controleer of dit Tindale-product ontbreekt of onder een andere code bestaat. |
+
+Op 30 juli 2026 zijn drie nieuwe supplier-PDF's verwerkt via een veilige scriptmatige draftimport: De Hollandse Bakker (`dehollandsebakker.pdf`), Messiaen Beer (`lista cerevza.pdf`) en Messiaen Food (`ListapreciosESP_merged.pdf`). Alle nieuwe producten staan `product_status='draft'`, `is_visible=false`, `sale_price_incl_vat=0`, zonder voorraadmutatie en met gekoppelde `supplier_product_offers`. De oude archived Hollandse Bakker-catalogus is niet gewijzigd. Een eerste importer-run stopte veilig door een schema/ID-mismatch en is als failed geaudit met 0 producten; de 73 tijdelijk fout geformatteerde draft-id's uit de tweede poging zijn direct hersteld naar normale `NC-03468`-achtige codes voordat de resterende imports zijn uitgevoerd.

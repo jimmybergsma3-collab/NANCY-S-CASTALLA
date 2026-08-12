@@ -74,7 +74,7 @@ De applicatie is online als productie-implementatie op Vercel, maar functioneel 
 1. Betrouwbare productiecontrole van alle Vercel-, Supabase-, Resend- en DNS-instellingen en een volledige productie-smoketest.
 2. Formele order-state-machine, statushistorie en voorraadreserveringsbesluit; de huidige kerntransities werken al transactioneel.
 3. Server-side handhaving van bezorgminimum, bezorgkosten en bezorggebied.
-4. Volwaardige inkoop, goederenontvangst, leveranciersmutaties en uitgebreide rapportages.
+4. Productie-uitvoering en verificatie van de nieuwe inkoop-, leveranciersfactuur-, goederenontvangst- en rapportagemigratie.
 5. Creditnota's, boekhoudexport en fiscale validatie; normale interne facturen en PDF's zijn al aanwezig.
 6. Resterende productinhoud, backoffice en compliance professioneel vertalen en controleren.
 7. Product- en categorie-SEO, structured data en volledige sitemap.
@@ -377,15 +377,15 @@ Kolommen: UUID `id`, `product_id`, `order_id`, `movement_type`, `quantity`, `ref
 
 RLS: ingeschakeld.
 
-## 4.8 `purchase_orders`
+## 4.8 Inkoop, leveranciersfacturen en goederenontvangst
 
-**Doel:** voorbereiding voor inkooporders.
+**Doel:** operationele backofficeflow voor leveranciersbestellingen, supplier-invoices, ontvangstcontrole en voorraadverhoging na feitelijke ontvangst.
 
-Kolommen: UUID, oplopend uniek inkoopnummer, leverancier, status, bedragen excl. btw/btw/incl. btw, verwachte en ontvangen datum, notities en timestamps.
+Migratie `202608120001_purchasing_supplier_invoice_workflow.sql` breidt `purchase_orders` uit en voegt `purchase_order_items`, `supplier_invoices`, `supplier_invoice_items`, `goods_receipts`, `goods_receipt_items` en `purchase_price_history` toe.
 
-Relatie: optionele foreign key naar `suppliers`, `ON DELETE SET NULL`.
+Leveranciersfacturen blijven strikt gescheiden van klantfacturen. Bestanden worden opgeslagen in de private Supabase Storage bucket `supplier-invoices`; de database bewaart alleen metadata, parse-status, bedragen, IVA en reviewgegevens. OCR/pdf-uitlezing is best-effort zonder externe OCR-secrets.
 
-Beperking: er is nog geen `purchase_order_items`-tabel. Daardoor is ontvangst per artikel en automatische voorraadverhoging nog niet als volledige workflow te implementeren.
+Voorraad wijzigt uitsluitend via een verwerkte goederenontvangst. Een receipt wordt per regel gekoppeld aan een product en schrijft positieve `supplier_receipt`-mutaties in `inventory_movements`; ontvangen aantallen verhogen daarna de actuele productvoorraad. Purchase orders en supplier invoices alleen aanmaken, uploaden of reviewen verandert geen voorraad.
 
 RLS: ingeschakeld.
 
@@ -643,6 +643,18 @@ De module `/{locale}/admin/imports` is bedoeld voor de nieuwe livecatalogus en w
 
 Deze module stuurt geen service-role sleutel naar de browser en verandert geen orders, facturen, klanten, auth of voorraadmutaties.
 
+Voor aanvullende actuele PDF-lijsten bestaat `scripts/import-pdf-supplier-lists.mjs`. Dit script gebruikt dezelfde veilige importprincipes als de adminmodule, maar is expliciet bedoeld voor ondersteunde supplier-PDF's die nog niet in de UI-parserlijst staan. Het draait standaard als dry-run, schrijft rapporten naar `tmp-import-reports`, en confirmed import schrijft alleen draft/onzichtbare `products` plus gekoppelde `supplier_product_offers`. Leveranciersbestanden zelf blijven buiten Git.
+
+Op 30 juli 2026 zijn hiermee drie productie-draftbatches aangemaakt:
+
+| Batch | Bronbestand | Resultaat |
+|---|---|---:|
+| `IMPORT_2026_LIVE_HOLLANDSE_BAKKER_JULY` | `dehollandsebakker.pdf` | 73 draftproducten en 73 supplier offers |
+| `IMPORT_2026_LIVE_MESSIAEN_BEER_JULY` | `lista cerevza.pdf` | 60 draftproducten en 60 supplier offers |
+| `IMPORT_2026_LIVE_MESSIAEN_FOOD_JULY` | `ListapreciosESP_merged.pdf` | 386 draftproducten, 386 supplier offers en 8 open conflicts |
+
+Deze drie batches zijn purchase-only: bronprijzen zijn inkoop-/supplier-offerprijzen, geen publieke verkoopprijzen. `sale_price_incl_vat` blijft 0, `product_status` blijft `draft`, `is_visible=false`, `stock_quantity=0`, en producten houden reviewflags voor IVA, categorie, verpakking, afbeelding en vertaling waar nodig. De oude archived Hollandse Bakker-catalogus blijft onaangetast en wordt niet als matchdoel hersteld.
+
 ## 6.6b Europ Foods/Eurodrop prijs- en productreview
 
 Eurodrop is sinds 28 juli 2026 de referentiebron voor consumentenverkoopprijzen van Europ Foods-producten. Dit is geen algemene importbron en geen automatische upsert. De regels:
@@ -795,7 +807,7 @@ Er is geen klassiek contactformulier. Contact loopt via `info@nancys.es`, WhatsA
 - POS/kassakoppeling.
 - WhatsApp Business API.
 - Factuur-PDF en boekhoudexport.
-- Automatische leveranciersorders en goederenontvangst.
+- Productiecontrole van de nieuwe leveranciersorder-, leveranciersfactuur- en goederenontvangstflow.
 - Postcode-/afstandcontrole.
 - Klantadresboek en meerdere afleveradressen.
 - Productreviews, verlanglijst, kortingscodes en marketingmail.
@@ -886,6 +898,8 @@ Ondersteunt productcreatie/upsert, wijziging, veilige archivering en restore. In
 **Validatie:** adminsessie, afbeelding-MIME en maximaal circa 5 MB.  
 **Actie:** upload naar de publieke Supabase-bucket, standaard `product-images`.  
 **Output:** publieke URL.
+
+Losse leveranciersfoto's mogen alleen via een expliciet image-only proces aan bestaande producten worden gekoppeld. Het hulpscript `scripts/link-product-photos.mjs` zoekt het bestaande product via leverancier plus `supplier_code`, uploadt de afbeelding naar Supabase Storage en patcht uitsluitend `image_url` en `images`; alleen met expliciete `--activate` mag het daarnaast `product_status='active'` en `is_visible=true` zetten. Het script heeft een harde allowlist en mag nooit `sale_price_incl_vat`, `price`, `cost_price_ex_vat`, `vat_rate`, verpakking, voorraad, categorie, beschrijving of suppliermetadata wijzigen. Losse fotobestanden bevatten geen prijsbron; eventuele zichtbare verkoopprijs moet dus al uit een eerder prijs-/productproces komen.
 
 ### `/api/admin/imports`
 
@@ -1089,7 +1103,7 @@ Deze velden zijn bewust gescheiden. `preorder` is commercieel altijd bestelbaar 
 ## 12.3 Risico's
 
 - Twee `new` orders kunnen dezelfde laatste voorraad claimen. De eerste bevestiging slaagt; de tweede krijgt bij bevestiging onvoldoende voorraad.
-- Pre-orders worden bewust niet aan fysieke voorraad gealloceerd; toekomstige inkoopkoppeling en vraagaggregatie ontbreken nog.
+- Pre-orders worden bewust niet aan fysieke voorraad gealloceerd; leveranciersinkoop en goederenontvangst zijn een aparte adminflow en verhogen voorraad pas na expliciete ontvangstverwerking.
 - Geen lotnummer, houdbaarheidsdatum, locatie of beschadigde voorraad.
 - Handmatige correcties verdienen Ã©Ã©n atomische RPC.
 
@@ -1097,7 +1111,7 @@ Deze velden zijn bewust gescheiden. `preorder` is commercieel altijd bestelbaar 
 
 1. Kies per product tussen `reserve_on_order` en `commit_on_confirm`.
 2. Voeg `stock_reservations` met vervaltijd toe voor directe verkoop.
-3. Voeg inkoopregels en goods receipts toe.
+3. Voer `202608120001_purchasing_supplier_invoice_workflow.sql` handmatig uit en verifieer purchase orders, supplier invoices, goods receipts en voorraadmutaties in productie.
 4. Introduceer lots, THT-datum en opslaglocatie voor food compliance.
 5. Maak lagevoorraadnotificaties en bestelvoorstellen.
 
@@ -1418,7 +1432,7 @@ De operationele samenvatting met **Afgeronde mijlpalen** en **TODO vÃ³Ã³r li
 
 1. Individuele adminaccounts, rollen, MFA en auditlog.
 2. Statusgeschiedenis, uitgebreidere interne notities en communicatie-eventhistorie in backoffice.
-3. Inkoopregels, goederenontvangst en automatische voorraadverhoging.
+3. Productieverificatie van inkoopregels, goederenontvangst en voorraadverhoging via supplier receipts.
 4. Voorraadreserveringen, lots en THT.
 5. Creditnota's, formele correcties en boekhoudexport boven op de bestaande factuurregels en PDF's.
 6. Adresboek, postcodezones en bezorgplanning.
@@ -1479,7 +1493,7 @@ Nancy's Castalla is een Next.js 16/React 19 webwinkel op Vercel met Supabase als
 
 Producten worden primair uit Supabase geladen. De catalogus bevat rijke commerciÃ«le en operationele velden: identificatie, meerdere categorieÃ«n, herkomst, afbeelding, zichtbaarheid, voorraadstatus, kostprijs, btw, verkoopprijs, leverancier, verpakkingen, voorraad, ingrediÃ«nten en bewaar-/bereidingsinformatie. Een lokale TypeScriptdataset fungeert als fallback, maar kan bij storingen verouderde data tonen. Grote leverancierslijsten zijn via SQL-imports ingebracht en standaard verborgen, waarna de beheerder producten handmatig kan verrijken en publiceren.
 
-De backoffice is bereikbaar via een verborgen adminlogin. Adminauth gebruikt een gedeelde e-mail en wachtwoord uit Vercel-environmentvariabelen en een beveiligde HttpOnly-cookie. Productbeheer is het meest volwassen onderdeel: toevoegen, wijzigen, verwijderen, foto's uploaden, meerdere categorieÃ«n, prijzen, btw, klantverpakkingen en online zichtbaarheid. Orders, voorraad en normale facturatie zijn operationeel bruikbaar. Klanten, leveranciers en eenvoudige rapportages zijn zichtbaar. Inkoop, creditnota's, boekhoudexport, uitgebreide btw-rapportage en externe integraties zijn vooral voorbereid en nog niet volledig uitvoerbaar.
+De backoffice is bereikbaar via een verborgen adminlogin. Adminauth gebruikt een gedeelde e-mail en wachtwoord uit Vercel-environmentvariabelen en een beveiligde HttpOnly-cookie. Productbeheer is het meest volwassen onderdeel: toevoegen, wijzigen, verwijderen, foto's uploaden, meerdere categorieÃ«n, prijzen, btw, klantverpakkingen en online zichtbaarheid. Orders, voorraad en normale facturatie zijn operationeel bruikbaar. Klanten, leveranciers en eenvoudige rapportages zijn zichtbaar. Inkoop, leveranciersfacturen, goederenontvangst en purchase/IVA-rapportage zijn in de code toegevoegd en worden productie-actief na handmatige uitvoering van migratie `202608120001_purchasing_supplier_invoice_workflow.sql`. Creditnota's, boekhoudexport en externe integraties blijven buiten scope.
 
 Klantaccounts gebruiken Supabase Auth. Registratie verstuurt via Supabase en Resend SMTP een branded bevestigingsmail van `account@nancys.es`. Na bevestiging kan de klant inloggen, het profiel met naam, telefoon, adres en taal beheren, het wachtwoord herstellen en orderhistorie bekijken. Een database-trigger koppelt de Auth-user aan de `customers`-tabel. De Supabase-sessie leeft in browserstorage; account-API's verifiÃ«ren ieder bearer-token opnieuw en gebruiken daarna server-side service-role toegang.
 

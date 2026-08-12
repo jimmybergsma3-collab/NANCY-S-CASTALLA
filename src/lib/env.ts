@@ -12,6 +12,7 @@ export const env = {
   accountEmail: process.env.ACCOUNT_EMAIL ?? "account@nancys.es",
   fromEmail: process.env.FROM_EMAIL ?? "Nancy's Castalla <orders@nancys.es>",
   productImagesBucket: process.env.PRODUCT_IMAGES_BUCKET ?? "product-images",
+  supplierInvoicesBucket: process.env.SUPPLIER_INVOICES_BUCKET ?? "supplier-invoices",
 };
 
 export function hasSupabaseAdmin() {

@@ -5,6 +5,34 @@
 
 Dit document legt belangrijke technische beslissingen en hun motivatie vast. Het beschrijft geen volledige codegeschiedenis; daarvoor dient `CHANGELOG.md`. Nieuwe besluiten worden onder de juiste datum toegevoegd. Wanneer een besluit wordt vervangen, blijft het oude besluit staan met een verwijzing naar het nieuwe besluit.
 
+## 2026-08-12
+
+### Leveranciersfacturen en inkoopontvangst zijn aparte backofficeflow
+
+**Besluit:** leveranciersfacturen worden los van klantfacturen beheerd. Ze gebruiken geen klantfactuurnummers, geen klant-PDF-flow en geen orderbevestigingsmails. Bestanden worden in de private Supabase Storage-bucket `supplier-invoices` geplaatst. Inkooporders en supplier invoice uploads wijzigen nooit voorraad; voorraad verandert alleen wanneer een admin een goods receipt expliciet verwerkt via de server-side receipt-processingfunctie.
+
+**Waarom:** Nancy's Castalla moet leveranciersbestellingen, inkoop-IVA en voorraadontvangst kunnen volgen zonder verkoopfacturen, klantorders of historische factuurseries te vervuilen. Een aparte flow voorkomt dat leveranciersdocumenten per ongeluk publiek of klantgericht worden behandeld.
+
+**Gevolg:** migratie `202608120001_purchasing_supplier_invoice_workflow.sql` moet handmatig in Supabase worden uitgevoerd voordat de productiebackoffice deze flow gebruikt. Salesrapportages sluiten `TEST-` facturen standaard uit; purchase reports baseren zich op supplier invoices/goods receipts.
+
+## 2026-07-30
+
+### Nieuwe Hollandse Bakker- en Messiaen-lijsten zijn purchase-only draftimports
+
+**Besluit:** De Hollandse Bakker, Messiaen Beer en Messiaen Food worden als aparte live-datasets geïmporteerd met eigen batches: `IMPORT_2026_LIVE_HOLLANDSE_BAKKER_JULY`, `IMPORT_2026_LIVE_MESSIAEN_BEER_JULY` en `IMPORT_2026_LIVE_MESSIAEN_FOOD_JULY`. Bronprijzen uit deze PDF's worden uitsluitend als inkoop-/supplier-offerdata opgeslagen. Nieuwe producten blijven `draft`, `is_visible=false`, zonder verkoopprijs, zonder voorraadmutatie en met reviewflags.
+
+**Waarom:** de PDF's bevatten leveranciersprijzen en uiteenlopende verpakkingsvormen, maar geen betrouwbaar afgeronde Nancy-verkoopprijzen of volledig gecontroleerde Spaanse IVA/categorie/sales-unitdata. Door alles eerst als draft te bewaren kan Nancy prijzen, IVA, verpakking, afbeeldingen en categorieën handmatig controleren zonder de publieke webshop te vervuilen.
+
+**Gevolg:** supplier code is de primaire koppelsleutel binnen de leverancier, maar geen globale productsleutel. Archived prelaunchproducten worden niet gewijzigd of hersteld. Mogelijke supplier-codeconflicten blijven in `product_import_conflicts`; exacte bronherhalingen worden niet dubbel aangemaakt.
+
+### Losse productfoto-imports zijn strikt image-only
+
+**Besluit:** losse productfoto's die op supplier code worden gekoppeld mogen uitsluitend afbeeldingsvelden wijzigen: `image_url`, `images` en noodzakelijke storage-metadata. Alleen wanneer een opdracht expliciet activatie vraagt, mag hetzelfde proces ook `product_status='active'` en `is_visible=true` zetten. Prijs, IVA, verpakking, voorraad, beschrijving, categorie, supplier offer en importmetadata blijven buiten bereik.
+
+**Waarom:** losse foto-bestandsnamen bevatten geen prijs- of productbron. Bij de Tindale-foto-imports bleek dat zichtbare prijzen al uit eerdere Tindale-prijsbatches of bestaande databasewaarden kwamen en niet uit de fotoverwerking. Een harde allowlist voorkomt dat toekomstige foto-imports via een algemene product-updatefunctie onbedoeld verkoopprijzen of fiscale velden aanpassen.
+
+**Gevolg:** gebruik voor bulkfoto's `scripts/link-product-photos.mjs`. Het script weigert elke patch buiten de allowlist en mag nooit worden uitgebreid tot prijs-, IVA-, verpakking- of voorraadimport.
+
 ## 2026-07-28
 
 ### Eurodrop-prijsupdate is gecontroleerde referentie, geen automatische import

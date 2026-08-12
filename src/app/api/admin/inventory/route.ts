@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { isAdminSession } from "@/lib/admin-auth";
-import { adjustInventory, listInventory } from "@/services/inventory/inventory-service";
+import { adjustInventory, listInventory, listRecentInventoryMovements } from "@/services/inventory/inventory-service";
 
 export async function GET() {
   if (!(await isAdminSession())) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  return NextResponse.json({ products: await listInventory() });
+  const [products, movements] = await Promise.all([listInventory(), listRecentInventoryMovements()]);
+  return NextResponse.json({ products, movements });
 }
 
 export async function PATCH(request: Request) {
