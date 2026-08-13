@@ -14,3 +14,4 @@ tsconfig.tsbuildinfo
 import/incoming/
 imports/incoming/
 supplier-files/
+.vercel

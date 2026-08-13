@@ -33,13 +33,14 @@ export function PwaInstallPrompt({ locale }: { locale: Locale }) {
   const [showManualHint, setShowManualHint] = useState(false);
 
   useEffect(() => {
-    if (isStandalone() || window.localStorage.getItem(dismissedKey) === "1") return;
+    if (isStandalone() || !isMobileBrowser() || window.localStorage.getItem(dismissedKey) === "1") return;
 
     if ("serviceWorker" in navigator) {
       void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
     }
 
     const onBeforeInstallPrompt = (event: Event) => {
+      if (!isMobileBrowser()) return;
       event.preventDefault();
       setInstallEvent(event as BeforeInstallPromptEvent);
       setShowManualHint(false);
