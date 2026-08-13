@@ -8,7 +8,7 @@ export default async function BreadPage({ params }: { params: Promise<unknown> }
   const { locale: rawLocale } = (await params) as { locale?: string };
   const locale: Locale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const dictionary = getDictionary(locale);
-  const breadProducts = (await getProducts()).filter((product) => product.category === "Bread & bakery");
+  const breadProducts = (await getProducts()).filter((product) => product.category === "Bread");
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-12">
@@ -19,7 +19,7 @@ export default async function BreadPage({ params }: { params: Promise<unknown> }
         <strong>{dictionary.bread.how}</strong> {dictionary.bread.howText}
       </div>
       <div className="mt-8">
-        <ProductOrder products={breadProducts} initialCategory="Bread & bakery" locale={locale} />
+        <ProductOrder products={breadProducts} initialCategory="Bread" locale={locale} />
       </div>
     </section>
   );

@@ -4,7 +4,7 @@ import { getProductCategories } from "@/lib/product-categories";
 import { getCustomerDisplayUnit } from "@/lib/product-packaging";
 import { translateProductName } from "@/lib/product-translations";
 
-const categoryFallbacks: Record<ProductCategory, Record<Locale, string>> = {
+const categoryFallbacks: Record<string, Record<Locale, string>> = {
   "Dutch products": {
     en: "Dutch product available by pre-order.",
     nl: "Nederlands product beschikbaar als voorbestelling.",

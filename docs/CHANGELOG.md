@@ -22,6 +22,7 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Toegevoegd
 
+- Webshopcategorieen omgezet van landgerichte groepen naar eenvoudige supermarktgroepen zoals Breakfast, Finger Foods, Meat, Barbecue & Grill, Sauces, Soft Drinks en Coffee & Tea, zonder de basislayout van de website te wijzigen.
 - PWA-installatieprompt voor klanten toegevoegd met taalteksten voor Engels, Nederlands, Duits, Spaans en Zweeds; Android/Chrome gebruikt de browser-installatieprompt en iOS toont een beginscherm-instructie.
 - Service worker en verbeterd webmanifest toegevoegd zodat Nancy's Castalla beter als telefoon-app installeerbaar is.
 - Operationele adminflow voor inkoop: inkooporders aanmaken, leveranciersfacturen uploaden, goederenontvangsten registreren en ontvangen regels pas na expliciete verwerking naar voorraad boeken.

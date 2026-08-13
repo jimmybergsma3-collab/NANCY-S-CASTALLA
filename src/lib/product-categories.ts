@@ -1,22 +1,31 @@
 import type { Product, ProductCategory } from "@/types/product";
 
 export const productCategories: ProductCategory[] = [
-  "Dutch products",
-  "British & Irish products",
-  "German products",
-  "Scandinavian products",
-  "Asian & Indonesian products",
-  "South American products",
-  "Vegan & vegetarian",
-  "Frozen snacks",
-  "Bread & bakery",
-  "Breakfast products",
-  "Coffee & drinks",
-  "Sauces & condiments",
-  "Non-food & packaging",
+  "Breakfast",
+  "Pies & Pasties",
+  "Sunday Roast",
+  "Bread",
+  "Finger Foods",
+  "Fish",
+  "Meat",
+  "Barbecue & Grill",
+  "Tex Mex & Convenience Food",
+  "Ready Meals",
+  "Dutch / Belgian",
+  "Potato, Vegetable & Fruits",
+  "Vegan & Vegetarian",
+  "Sauces",
+  "Tinned Food",
+  "Baking & Cooking",
+  "Cakes & Desserts",
+  "Snacks & Sweets",
+  "Soft Drinks",
+  "Coffee & Tea",
+  "Non-food & Packaging",
 ];
 
 export function getProductCategories(product: Product) {
+  const defaultCategory: ProductCategory = "Breakfast";
   const source = Array.isArray(product.categories) && product.categories.length ? product.categories : [product.category];
   const normalized = source
     .map((category) => category as string)
@@ -24,7 +33,7 @@ export function getProductCategories(product: Product) {
     .filter((category): category is ProductCategory => productCategories.includes(category as ProductCategory));
 
   const fallback = (product.category as string) === "Asian products" ? "Asian & Indonesian products" : product.category;
-  return Array.from(new Set(normalized.length ? normalized : [fallback as ProductCategory]));
+  return Array.from(new Set(normalized.length ? normalized : productCategories.includes(fallback as ProductCategory) ? [fallback as ProductCategory] : [defaultCategory]));
 }
 
 export function productMatchesCategory(product: Product, category: ProductCategory) {

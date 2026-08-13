@@ -4,7 +4,7 @@ export const products: Product[] = [
   {
     id: "bread-white-loaf",
     name: "White bread loaf",
-    category: "Bread & bakery",
+    category: "Bread",
     description: "Soft everyday white loaf, supplied by pre-order for collection in Castalla.",
     price: 3.25,
     unit: "1 loaf",
@@ -25,7 +25,7 @@ export const products: Product[] = [
   {
     id: "bread-tiger-loaf",
     name: "Tiger bread",
-    category: "Bread & bakery",
+    category: "Bread",
     description: "Crackled tiger loaf with a warm bakery crust.",
     price: 3.75,
     unit: "1 loaf",
@@ -46,7 +46,7 @@ export const products: Product[] = [
   {
     id: "bread-wholemeal",
     name: "Wholemeal bread",
-    category: "Bread & bakery",
+    category: "Bread",
     description: "Nutty wholemeal loaf for toast, sandwiches and breakfasts.",
     price: 3.5,
     unit: "1 loaf",
@@ -67,7 +67,7 @@ export const products: Product[] = [
   {
     id: "bread-six-grain",
     name: "6 grain bread",
-    category: "Bread & bakery",
+    category: "Bread",
     description: "Seeded multi-grain loaf, available when bakery minimum demand is reached.",
     price: 3.95,
     unit: "1 loaf",
@@ -88,7 +88,7 @@ export const products: Product[] = [
   {
     id: "bread-half-loaf",
     name: "Half loaf",
-    category: "Bread & bakery",
+    category: "Bread",
     description: "Smaller loaf option for lighter weekly orders.",
     price: 2.15,
     unit: "half loaf",
@@ -109,7 +109,7 @@ export const products: Product[] = [
   {
     id: "bread-sourdough-boule",
     name: "Sourdough boule",
-    category: "Bread & bakery",
+    category: "Bread",
     description: "Rustic sourdough-style boule for weekend tables and cheese boards.",
     price: 4.95,
     unit: "1 boule",
@@ -130,7 +130,7 @@ export const products: Product[] = [
   {
     id: "beans-heinz",
     name: "Baked beans",
-    category: "British & Irish products",
+    category: "Breakfast",
     description: "Classic British-style baked beans for breakfast plates and toast.",
     price: 2.4,
     unit: "415g tin",
@@ -151,7 +151,7 @@ export const products: Product[] = [
   {
     id: "sausages-breakfast",
     name: "British breakfast sausages",
-    category: "British & Irish products",
+    category: "Breakfast",
     description: "Freezer-friendly sausages for cooked breakfasts.",
     price: 5.95,
     unit: "pack",
@@ -172,7 +172,7 @@ export const products: Product[] = [
   {
     id: "bacon-back",
     name: "Back bacon",
-    category: "British & Irish products",
+    category: "Breakfast",
     description: "British-style back bacon for breakfast sandwiches.",
     price: 5.25,
     unit: "pack",
@@ -193,7 +193,7 @@ export const products: Product[] = [
   {
     id: "hash-browns",
     name: "Hash browns",
-    category: "Breakfast products",
+    category: "Breakfast",
     description: "Crispy potato hash browns for fry-ups and weekend brunch.",
     price: 3.95,
     unit: "frozen pack",
@@ -214,7 +214,7 @@ export const products: Product[] = [
   {
     id: "pancakes-breakfast",
     name: "Breakfast pancakes",
-    category: "Breakfast products",
+    category: "Breakfast",
     description: "Ready-to-heat pancakes for easy breakfast boxes.",
     price: 3.5,
     unit: "pack",
@@ -235,7 +235,7 @@ export const products: Product[] = [
   {
     id: "hp-sauce",
     name: "HP brown sauce",
-    category: "Sauces & condiments",
+    category: "Sauces",
     description: "The breakfast table classic for bacon sandwiches and pies.",
     price: 3.95,
     unit: "bottle",
@@ -256,7 +256,7 @@ export const products: Product[] = [
   {
     id: "jam-portions",
     name: "Jam portions",
-    category: "Breakfast products",
+    category: "Breakfast",
     description: "Individual jam portions for toast, pancakes and guest breakfasts.",
     price: 3.25,
     unit: "portion box",
@@ -277,7 +277,7 @@ export const products: Product[] = [
   {
     id: "yorkshire-pudding",
     name: "Yorkshire puddings",
-    category: "British & Irish products",
+    category: "Breakfast",
     description: "Frozen Yorkshire puddings for Sunday roast orders.",
     price: 3.75,
     unit: "frozen pack",
@@ -298,7 +298,7 @@ export const products: Product[] = [
   {
     id: "gravy-granules",
     name: "Gravy granules",
-    category: "Sauces & condiments",
+    category: "Sauces",
     description: "Easy roast dinner gravy for pies, mash and Sunday lunches.",
     price: 3.2,
     unit: "tub",
@@ -319,7 +319,7 @@ export const products: Product[] = [
   {
     id: "steak-pie",
     name: "British steak pie",
-    category: "British & Irish products",
+    category: "Breakfast",
     description: "Hearty frozen pie option for easy dinners.",
     price: 5.95,
     unit: "single pie",
@@ -340,7 +340,7 @@ export const products: Product[] = [
   {
     id: "sausage-rolls",
     name: "Sausage rolls",
-    category: "British & Irish products",
+    category: "Breakfast",
     description: "Frozen sausage rolls for parties, lunches and snack trays.",
     price: 4.95,
     unit: "frozen pack",
@@ -361,7 +361,7 @@ export const products: Product[] = [
   {
     id: "cornish-pasty",
     name: "Cornish pasty",
-    category: "British & Irish products",
+    category: "Breakfast",
     description: "Classic frozen pasty for quick oven meals.",
     price: 4.5,
     unit: "single pasty",
@@ -382,7 +382,7 @@ export const products: Product[] = [
   {
     id: "fish-fingers",
     name: "Fish fingers",
-    category: "British & Irish products",
+    category: "Breakfast",
     description: "Freezer staple for fish-and-chips style family meals.",
     price: 4.25,
     unit: "frozen pack",
@@ -403,7 +403,7 @@ export const products: Product[] = [
   {
     id: "oven-chips",
     name: "Oven chips",
-    category: "British & Irish products",
+    category: "Breakfast",
     description: "Chunky chips for fish suppers and easy freezer dinners.",
     price: 3.95,
     unit: "frozen bag",
@@ -424,7 +424,7 @@ export const products: Product[] = [
   {
     id: "bitterballen",
     name: "Bitterballen",
-    category: "Frozen snacks",
+    category: "Finger Foods",
     description: "Dutch party snack with a crisp crumb and savoury ragout filling.",
     price: 5.95,
     unit: "frozen pack",
@@ -445,7 +445,7 @@ export const products: Product[] = [
   {
     id: "kaastengels",
     name: "Kaastengels",
-    category: "Frozen snacks",
+    category: "Finger Foods",
     description: "Crispy Dutch cheese sticks for borrel platters.",
     price: 5.5,
     unit: "frozen pack",
@@ -466,7 +466,7 @@ export const products: Product[] = [
   {
     id: "vlammetjes",
     name: "Vlammetjes",
-    category: "Frozen snacks",
+    category: "Finger Foods",
     description: "Spicy Dutch mini snacks, ideal for sharing.",
     price: 5.75,
     unit: "frozen pack",
@@ -487,7 +487,7 @@ export const products: Product[] = [
   {
     id: "kroketten",
     name: "Kroketten",
-    category: "Frozen snacks",
+    category: "Finger Foods",
     description: "Dutch croquettes for air fryer, oven or fryer preparation.",
     price: 5.95,
     unit: "frozen pack",
@@ -508,7 +508,7 @@ export const products: Product[] = [
   {
     id: "coffee-beans-house",
     name: "House coffee beans",
-    category: "Coffee & drinks",
+    category: "Coffee & Tea",
     description: "Warm, balanced coffee beans for home espresso and filter coffee.",
     price: 7.95,
     unit: "250g bag",
@@ -529,7 +529,7 @@ export const products: Product[] = [
   {
     id: "takeaway-coffee",
     name: "Takeaway coffee",
-    category: "Coffee & drinks",
+    category: "Coffee & Tea",
     description: "Fresh coffee served during collection times when available.",
     price: 2.5,
     unit: "cup",
@@ -550,7 +550,7 @@ export const products: Product[] = [
   {
     id: "south-american-coming-soon",
     name: "South American pantry selection",
-    category: "South American products",
+    category: "Tex Mex & Convenience Food",
     description: "A small Latin pantry range is planned for a later phase.",
     price: 0,
     unit: "coming soon",

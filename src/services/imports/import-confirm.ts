@@ -49,8 +49,8 @@ function normalizePrice(value?: number) {
 }
 
 function categoryFallback(product: SupplierImportProduct) {
-  if (product.supplier === "Europ Foods") return "Dutch products";
-  return "British & Irish products";
+  if (product.supplier === "Europ Foods") return "Dutch / Belgian";
+  return "Breakfast";
 }
 
 function productTypeFromStorage(storageType: string) {

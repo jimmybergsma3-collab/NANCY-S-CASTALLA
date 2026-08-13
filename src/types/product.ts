@@ -4,19 +4,27 @@ export type ProductType = "frozen" | "fresh" | "ambient";
 export type ProductOrigin = "Dutch" | "British" | "Irish" | "German" | "Scandinavian" | "Asian" | "Indonesian" | "South American" | "Other";
 
 export type ProductCategory =
-  | "Dutch products"
-  | "British & Irish products"
-  | "German products"
-  | "Scandinavian products"
-  | "Asian & Indonesian products"
-  | "South American products"
-  | "Vegan & vegetarian"
-  | "Frozen snacks"
-  | "Bread & bakery"
-  | "Breakfast products"
-  | "Coffee & drinks"
-  | "Sauces & condiments"
-  | "Non-food & packaging";
+  | "Breakfast"
+  | "Pies & Pasties"
+  | "Sunday Roast"
+  | "Bread"
+  | "Finger Foods"
+  | "Fish"
+  | "Meat"
+  | "Barbecue & Grill"
+  | "Tex Mex & Convenience Food"
+  | "Ready Meals"
+  | "Dutch / Belgian"
+  | "Potato, Vegetable & Fruits"
+  | "Vegan & Vegetarian"
+  | "Sauces"
+  | "Tinned Food"
+  | "Baking & Cooking"
+  | "Cakes & Desserts"
+  | "Snacks & Sweets"
+  | "Soft Drinks"
+  | "Coffee & Tea"
+  | "Non-food & Packaging";
 
 export type ProductPackageOption = {
   label: string;
