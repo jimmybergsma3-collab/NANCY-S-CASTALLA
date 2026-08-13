@@ -20,6 +20,7 @@ export const productCategories: ProductCategory[] = [
   "Cakes & Desserts",
   "Snacks & Sweets",
   "Soft Drinks",
+  "Alcoholic Drinks",
   "Coffee & Tea",
   "Non-food & Packaging",
 ];

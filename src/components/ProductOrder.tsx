@@ -59,7 +59,7 @@ export function ProductOrder({ products, initialCategory = "All", locale = defau
           </button>
         ))}
       </div>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {visibleProducts.length === 0 ? <div className="rounded-lg border border-forest/10 bg-white p-6 text-sm text-forest/70 shadow-soft md:col-span-2">{ui.products.noProducts}</div> : null}
         {visibleProducts.map((product) => {
           const productName = translateProductName(product.name, locale);
