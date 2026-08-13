@@ -57,6 +57,10 @@ type ProductRow = {
 };
 
 export function rowToProduct(row: ProductRow): Product {
+  const images = Array.isArray(row.images) ? row.images : row.image_url ? [row.image_url] : [];
+  const categories = Array.isArray(row.categories) && row.categories.length ? row.categories : [row.category];
+  const packageOptions = Array.isArray(row.package_options) ? row.package_options : [];
+
   return {
     id: row.id,
     uuid: row.uuid ?? "",
@@ -64,7 +68,7 @@ export function rowToProduct(row: ProductRow): Product {
     ean: row.ean ?? "",
     name: row.name,
     imageUrl: row.image_url ?? "",
-    images: row.images ?? (row.image_url ? [row.image_url] : []),
+    images,
     isVisible: row.is_visible ?? true,
     isNew: row.is_new ?? false,
     readyForPublish: row.ready_for_publish ?? false,
@@ -72,7 +76,7 @@ export function rowToProduct(row: ProductRow): Product {
     importBatch: row.import_batch ?? "",
     archivedAt: row.archived_at ?? "",
     category: row.category,
-    categories: row.categories?.length ? row.categories : [row.category],
+    categories,
     description: row.description,
     price: row.price,
     unit: row.unit,
@@ -101,7 +105,7 @@ export function rowToProduct(row: ProductRow): Product {
     minimumStock: row.minimum_stock ?? 0,
     trackInventory: row.track_inventory ?? false,
     weight: row.weight ?? "",
-    packageOptions: row.package_options ?? [],
+    packageOptions,
     ingredients: row.ingredients ?? "",
     directions: row.directions ?? "",
     conservation: row.conservation ?? "",
@@ -183,6 +187,28 @@ async function getAllProductRows() {
   return rows;
 }
 
+async function getActiveVisibleProductRows() {
+  const pageSize = 1000;
+  const rows: ProductRow[] = [];
+
+  for (let page = 0; page < 5; page += 1) {
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
+    const pageRows = await supabaseAdminFetch<ProductRow[]>(
+      "products?select=*&product_status=eq.active&is_visible=eq.true&order=id.asc",
+      { range: { from, to } },
+    );
+
+    rows.push(...pageRows);
+
+    if (pageRows.length < pageSize) {
+      break;
+    }
+  }
+
+  return rows;
+}
+
 function isActivePublicProduct(product: Product) {
   if (product.isVisible !== true || (product.lifecycleStatus ?? "active") !== "active") return false;
   if (product.stockStatus === "coming-soon") return true;
@@ -195,7 +221,7 @@ export async function getProducts({ includeHidden = false, includeArchived = fal
   }
 
   try {
-    const rows = await getAllProductRows();
+    const rows = includeHidden || includeArchived ? await getAllProductRows() : await getActiveVisibleProductRows();
     const products = rows.map(rowToProduct);
     if (includeArchived) return products;
     return includeHidden ? products.filter((product) => (product.lifecycleStatus ?? "active") === "active") : products.filter(isActivePublicProduct);

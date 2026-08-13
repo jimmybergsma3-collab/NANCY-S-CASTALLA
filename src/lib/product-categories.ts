@@ -17,7 +17,7 @@ export const productCategories: ProductCategory[] = [
 ];
 
 export function getProductCategories(product: Product) {
-  const source = product.categories?.length ? product.categories : [product.category];
+  const source = Array.isArray(product.categories) && product.categories.length ? product.categories : [product.category];
   const normalized = source
     .map((category) => category as string)
     .map((category) => category === "Asian products" ? "Asian & Indonesian products" : category)

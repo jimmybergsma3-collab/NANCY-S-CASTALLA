@@ -1,8 +1,8 @@
 import type { Product, ProductPackageOption } from "@/types/product";
 
 export function getEffectivePackageOptions(product: Product): ProductPackageOption[] {
-  if ((product.packageOptions ?? []).length > 0) {
-    return product.packageOptions ?? [];
+  if (Array.isArray(product.packageOptions) && product.packageOptions.length > 0) {
+    return product.packageOptions;
   }
 
   const match = /^x\s*(\d+)$/i.exec(product.unit.trim());

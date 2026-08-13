@@ -205,6 +205,9 @@ Categorieën: **Toegevoegd**, **Gewijzigd**, **Verbeterd**, **Opgelost**, **Beve
 
 ### Opgelost
 
+- Categoriepagina's crashen niet meer wanneer productieproducten een verouderd of verkeerd gevormd `categories`- of `package_options`-veld bevatten; deze velden worden nu veilig genormaliseerd voordat productkaarten worden gerenderd.
+- Publieke product- en categoriepagina's laden nu alleen actieve zichtbare webshopproducten in plaats van de volledige interne leverancierscatalogus, zodat categoriepagina's op productie niet meer wegvallen onder zware datarespons.
+- De PWA-installatieprompt verschijnt niet meer op desktop/pc; hij blijft beperkt tot mobiele browsers waar de telefooninstallatie relevant is.
 - Taal-audit opgeschoond: resterende mojibake-accenten in productbeheer hersteld en publieke productdetails tonen geen losse vertaling-volgt-meldingen meer.
 - Laatste omschrijvingsbatch afgerond: de resterende 19 actieve webshopproducten kregen een klantgerichte productomschrijving zonder `additional_info` te vullen; actieve webshopproducten zonder omschrijving: 0.
 - Derde omschrijvingsbatch afgerond: nog eens 25 actieve webshopproducten kregen een korte klantgerichte productomschrijving zonder `additional_info` te vullen; resterende actieve webshopproducten zonder omschrijving: 19.
